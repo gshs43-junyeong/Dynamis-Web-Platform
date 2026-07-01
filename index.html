@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamis - 경남과학고등학교</title>
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Italianno:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/css/style.css">
+    <script>
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect!= location.href) {
+          history.replaceState(null, null, redirect);
+        }
+      })();
+    </script>
+</head>
+<body>
+    <header>
+        <div class="logo-area" onclick="navigateTo('/home')">
+            <img src="logo.png" alt="Dynamis Logo" style="height: 38px; width: auto; filter: invert(1);" onerror="this.style.display='none'">
+            <div class="logo-text">Dynamis</div>
+        </div>
+        <nav>
+            <ul>
+                <li><a onclick="navigateTo('/home')" id="nav-home" class="active">Home</a></li>
+                <li><a onclick="navigateTo('/notice')" id="nav-notice">Notice</a></li>
+                <li><a onclick="navigateTo('/faq')" id="nav-faq">FAQ</a></li>
+                <li><a onclick="navigateTo('/members')" id="nav-members">Members</a></li>
+                <li><a onclick="handleAuthNavClick()" id="nav-login">Login</a></li>
+                <li id="admin-menu" style="display: none;"><a onclick="navigateTo('/admin')" id="nav-admin">Admin</a></li>
+            </ul>
+        </nav>
+        <div class="hamburger-menu" id="hamburger-menu" onclick="toggleMobileMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </header>
+
+    <div class="mobile-nav" id="mobile-nav">
+        <a onclick="navigateTo('/home'); closeMobileMenu()" id="mobile-nav-home" class="active">Home</a>
+        <a onclick="navigateTo('/notice'); closeMobileMenu()" id="mobile-nav-notice">Notice</a>
+        <a onclick="navigateTo('/faq'); closeMobileMenu()" id="mobile-nav-faq">FAQ</a>
+        <a onclick="navigateTo('/members'); closeMobileMenu()" id="mobile-nav-members">Members</a>
+        <a onclick="handleAuthNavClick(); closeMobileMenu()" id="mobile-nav-login">Login</a>
+        <a id="mobile-admin-menu" style="display: none;" onclick="navigateTo('/admin'); closeMobileMenu()" id="mobile-nav-admin">Admin</a>
+    </div>
+
+    <main>
+        <div id="auth-status-banner" class="auth-status-banner" role="status" aria-live="polite"></div>
+        <section id="home" class="section active">
+            <div class="bg-blob bg-blob-1"></div>
+            <div class="bg-blob bg-blob-2"></div>
+            <div class="bg-blob bg-blob-3"></div>
+            <div class="hero">
+                <img src="logo.png" alt="Main Logo" style="height: 115px; width: auto; margin-bottom: 20px; filter: invert(1);" onerror="this.style.display='none'">
+                <h1>Dynamis</h1>
+                <p class="tagline">"공학적인 원리를 깨닫고 이를 활용하여 깊은 생각과 탐구를 통해 답을 찾고자 하는 집단"</p>
+            </div>
+
+            <div class="content-card">
+                <h3>About Our Vision</h3>
+                <p><strong>42기 때 탄생된 새로운 동아리입니다.</strong></p>
+                <p>Dynamis는 기계공학과 수학적 논리의 결합을 통해 실질적인 문제 해결 과정을 탐구합니다. 우리는 단순한 지식의 습득을 넘어, 복잡한 메커니즘이 작동하는 원리를 숫자로 증명하고 분석하는 것에 집중합니다.</p>
+                <div class="image-box">
+                    <img src="figure1.png" alt="Engineering Session" onerror="this.src='https://via.placeholder.com/1000x400/222/fff?text=Dynamis+Research+Session+(figure1.png)'">
+                </div>
+                <p>동아리원들은 수학적 모델링과 동역학적 분석을 비롯한 심도 있는 학술 활동을 바탕으로, 이론적 아이디어를 공학적으로 설계하고 검증하며 경남과학고의 학술적 깊이를 더해가고 있습니다.</p>
+            </div>
+
+            <div class="content-card">
+                <h3>특징 및 활동</h3>
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <h4>01. 아이디어의 구현</h4>
+                        <p>단순히 공부하는 것에 그치지 않고, 설계에서 제작, 그리고 테스트로 이어지는 일련의 과정을 직접 경험합니다.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>02. 이론과 실습의 융합</h4>
+                        <p>물리와 수학적 원리를 메커니즘 설계에 적용하여, 학교 수업에서 배운 개념이 현실의 공학적 모델에서 어떻게 쓰이는지 이해합니다.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>03. 문제 해결 능력</h4>
+                        <p>설계 오류, 성능 부족 등의 문제를 수리적으로 분석하고 개선하는 과정을 반복하며 논리적 사고력을 기릅니다.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h4>04. 시너지 협업</h4>
+                        <p>서로 다른 관점의 아이디어를 조율하고 팀원들과 협력하여, 혼자서는 도달할 수 없는 최선의 결과물을 만들어 냅니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h3>인재상 (Ideal Candidates)</h3>
+                <p>Dynamis는 다음과 같은 역량을 가진 동아리원들과 함께 성장하고자 합니다.</p>
+                <div class="ideal-grid">
+                    <div class="ideal-item">
+                        <div style="font-size: 24px; margin-bottom: 10px;">💡</div>
+                        <strong>창의적 문제 해결자</strong>
+                        <p style="font-size: 0.85rem; margin-top: 5px;">기존의 틀을 깨고 새로운 대안을 제시하는 학생</p>
+                    </div>
+                    <div class="ideal-item">
+                        <div style="font-size: 24px; margin-bottom: 10px;">⚙️</div>
+                        <strong>집요한 탐구 정신</strong>
+                        <p style="font-size: 0.85rem; margin-top: 5px;">수학적 논리의 끝을 보고자 노력하는 학생</p>
+                    </div>
+                    <div class="ideal-item">
+                        <div style="font-size: 24px; margin-bottom: 10px;">🤝</div>
+                        <strong>소통하는 엔지니어</strong>
+                        <p style="font-size: 0.85rem; margin-top: 5px;">팀의 목표를 위해 기꺼이 지식을 공유하는 학생</p>
+                    </div>
+                </div>
+                <div class="image-box" style="margin-top: 3rem;">
+                    <img src="figure2.png" alt="Mechanism Analysis" onerror="this.src='https://via.placeholder.com/1000x400/222/fff?text=Mechanism+Analysis+(figure2.png)'">
+                </div>
+            </div>
+        </section>
+
+        <section id="notice" class="section">
+            <h2 style="margin-bottom: 2rem;">Notice</h2>
+            
+            <div id="notice-write-box" class="admin-write">
+                <h3>새 공지사항 작성</h3>
+                <input type="text" id="post-title" placeholder="제목">
+                <textarea id="post-content" placeholder="내용을 입력하세요... (최대 2000바이트 제한)"></textarea>
+                
+                <div id="file-upload-container" style="margin-bottom: 1rem;">
+                    <label style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.9rem;">파일 첨부 (명예부원은 첨부 불가 / 일일 업로드 제한 2MB)</label>
+                    <input type="file" id="post-file" multiple style="padding: 0.5rem; background: transparent; border: 1px dashed var(--border-color); width: 100%;">
+                </div>
+                
+                <button class="btn" onclick="addNotice()">게시하기</button>
+            </div>
+
+            <table class="notice-table">
+                <thead>
+                    <tr>
+                        <th id="th-pin-header" style="width: 8%; text-align: center; display: none;">고정</th>
+                        <th style="width: 47%;">제목</th>
+                        <th style="width: 25%;">작성자 (등급)</th>
+                        <th style="width: 20%;">날짜</th>
+                    </tr>
+                </thead>
+                <tbody id="notice-list"></tbody>
+            </table>
+            <div id="pagination-controls" class="pagination"></div>
+        </section>
+
+        <section id="faq" class="section">
+            <h2 style="margin-bottom: 2rem;">FAQ</h2>
+
+            <div id="faq-write-box" class="admin-write">
+                <h3 style="margin-bottom: 1rem;">새 질문 작성</h3>
+                <div id="faq-write-guest-message" style="display: none; color: var(--text-secondary); font-style: italic; font-size: 0.95rem; margin-bottom: 1rem;">
+                    💡 로그인한 상태에서만 질문 작성이 가능합니다.
+                </div>
+                <div id="faq-write-form" style="display: none;">
+                    <input type="text" id="faq-title-input" placeholder="질문 제목을 입력하세요. (50자 이내)" maxlength="50" style="margin-bottom: 1rem;">
+                    <textarea id="faq-question-input" placeholder="질문 내용을 입력하세요... (하루 1회, 3000바이트 이내)"></textarea>
+                    <button class="btn" style="margin-top: 1rem;" onclick="addFaqQuestion()">질문 등록</button>
+                </div>
+            </div>
+
+            <table class="notice-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60%;">질문</th>
+                        <th style="width: 20%;">작성자</th>
+                        <th style="width: 20%;">날짜</th>
+                    </tr>
+                </thead>
+                <tbody id="faq-list"></tbody>
+            </table>
+            <div id="faq-pagination-controls" class="pagination"></div>
+        </section>
+
+        <section id="members" class="section">
+            <h2 style="margin-bottom: 2rem;">Members</h2>
+            <div class="content-card">
+                <div class="member-group">
+                    <h4>관리자 (Admin)</h4>
+                    <div id="group-admin" class="member-ul"></div>
+                </div>
+                <div class="member-group">
+                    <h4>부원 (Member)</h4>
+                    <div id="group-member" class="member-ul"></div>
+                </div>
+                <div class="member-group">
+                    <h4>명예부원 (Honored)</h4>
+                    <div id="group-honored" class="member-ul"></div>
+                </div>
+                <div id="member-detail-panel" class="member-detail-panel">
+                    <p style="color: var(--text-secondary);">멤버를 선택하면 설명을 확인할 수 있습니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="login" class="section">
+            <div id="login-form-box" class="form-card">
+                <h2 style="text-align: center; margin-bottom: 2rem;">Login</h2>
+                <button class="btn" style="width:100%; margin-bottom: 0.75rem; padding: 0.8rem 1rem;" onclick="handleLoginWithGoogle()">Google 계정으로 로그인</button>
+                <button class="btn" style="width:100%; margin-bottom: 1.5rem; padding: 0.8rem 1rem;" onclick="handleLoginWithGitHub()">GitHub 계정으로 로그인</button>
+                
+                <label class="signup-consent-item">
+                    <input type="checkbox" id="login-persist-checkbox" class="signup-consent-checkbox">
+                    <span class="signup-consent-text">로그인 상태 유지</span>
+                </label>
+                
+                <div style="text-align: center; margin-top: 1rem; font-size: 0.95rem; color:var(--text-secondary);">
+                    아직 계정을 만들지 않으셨나요? <a onclick="navigateTo('/signup')" style="cursor:pointer; color:inherit; font-weight:700; text-decoration:underline;">회원가입</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="signup" class="section">
+            <div id="signup-form-box" class="form-card">
+                <h2 style="text-align: center; margin-bottom: 2rem;">Sign Up</h2>
+                <div class="form-group">
+                    <label>아이디 입력</label>
+                    <input type="text" id="signup-id" placeholder="예: gshs43_junyeong (실명 일치 여부 확인 용도)" required>
+                </div>
+                <div class="form-group">
+                    <label>기수</label>
+                    <input type="text" id="signup-batch" placeholder="예: 42기" required>
+                </div>
+                <div class="form-group">
+                    <label>이름</label>
+                    <input type="text" id="signup-name" placeholder="실명 입력" required>
+                </div>
+                <div class="signup-consent-list">
+                    <label class="signup-consent-item">
+                        <input type="checkbox" id="signup-consent-1" class="signup-consent-checkbox">
+                        <span class="signup-consent-text">
+                            1. <a href="#" class="signup-consent-link" onclick="event.preventDefault(); navigateTo('/privacy');">개인정보 처리방침 및 법적 고지</a>에 관한 내용에 동의합니다.
+                        </span>
+                    </label>
+                    <label class="signup-consent-item">
+                        <input type="checkbox" id="signup-consent-2" class="signup-consent-checkbox">
+                        <span class="signup-consent-text">
+                            2. <a href="#" class="signup-consent-link" onclick="event.preventDefault(); navigateTo('/guidelines');">커뮤니티 이용 가이드라인</a>에 관한 내용에 동의하며, 이에 맞춰 건전하게 커뮤니티를 사용할 것을 다짐합니다.
+                        </span>
+                    </label>
+                    <label class="signup-consent-item">
+                        <input type="checkbox" id="signup-consent-3" class="signup-consent-checkbox">
+                        <span class="signup-consent-text">3. 본인의 실명에 맞게 이름, 기수를 기재하였으며, 불시에 아이디와 이름 일치 여부를 확인할 수 있음을 인지하고 동의합니다.</span>
+                    </label>
+                </div>
+                <button class="btn" style="width:100%; margin-bottom: 0.75rem; padding: 0.8rem 1rem;" onclick="handleSignupWithGoogle()">Google 계정으로 회원가입</button>
+                <button class="btn" style="width:100%; margin-bottom: 0.75rem; padding: 0.8rem 1rem;" onclick="handleSignupWithGitHub()">GitHub 계정으로 회원가입</button>
+                <div style="text-align: center; margin-top: 1rem; font-size: 0.95rem; color:var(--text-secondary);">
+                    이미 계정을 만드셨나요? <a onclick="navigateTo('/login')" style="cursor:pointer; color:inherit; font-weight:700; text-decoration:underline;">로그인</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="mypage" class="section">
+            <div id="logged-in-box" class="form-card" style="text-align: center;">
+                <h2 id="welcome-user" style="margin-bottom: 1rem;"></h2>
+                <p id="user-role-display" style="color: var(--text-secondary); margin-bottom: 2rem; font-weight: bold;"></p>
+                <button class="btn" style="background: #333; color: white; margin-bottom: 1rem;" onclick="handleLogout()">로그아웃</button>
+                <button class="btn" style="background: #cc3333; color: white; font-weight: 500; font-size: 0.9rem; padding: 0.6rem;" onclick="handleDeleteAccount()">회원 탈퇴 (기록 전체 삭제)</button>
+
+                <div style="width: 100%; height: 1px; background: var(--border-color); margin: 2rem 0;"></div>
+                <div style="text-align: center; color: #ccc; font-size: 0.95rem;">
+                    Google 또는 GitHub 계정으로 로그인할 수 있습니다. 비밀번호 관리는 각 계정 설정에서 진행해주세요.
+                </div>
+            </div>
+        </section>
+
+        <section id="admin" class="section">
+            <div class="content-card">
+                <h3>전체 회원 등급 조정 및 승인 관리</h3>
+                <p style="font-size: 0.9rem; margin-top: -0.5rem; margin-bottom: 2rem;">가입한 회원의 등급을 즉시 관리자, 부원, 명예부원, 등급 없음 중 하나로 지정 및 변경할 수 있습니다.</p>
+                <table class="notice-table">
+                    <thead>
+                        <tr>
+                            <th>학번/이름 (ID)</th>
+                            <th>현재 등급</th>
+                            <th>등급 배정 및 변경</th>
+                            <th>관리 조치</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-user-list"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="privacy" class="section">
+            <div class="content-card">
+                <h2 style="margin-bottom: 2rem; border-left: 5px solid red; padding-left: 15px;">개인정보 처리방침 (Dynamis Web Platform 2026)</h2>
+
+                <h4 style="margin-top: 1rem; color: #fff;">제1조 (개인정보의 처리 목적 및 수집 항목)</h4>
+                <p>경남과학고등학교 학술 동아리 디나미스(이하 '동아리')는 플랫폼의 기능 유지, 트래픽 통제 및 악성 가입원 선별을 위해 최소한의 식별 정보를 적법하게 처리합니다. 수집된 모든 정보는 명시된 목적 외의 용도로는 절대 사용되지 않습니다.</p>
+                <p>동아리는 다음과 같은 목적을 위해 개인정보를 수집합니다.</p>
+                <ul style="color: var(--text-secondary); margin-left: 1rem;">
+                    <li>동아리 가입원 기본 데이터: ID, 연결된 Google 또는 Github 계정 로그인 사실 (Google 로그인 시 연동된 이메일, Github 로그인 시 Github 아이디), 소속 기수 및 실명 정보를 수집하며, 이는 실명 및 동아리 부원 지위 검증, 프로필 상태 유지 및 계정 관리를 목적으로 합니다.</li>
+                    <li>일일 트래픽 제어 시스템 로그: 사용자 식별자와 결합된 일일 공지사항 작성 횟수, 신규 댓글 작성 수량, 일일 업로드 및 다운로드 총 바이트 크기, 서버 내 하루 회원가입하는 계정 수를 수집하며, 이는 악성 트래픽(DDoS) 방어 및 Firestore 과금 방지를 목적으로 합니다.</li>
+                    <li>관리자 내부 통제 통계: 사용자 ID에 매핑된 누적 경고 수량을 수집하며, 이는 게시판 무단 활동 예방 및 등급 조치를 목적으로 합니다.</li>
+                </ul>
+
+                <h4 style="margin-top: 1.5rem; color: #fff;">제2조 (개인정보의 보유 및 파기 기간)</h4>
+                <p>동아리는 수집한 개인정보를 목적이 달성되는 즉시 지체 없이 영구 파기합니다.</p>
+                <p>가입원 기본 데이터 및 관리자 통제 통계는 사용자가 자율적으로 회원 탈퇴를 처리하거나, 부정 가입으로 인해 관리자가 계정을 강제 삭제 조치하는 즉시 클라우드 데이터베이스에서 물리적으로 영구 삭제됩니다. 일일 트래픽 제어 로그는 당일 24:00(자정) 경과 시 시스템에 의해 즉시 자동으로 전량 소멸 및 초기화됩니다.</p>
+
+                <h4 style="margin-top: 1.5rem; color: #fff;">제3조 (개인정보의 제3자 제공 및 위탁 금지)</h4>
+                <p>동아리는 정보주체의 동의 없이 수집한 어떠한 개인정보도 외부에 제공, 공유 또는 위탁하지 않으며, 전량 Firebase 보안 도메인 내부 데이터베이스에 안전하게 격리 보관합니다.</p>
+
+                <h4 style="margin-top: 1.5rem; color: #fff;">제4조 (정보주체의 권리 행사 방법)</h4>
+                <p>가입한 부원은 언제든지 마이페이지에 진입하여 본인의 정보를 열람할 수 있으며, 기존 비밀번호 대조 절차를 거쳐 직접 정보를 수정하거나 자유롭게 즉시 탈퇴(데이터 파기)를 요구해 권리를 행사할 수 있습니다. 본 사이트는 만 14세 미만 아동의 가입을 원천 배제합니다.</p>
+
+                <h4 style="margin-top: 1.5rem; color: #fff;">제5조 (개인정보의 안전성 확보 조치 및 기술적 제한)</h4>
+                <p>동아리는 정보 유출 방지와 안전성 확보를 위해 기술적·관리적 보안 프로토콜을 성실히 이행합니다.</p>
+                <ul style="color: var(--text-secondary); margin-left: 1rem;">
+                    <li>App Check 보안 인증: 구글 reCAPTCHA v3 보안 인증을 통해 웹 브라우저 외적인 비공식 REST API 호출이나 비정상 봇 인젝션 시도를 서버 레벨에서 무조건 무효화합니다.</li>
+                    <li>트래픽 제한 조건식: 악성 과부하 방지를 위해 비관리자 사용자는 일일 공지사항 작성 5회 이하, 일일 댓글 등록 10회 이하, 일일 파일 업로드 2MB 이하 및 다운로드 5MB 이하의 엄격한 기술적 트래픽 스로틀링 제한 식을 통과해야 합니다.</li>
+                </ul>
+
+                <h4 style="margin-top: 1.5rem; color: #fff;">제6조 (생성형 AI 기술 정보 처리 방침 및 자동화 결정 거부)</h4>
+                <p>본 플랫폼은 사용자가 입력하는 어떠한 텍스트, 댓글, 첨부파일도 외부 생성형 AI 기술의 학습 자원으로 전송하거나 가공하지 않음을 보장합니다. 이용자는 언제든지 시스템의 AI 기술 처리 배제 또는 자동화된 조치 결정에 대한 거부권을 행사할 수 있습니다.</p>
+
+                <h4 style="margin-top: 1.5rem; color: #fff;">제7조 (쿠키 등 자동 수집 장치의 미운영)</h4>
+                <p>본 사이트는 이용자의 브라우저 접속 행동 패턴을 추적·분석하거나 개별 광고를 전송하기 위한 '쿠키(Cookie)' 수집 장치를 절대 설치 및 운영하지 않습니다.</p>
+
+                <h4 style="margin-top: 1.5rem; color: #fff;">제8조 (개인정보 보호책임자 및 고충 처리)</h4>
+                <p>개인정보 처리에 관한 고충 및 불만 사항은 경남과학고등학교 Dynamis 동아리 회장(개인정보 보호책임자) 및 운영진 대표 이메일, 혹은 원격 깃허브 리포지토리의 Issue 트래커를 통해 상시 접수 및 처리됩니다.</p>
+
+                <h4 style="margin-top: 2rem; color: #ff5555;">제9조 (악의적 접근 행위자 및 정보 도용자에 대한 법적 처벌 고지)</h4>
+                <p style="margin-top: 0.75rem; color: #ffddd7; background: rgba(255, 0, 0, 0.08); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255, 85, 85, 0.25);">
+                    타인의 개인정보(ID, 비밀번호 등)를 무단으로 탈취·확인 및 도용하는 행위, 악의적으로 시스템 과부하를 유발해 사이트를 마비시키는 행위, 허위 정보를 지속 전송하여 시스템 운영을 방해(DDoS 등)하거나 고의로 사이트를 폐쇄시키고자 불법적으로 액세스를 지속 시도하는 행위는 엄격히 금지됩니다.
+                </p>
+                <p style="color: #ffddd7; background: rgba(255, 0, 0, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255, 85, 85, 0.15); margin-top: 1rem;">
+                    이러한 행위가 적발되거나 정황이 포착될 경우, 동아리는 불법 IP 주소와 시스템 로그 등 증집된 보안 이력을 기반으로 즉시 과학기술정보통신부 산하 한국인터넷진흥원(KISA) 개인정보침해신고센터 및 경찰청 사이버범죄수사대에 신고 고발 조치합니다.
+                </p>
+                <p style="color: #ffddd7; background: rgba(255, 0, 0, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255, 85, 85, 0.15); margin-top: 1rem;">
+                    위반자는 대한민국 '개인정보 보호법' 제59조(권한 없는 자의 개인정보 유출 및 도용), '정보통신망 이용촉진 및 정보보호 등에 관한 법률' 제48조(정보통신망 침해행위 금지) 및 '형법' 제314조 제2항(컴퓨터 등 장애 업무방해죄)에 의거하여 최대 5년 내지 7년 이하의 징역 또는 5,000만 원 이하의 벌금형 등 강력한 사법적 처벌을 받게 됨을 엄중히 고지합니다.
+                </p>
+            </div>
+        </section>
+
+        <section id="guidelines" class="section">
+            <div class="content-card">
+                <h2 style="margin-bottom: 2rem; border-left: 5px solid #4ea1ff; padding-left: 15px;">커뮤니티 이용 가이드라인 (Dynamis Web Platform 2026)</h2>
+                <h4 style="margin-top: 1rem; color: #fff;">제1조 (건전한 소통 문화 지향)</h4>
+                <p>본 가이드라인은 기계공학 및 수리 모델링의 융합 학술을 탐구하는 디나미스(Dynamis) 웹 플랫폼 내에서 부원들이 상호 존중하며 지식을 공유할 수 있도록 돕는 이용 수칙입니다. 모든 소통은 동아리의 명예와 학술적 가치를 지키기 위해 상호 신뢰를 바탕으로 정중하게 이루어져야 합니다. 이는 서로 간의 존중과 학술적인 견해 인정이 원활하게 이루어지는 것을 의미합니다.</p>
+                <h4 style="margin-top: 1.5rem; color: #fff;">제2조 (공지사항 작성 및 파일 첨부 수칙)</h4>
+                <p>공지사항 작성 및 파일 첨부 권한을 가진 부원과 관리자는 정보의 무결성을 유지하기 위해 다음 수칙을 반드시 준수해야 합니다.</p>
+                <ul style="color: var(--text-secondary); margin-left: 1rem;">
+                    <li>저작권 보호: 동아리원들이 직접 연구하고 작성한 공학 설계안, 기계 메커니즘 분석 자료 등의 성과물을 공유할 때는 저작권을 준수하고 출처를 명확히 해야 합니다. 타인의 연구 자료를 무단 도용하거나 표절하는 행위는 엄격히 금지되며, 이를 어길 경우 본 사이트에서 부원 역할이 박탈됩니다.</li>
+                    <li>규격 제한 준수: 서버 공간 관리와 트래픽 안정성을 위해 공지사항 본문 크기는 최대 2000바이트 이내로 작성해야 하며, 첨부하는 파일은 하루 누적 용량 기준인 2메가바이트 이내의 규격을 준수해야 합니다. (명예부원은 파일 첨부 권한이 제한됩니다).</li>
+                    <li>불법 파일 공유 금지: 악성코드, 바이러스, 불법 프로그램 크랙 등 시스템의 안전을 위협하거나 보안 정책을 저해하는 파일을 무단 업로드 및 공유하는 행위는 즉각적인 계정 삭제 사유가 됩니다.</li>
+                </ul>
+                <h4 style="margin-top: 1.5rem; color: #fff;">제3조 (실시간 채팅 및 댓글 소통 수칙)</h4>
+                <p>실시간 채팅과 댓글 창은 모든 로그인한 학생들의 자유로운 의견 교환 공간입니다.</p>
+                <ul style="color: var(--text-secondary); margin-left: 1rem;">
+                    <li>상호 존중의 원칙: 학술적 견해 차이나 토론이 진행되더라도 비방, 인신공격, 욕설, 조롱 등 부적절한 표현은 일절 금지됩니다. 이를 어길 경우 아래와 같이 처벌합니다.
+                        <ul style="margin-top: 0.5rem; color: var(--text-secondary); margin-left: 1rem;">
+                            <li>(1) 욕설 및 비방: 경고 조치</li>
+                            <li>(2) 인신공격 및 조롱, 괴롭힘: 경고 조치 및 학년부 사실 전달</li>
+                            <li>(3) 지속적인 사이버 폭력 또는 성폭력: 연루된 계정 모두 삭제, 학년부 사실 전달</li>
+                            <li>(4) 기타 부적절한 댓글 작성: 관리자 재량으로 결정</li>
+                        </ul>
+                    </li>
+                    <li>도배 행위 제한: 정상적인 게시판 흐름을 방해하지 않도록 일반 부원의 댓글 작성은 하루 최대 10회, 회당 크기는 500바이트 이내로 시스템 제한됩니다. 이를 악의적으로 우회하여 연속적인 무의미 글을 남기는 도배 행위는 차단됩니다.</li>
+                    <li>명예훼손 금지: 타인을 비방할 목적으로 채팅이나 댓글에 근거 없는 허위 사실을 게시하여 명예를 훼손하는 경우 정보통신망법에 의거하여 사법적인 처벌 대상이 될 수 있습니다.</li>
+                </ul>
+                <h4 style="margin-top: 1.5rem; color: #fff;">제4조 (관리자 권한 및 계정 관리 수칙)</h4>
+                <p>플랫폼을 관리하는 운영진은 동아리의 안전한 자치 운영을 위해 부여받은 권한을 객관적이고 공정하게 행사해야 합니다.</p>
+                <ul style="color: var(--text-secondary); margin-left: 1rem;">
+                    <li>계정 및 권한 조정: 관리자는 가입 신청을 보낸 대기 인원의 신원을 확인하여 알맞은 등급(부원, 명예부원 등)을 부여하고, 이용 수칙을 위반한 이용자에 대해 경고 누적 조치 및 계정 강제 탈퇴 등의 관리 조치를 신속하고 일관되게 적용해야 합니다.</li>
+                    <li>권한 남용 금지: 정상적인 관리 권한이라 하더라도, 본연의 범위를 넘어서 사적 이익을 위해 회원의 정보를 무단으로 열람하거나 유출하는 행위는 법적으로 엄격히 금지되며 내부 조치를 포함한 사법적 처벌 대상이 됩니다. 이를 남용할 경우 관리자 역할 박탈 및 계정 삭제 조치, 학년부 및 인성부 인계 등 엄벌 조치합니다.</li>
+                </ul>
+                <h4 style="margin-top: 1.5rem; color: #fff;">제5조 (불법 접근 및 업무방해 엄정 대응)</h4>
+                <p>허가되지 않은 접근 경로로 시스템 내부 데이터베이스에 침입을 시도하거나, 고의로 정당한 명령 수행을 가로막고, 허위 명령을 전송하여 시스템에 장애를 유발해 동아리 웹 서비스를 일시적 혹은 영구적으로 마비 및 폐쇄하려 하는 악의적인 공격 행위는 형법상 명백한 범죄에 해당합니다.</p>
+                <p>이러한 행위가 적발되는 즉시, 기록된 불법 침입 로그(IP 주소, 기기 정보 등)를 증거 자료로 수집하여 경찰청 사이버수사대 등 수사 당국에 고발 조치하고 사법 처리를 진행하여 동아리의 지식 재산과 웹 시스템을 철저히 보호할 것입니다.</p>
+            </div>
+        </section>
+    </main>
+
+    <div id="notice-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeNotice()">&times;</span>
+            <h2 id="modal-title" style="margin-bottom: 0.5rem; padding-right: 30px;"></h2>
+            <div style="margin-bottom: 1rem;">
+                <span id="modal-author" style="font-size: 0.95rem; color: #fff; font-weight: 600; margin-right: 15px;"></span>
+                <span id="modal-date" style="font-size: 0.9rem; color: var(--text-secondary);"></span>
+            </div>
+            <div style="width: 100%; height: 1px; background: var(--border-color); margin: 1rem 0;"></div>
+            <p id="modal-text" style="line-height: 1.8; white-space: pre-wrap; font-size: 1.05rem;"></p>
+            <div id="modal-file-box" style="margin-top: 1.5rem; padding: 0.8rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; display: none;">
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight:bold;">📁 첨부파일 목록</p>
+                <div id="modal-file-list"></div>
+            </div>
+            <button id="modal-delete-btn" class="btn" style="background: #cc3333; color: white; width: auto; margin-top: 1.5rem; display: none;" onclick="deleteCurrentNotice()">공지사항 삭제</button>
+            <div class="comment-box">
+                <h4 style="margin-bottom: 1rem; font-size: 1.2rem;">댓글 목록</h4>
+                <div id="comment-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;"></div>
+                <div id="comment-write-container" style="display: none;">
+                    <textarea id="comment-input" placeholder="댓글을 입력하세요. (1회 500바이트 이내, 하루 최대 10회 제한. 남을 비방하거나 부적절한 댓글을 달 경우 경고 또는 계정 삭제 조치가 이루어질 수 있습니다.)" style="width:100%; height:70px; background:var(--bg-primary); border:1px solid var(--border-color); color:white; padding:0.8rem; border-radius:4px; resize:none; font-size:0.95rem;"></textarea>
+                    <div style="text-align: right; margin-top: 0.5rem;">
+                        <button class="btn" style="width: auto; padding: 0.6rem 1.5rem; font-size: 0.9rem;" onclick="addComment()">댓글 등록</button>
+                    </div>
+                </div>
+                <div id="comment-guest-message" style="color: var(--text-secondary); font-style: italic; font-size: 0.9rem; text-align: center;">
+                    💡 로그인한 상태에서만 댓글 작성이 가능합니다.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="faq-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeFaq()">&times;</span>
+            <h2 id="faq-modal-title" style="margin-bottom: 0.5rem; padding-right: 30px;"></h2>
+            <div style="margin-bottom: 1rem;">
+                <span id="faq-modal-author" style="font-size: 0.95rem; color: #fff; font-weight: 600; margin-right: 15px;"></span>
+                <span id="faq-modal-date" style="font-size: 0.9rem; color: var(--text-secondary);"></span>
+            </div>
+            <div style="width: 100%; height: 1px; background: var(--border-color); margin: 1rem 0;"></div>
+            <p id="faq-modal-text" style="line-height: 1.8; white-space: pre-wrap; font-size: 1.05rem;"></p>
+            <div class="comment-box">
+                <h4 style="margin-bottom: 1rem; font-size: 1.2rem;">답변 목록</h4>
+                <div id="faq-answer-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;"></div>
+                <div id="faq-answer-write-container" style="display: none;">
+                    <textarea id="faq-answer-input" placeholder="답변을 입력하세요. (각 질문당 최대 2개, 1000바이트 이내)" style="width:100%; height:70px; background:var(--bg-primary); border:1px solid var(--border-color); color:white; padding:0.8rem; border-radius:4px; resize:none; font-size:0.95rem;"></textarea>
+                    <div style="text-align: right; margin-top: 0.5rem;">
+                        <button class="btn" style="width: auto; padding: 0.6rem 1.5rem; font-size: 0.9rem;" onclick="addFaqAnswer()">답변 등록</button>
+                    </div>
+                </div>
+                <div id="faq-answer-guest-message" style="color: var(--text-secondary); font-style: italic; font-size: 0.9rem; text-align: center;">
+                    💡 부원 및 관리자만 답변 작성이 가능합니다.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="signup-preview-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal" onclick="closeSignupPreview()">&times;</span>
+            <h2 style="margin-bottom: 1.5rem;">회원가입 정보 확인</h2>
+            
+            <div id="signup-preview-warnings" style="display: none; margin-bottom: 1.5rem; padding: 1rem; border-radius: 6px; background: rgba(255, 85, 85, 0.1); border: 1px solid rgba(255, 85, 85, 0.3);"></div>
+            
+            <div style="background: var(--bg-tertiary); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+                <div style="margin-bottom: 1.2rem;">
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem; text-transform: uppercase; font-weight: 600;">아이디</p>
+                    <p style="font-size: 1.15rem; font-weight: 600; word-break: break-all;" id="preview-id"></p>
+                </div>
+                <div style="margin-bottom: 1.2rem;">
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem; text-transform: uppercase; font-weight: 600;">기수</p>
+                    <p style="font-size: 1.15rem; font-weight: 600;" id="preview-batch"></p>
+                </div>
+                <div>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem; text-transform: uppercase; font-weight: 600;">이름</p>
+                    <p style="font-size: 1.15rem; font-weight: 600;" id="preview-name"></p>
+                </div>
+            </div>
+
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.6; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 6px; border-left: 3px solid #8c9aff;">
+                ⚠️ 위의 정보가 올바른지 꼼꼼히 확인해주세요.<br>
+                회원가입 후 정보 변경은 관리자를 통해서만 가능합니다.
+            </p>
+
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn" style="flex: 1; background: #555; color: white;" onclick="closeSignupPreview()">◀ 수정하기</button>
+                <button class="btn" style="flex: 1;" id="signup-preview-google-btn" onclick="proceedSignupWithGoogle()">Google로 계속 ▶</button>
+                <button class="btn" style="flex: 1; display: none;" id="signup-preview-github-btn" onclick="proceedSignupWithGitHub()">GitHub로 계속 ▶</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Dynamis, Gyeongnam Science High School.<br>
+        <span style="display:inline-flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; justify-content: center; margin: 0.75rem 0; font-size: 0.85rem; color: #a0a0a0;">
+            <a onclick="navigateTo('/privacy')" style="color: inherit; text-decoration: underline; cursor: pointer;">개인정보 처리방침 및 법적 고지</a>
+            <a onclick="navigateTo('/guidelines')" style="color: inherit; text-decoration: underline; cursor: pointer;">커뮤니티 이용 가이드라인</a>
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; cursor: pointer;">GitHub</a>
+            <a href="https://github.com/issues" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; cursor: pointer;">오류신고</a>
+        </span><br>
+        <strong style="color: #deff9a; font-weight: normal; margin-top: 8px; display: inline-block;">v1.0.0 - beta 1</strong></p>
+    </footer>
+
+    <script type="module" src="/src/js/app.js"></script>
+</body>
+</html>
