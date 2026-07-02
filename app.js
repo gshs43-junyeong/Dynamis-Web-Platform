@@ -1,6 +1,6 @@
-import { db } from './src/js/firebase-config.js';
-import { verifyAndIncrementTraffic } from './src/js/traffic.js';
-import * as auth from './src/js/auth.js';
+import { db } from './firebase-config.js';
+import { verifyAndIncrementTraffic } from './traffic.js';
+import * as auth from './auth.js';
 import {
     collection,
     collectionGroup,
