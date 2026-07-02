@@ -251,7 +251,7 @@ async function addNotice() {
             return;
         }
 
-        const isNoticeAllowed = await verifyAndIncrementTraffic(loggedInUser.id, 'noticeCount', 1, 5);
+        const isNoticeAllowed = await verifyAndIncrementTraffic(loggedInUser.uid, 'noticeCount', 1, 5);
         if (!isNoticeAllowed) {
             alert('❌ [작성 빈도 제한] 악성 트래픽 및 오뷰즈 방어 정책에 의해 하루 최대 공지사항 작성 한도(5회)를 초과하여 차단되었습니다.');
             return;
@@ -272,7 +272,7 @@ async function addNotice() {
 
         if (loggedInUser.role !== 'admin') {
             const uploadLimit = 2 * 1024 * 1024;
-            const isUploadAllowed = await verifyAndIncrementTraffic(loggedInUser.id, 'uploadBytes', totalNewSize, uploadLimit);
+            const isUploadAllowed = await verifyAndIncrementTraffic(loggedInUser.uid, 'uploadBytes', totalNewSize, uploadLimit);
             if (!isUploadAllowed) {
                 alert('⚠️ [업로드 제한] 하루 최대 파일 업로드 총량(2MB)을 초과하였거나 이번 파일이 허용치를 초과했습니다.');
                 return;
@@ -298,7 +298,7 @@ async function addNotice() {
         authorName: loggedInUser.name,
         authorBatch: loggedInUser.batch,
         authorRole: loggedInUser.role,
-        authorId: loggedInUser.id,
+        authorId: loggedInUser.uid,
         date,
         pinned: false,
         files: uploadedFilesArray,
@@ -528,7 +528,7 @@ function viewNotice(index) {
 async function executeFileDownloadSecure(e, size, dataStr, nameStr) {
     if (!loggedInUser) return alert('다운로드는 로그인된 회원 정보 세션이 있어야 동작합니다.');
     if (loggedInUser.role !== 'admin') {
-        const isDownloadAllowed = await verifyAndIncrementTraffic(loggedInUser.id, 'downloadBytes', size || 0, 5 * 1024 * 1024);
+        const isDownloadAllowed = await verifyAndIncrementTraffic(loggedInUser.uid, 'downloadBytes', size || 0, 5 * 1024 * 1024);
         if (!isDownloadAllowed) {
             alert('❌ [다운로드 제한] 하루 최대 파일 다운로드 총량(5MB) 한도를 초과하여 다운로드가 차단되었습니다.');
             return;
@@ -554,7 +554,7 @@ async function addComment() {
             alert(`❌ [바이트 초과] 댓글 크기가 500바이트를 초과하여 등록할 수 없습니다. (현재: ${bytes}바이트)`);
             return;
         }
-        const isCommentAllowed = await verifyAndIncrementTraffic(loggedInUser.id, 'commentCount', 1, 10);
+        const isCommentAllowed = await verifyAndIncrementTraffic(loggedInUser.uid, 'commentCount', 1, 10);
         if (!isCommentAllowed) {
             alert('❌ [작성 빈도 제한] 악성 트래픽 방어 정책에 의해 하루 최대 댓글 작성 가능 횟수(10회)를 초과하여 차단되었습니다.');
             return;
@@ -567,7 +567,7 @@ async function addComment() {
         authorName: loggedInUser.name,
         authorBatch: loggedInUser.batch,
         authorRole: loggedInUser.role,
-        authorId: loggedInUser.id,
+        authorId: loggedInUser.uid,
         date,
         timestamp: Date.now()
     });
@@ -610,7 +610,7 @@ async function addFaqQuestion() {
         return;
     }
 
-    const isQuestionAllowed = await verifyAndIncrementTraffic(loggedInUser.id, 'faqQuestionCount', 1, 1);
+    const isQuestionAllowed = await verifyAndIncrementTraffic(loggedInUser.uid, 'faqQuestionCount', 1, 1);
     if (!isQuestionAllowed) {
         alert('❌ [작성 제한] 오늘은 이미 FAQ 질문을 등록했습니다. 하루 최대 1회만 가능합니다.');
         return;
@@ -622,7 +622,7 @@ async function addFaqQuestion() {
         content,
         authorName: loggedInUser.name,
         authorRole: loggedInUser.role,
-        authorId: loggedInUser.id,
+        authorId: loggedInUser.uid,
         date,
         timestamp: Date.now()
     };
@@ -811,7 +811,7 @@ async function addFaqAnswer() {
         authorName: loggedInUser.name,
         authorBatch: loggedInUser.batch,
         authorRole: loggedInUser.role,
-        authorId: loggedInUser.id,
+        authorId: loggedInUser.uid,
         date,
         timestamp: Date.now()
     });
