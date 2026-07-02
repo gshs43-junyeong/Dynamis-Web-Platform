@@ -1,4 +1,4 @@
-﻿import { db } from './firebase-config.js';
+import { db } from './firebase-config.js';
 import { auth, googleProvider, githubProvider } from './firebase-config.js';
 import {
     doc,
@@ -27,18 +27,41 @@ let applyUserSessionUIFunc = null;
 let signupPreviewData = null;
 let pendingAuthIntent = null;
 
-function setAuthStatus(message, type = 'info') {
+let __authStatusTimer = null;
+function setAuthStatus(message, type = 'info', durationMs = undefined) {
     const banner = document.getElementById('auth-status-banner');
     if (!banner) return;
     if (!message) {
         banner.style.display = 'none';
         banner.textContent = '';
         banner.className = 'auth-status-banner';
+        if (__authStatusTimer) {
+            clearTimeout(__authStatusTimer);
+            __authStatusTimer = null;
+        }
         return;
     }
+
+    // 기본 지속시간: success 4s, error 7s, info 3s
+    const defaultDurations = { success: 4000, error: 7000, info: 3000 };
+    const timeout = typeof durationMs === 'number' ? durationMs : (defaultDurations[type] || 3000);
+
     banner.textContent = message;
     banner.className = `auth-status-banner ${type}`;
     banner.style.display = 'block';
+
+    if (__authStatusTimer) {
+        clearTimeout(__authStatusTimer);
+        __authStatusTimer = null;
+    }
+    if (timeout > 0) {
+        __authStatusTimer = setTimeout(() => {
+            banner.style.display = 'none';
+            banner.textContent = '';
+            banner.className = 'auth-status-banner';
+            __authStatusTimer = null;
+        }, timeout);
+    }
 }
 
 function clearPendingAuthIntent() {
@@ -60,7 +83,7 @@ function showProviderSetupGuide(providerName, err) {
         errorMessage: err?.message
     });
 
-    alert(`${providerName} 로그인은 현재 Firebase 프로젝트에서 허용되지 않았습니다.\n\nFirebase Console > Authentication > Sign-in method에서 ${providerName}를 활성화한 뒤, 승인된 redirect URI에 아래 주소를 추가해 주세요.\n${redirectUri}\n\n오류: ${err?.message || ''}`);
+    alert(`${providerName} 로그인은 현재 Firebase 프로젝트에서 허용되지 않았습니다.\n\nFirebase Console > Authentication > Sign-in method에서 ${providerName}를 활성화한[...]
 }
 
 function storePendingSignupData(data) {
@@ -520,7 +543,7 @@ export async function handleDeleteAccount() {
     if (!loggedInUser) return alert('인증 정보가 없습니다.');
 
     if (!confirm('⚠️ 정말 탈퇴하시겠습니까? 이 작업은 절대 되돌릴 수 없습니다.')) return;
-    if (!confirm('🚨 최종 확인: 탈퇴 시 본인 계정 정보는 물론, 그동안 작성하신 모든 공지사항, 댓글, 일일 트래픽 통계 데이터가 데이터베이스에서 영구 소멸됩니다. 이에 동의하십니까?')) return;
+    if (!confirm('🚨 최종 확인: 탈퇴 시 본인 계정 정보는 물론, 그동안 작성하신 모든 공지사항, 댓글, 일일 트래픽 통계 데이터가 데이터베이스에서 [...]
 
     const userId = loggedInUser.uid || loggedInUser.id;
     try {
