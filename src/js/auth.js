@@ -83,7 +83,7 @@ function showProviderSetupGuide(providerName, err) {
         errorMessage: err?.message
     });
 
-    alert(`${providerName} 로그인은 현재 Firebase 프로젝트에서 허용되지 않았습니다.\n\nFirebase Console > Authentication > Sign-in method에서 ${providerName}를 활성화한[...]
+    alert(`${providerName} 로그인은 현재 Firebase 프로젝트에서 허용되지 않았습니다.\n\nFirebase Console > Authentication > Sign-in method에서 ${providerName}를 활성화한 후 다시 시도해 주세요.`);
 }
 
 function storePendingSignupData(data) {
@@ -543,7 +543,7 @@ export async function handleDeleteAccount() {
     if (!loggedInUser) return alert('인증 정보가 없습니다.');
 
     if (!confirm('⚠️ 정말 탈퇴하시겠습니까? 이 작업은 절대 되돌릴 수 없습니다.')) return;
-    if (!confirm('🚨 최종 확인: 탈퇴 시 본인 계정 정보는 물론, 그동안 작성하신 모든 공지사항, 댓글, 일일 트래픽 통계 데이터가 데이터베이스에서 [...]
+    if (!confirm('🚨 최종 확인: 탈퇴 시 본인 계정 정보는 물론, 그동안 작성하신 모든 공지사항, 댓글, 일일 트래픽 통계 데이터가 데이터베이스에서 완벽히 삭제됩니다.')) return;
 
     const userId = loggedInUser.uid || loggedInUser.id;
     try {

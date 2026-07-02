@@ -60,9 +60,7 @@ function formatUserIdentityLabel(user) {
     if (!user) return '비로그인';
     const batch = user.batch ? `${user.batch}` : '';
     const rawName = user.name || user.displayName || user.email?.split('@')[0] || '';
-    const isLegacyRealNameAccount = (rawName === '정준영' || rawName === 'junyung' || rawName === 'Junyoung') && batch === '43기';
-    const isLegacyTestAccount = (rawName === '테스트' || rawName === 'test' || rawName === 'Test') && batch === '43기';
-    const displayName = isLegacyTestAccount ? '정준영' : isLegacyRealNameAccount ? '테스트' : rawName;
+    const displayName = rawName;
     if (batch && displayName) return `${batch} ${displayName}`;
     if (displayName) return displayName;
     return '사용자';
@@ -72,9 +70,7 @@ function formatUserDisplayLabel(user) {
     if (!user) return '비로그인';
     const batch = user.batch ? `${user.batch}` : '';
     const rawName = user.name || user.displayName || user.email?.split('@')[0] || '';
-    const isLegacyRealNameAccount = (rawName === '정준영' || rawName === 'junyung' || rawName === 'Junyoung') && batch === '43기';
-    const isLegacyTestAccount = (rawName === '테스트' || rawName === 'test' || rawName === 'Test') && batch === '43기';
-    const displayName = isLegacyTestAccount ? '정준영' : isLegacyRealNameAccount ? '테스트' : rawName;
+    const displayName = rawName;
     const role = getRoleLabel(user.role);
     if (batch && displayName) return `${batch} ${displayName} (${role})`;
     if (displayName) return `${displayName} (${role})`;
@@ -224,9 +220,9 @@ function applyUserSessionUI(user) {
     const adminMenu = document.getElementById('admin-menu');
     const mobileAdminMenu = document.getElementById('mobile-admin-menu');
     const pinHeader = document.getElementById('th-pin-header');
-    if (adminMenu) adminMenu.style.display = user.role === 'admin' ? 'block' : 'none';
-    if (mobileAdminMenu) mobileAdminMenu.style.display = user.role === 'admin' ? 'block' : 'none';
-    if (pinHeader) pinHeader.style.display = user.role === 'admin' ? 'table-cell' : 'none';
+    if (adminMenu) adminMenu.style.display = normalizedUser?.role === 'admin' ? 'block' : 'none';
+    if (mobileAdminMenu) mobileAdminMenu.style.display = normalizedUser?.role === 'admin' ? 'block' : 'none';
+    if (pinHeader) pinHeader.style.display = normalizedUser?.role === 'admin' ? 'table-cell' : 'none';
 
     renderNotices();
 
