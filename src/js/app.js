@@ -660,6 +660,7 @@ async function addFaqQuestion() {
         title,
         content,
         authorName: loggedInUser.name,
+        authorBatch: loggedInUser.batch,
         authorRole: loggedInUser.role,
         authorId: firebaseAuth.currentUser?.uid,
         date,
@@ -1113,7 +1114,7 @@ function renderAdminUserConsole() {
             selectTd.appendChild(confirmBtn);
 
             const actionTd = document.createElement('td');
-            actionTd.style.textAlign = 'center';
+            actionTd.style.textAlign = 'left';
             const warnBtn = document.createElement('button');
             warnBtn.type = 'button';
             warnBtn.className = 'btn-mini btn-warn';
