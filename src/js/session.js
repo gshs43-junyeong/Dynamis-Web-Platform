@@ -3,6 +3,7 @@ import { formatUserIdentityLabel, formatUserDisplayLabel } from './utils.js';
 import { BASE_PATH, renderRoute, navigateTo } from './router.js';
 import { renderNotices } from './notice.js';
 import { renderAdminUserConsole } from './admin.js';
+import { verifyClock } from './clock.js';
 
 // 로그인 상태 변화(auth 콜백)에 따라 화면 전체의 세션 의존 UI를 갱신한다.
 export function applyUserSessionUI(user) {
@@ -26,6 +27,8 @@ export function applyUserSessionUI(user) {
 
     const noticeWriteBox = document.getElementById('notice-write-box');
     const fileUploadContainer = document.getElementById('file-upload-container');
+    const eventWriteBox = document.getElementById('event-write-box');
+    const eventFileUploadContainer = document.getElementById('event-file-upload-container');
     const faqWriteBox = document.getElementById('faq-write-box');
     const faqWriteGuestMessage = document.getElementById('faq-write-guest-message');
     const faqWriteForm = document.getElementById('faq-write-form');
@@ -34,6 +37,12 @@ export function applyUserSessionUI(user) {
     }
     if (fileUploadContainer) {
         fileUploadContainer.style.display = normalizedUser?.role === 'honored' ? 'none' : 'block';
+    }
+    if (eventWriteBox) {
+        eventWriteBox.style.display = ['admin', 'member', 'honored'].includes(normalizedUser?.role) ? 'block' : 'none';
+    }
+    if (eventFileUploadContainer) {
+        eventFileUploadContainer.style.display = normalizedUser?.role === 'honored' ? 'none' : 'block';
     }
     if (faqWriteBox) {
         faqWriteBox.style.display = 'block';
@@ -60,4 +69,7 @@ export function applyUserSessionUI(user) {
     } else {
         renderRoute();
     }
+
+    // 로그인 상태가 바뀔 때마다 기기 시계 오차를 확인 (이벤트 타이머 신뢰성용).
+    verifyClock();
 }

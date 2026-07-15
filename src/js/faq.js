@@ -11,11 +11,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength } from './utils.js';
 import { loggedInUser } from './state.js';
+import { renderLikeWidget } from './likes.js';
 
 let faqs = [];
 let displayFaqsGlobal = [];
 let currentFaqDocId = null;
 let faqAnswersSnapshotListener = null;
+let faqLikeUnsub = null;
 let currentFaqPage = 1;
 
 export async function addFaqQuestion() {
@@ -184,6 +186,9 @@ function viewFaq(index) {
     if (answerWriteContainer) answerWriteContainer.style.display = canAnswer ? 'block' : 'none';
     if (answerGuestMessage) answerGuestMessage.style.display = canAnswer ? 'none' : 'block';
 
+    if (faqLikeUnsub) { faqLikeUnsub(); faqLikeUnsub = null; }
+    faqLikeUnsub = renderLikeWidget(document.getElementById('faq-like-mount'), ['faqs', faq.docId]);
+
     if (faqAnswersSnapshotListener) faqAnswersSnapshotListener();
     faqAnswersSnapshotListener = onSnapshot(
         query(collection(doc(db, 'faqs', faq.docId), 'answers'), orderBy('timestamp', 'asc')),
@@ -268,6 +273,7 @@ export function closeFaq() {
     const faqModal = document.getElementById('faq-modal');
     if (faqModal) faqModal.style.display = 'none';
     if (faqAnswersSnapshotListener) faqAnswersSnapshotListener();
+    if (faqLikeUnsub) { faqLikeUnsub(); faqLikeUnsub = null; }
 }
 
 export function listenFaqs() {

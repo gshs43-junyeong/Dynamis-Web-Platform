@@ -29,6 +29,7 @@
             <ul>
                 <li><a onclick="navigateTo('/home')" id="nav-home" class="active">Home</a></li>
                 <li><a onclick="navigateTo('/notice')" id="nav-notice">Notice</a></li>
+                <li><a onclick="navigateTo('/event')" id="nav-event">Event</a></li>
                 <li><a onclick="navigateTo('/faq')" id="nav-faq">FAQ</a></li>
                 <li><a onclick="navigateTo('/members')" id="nav-members">Members</a></li>
                 <li><a onclick="handleAuthNavClick()" id="nav-login">Login</a></li>
@@ -45,6 +46,7 @@
     <div class="mobile-nav" id="mobile-nav">
         <a onclick="navigateTo('/home'); closeMobileMenu()" id="mobile-nav-home" class="active">Home</a>
         <a onclick="navigateTo('/notice'); closeMobileMenu()" id="mobile-nav-notice">Notice</a>
+        <a onclick="navigateTo('/event'); closeMobileMenu()" id="mobile-nav-event">Event</a>
         <a onclick="navigateTo('/faq'); closeMobileMenu()" id="mobile-nav-faq">FAQ</a>
         <a onclick="navigateTo('/members'); closeMobileMenu()" id="mobile-nav-members">Members</a>
         <a onclick="handleAuthNavClick(); closeMobileMenu()" id="mobile-nav-login">Login</a>
@@ -53,6 +55,7 @@
 
     <main>
         <div id="auth-status-banner" class="auth-status-banner" role="status" aria-live="polite"></div>
+        <div id="clock-warning-banner" class="clock-warning-banner" role="alert" style="display: none;"></div>
         <section id="home" class="section active">
             <div class="bg-blob bg-blob-1"></div>
             <div class="bg-blob bg-blob-2"></div>
@@ -149,6 +152,42 @@
                 <tbody id="notice-list"></tbody>
             </table>
             <div id="pagination-controls" class="pagination"></div>
+        </section>
+
+        <section id="event" class="section">
+            <h2 style="margin-bottom: 0.5rem;">Event</h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 2rem;">Dynamis에서 주최하는 행사 안내입니다. 마감 기한이 지나면 내용을 확인할 수 없습니다.</p>
+
+            <div id="event-write-box" class="admin-write" style="display: none;">
+                <h3>새 이벤트 작성</h3>
+                <input type="text" id="event-post-title" placeholder="행사 제목">
+                <textarea id="event-post-content" placeholder="행사 내용을 입력하세요... (최대 2000바이트 제한)"></textarea>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.9rem;">마감 기한 (이 시각이 지나면 열람 불가)</label>
+                    <input type="datetime-local" id="event-deadline-input" style="padding: 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); color: white; border-radius: 4px; width: 100%; max-width: 320px;">
+                </div>
+
+                <div id="event-file-upload-container" style="margin-bottom: 1rem;">
+                    <label style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.9rem;">파일 첨부 (명예부원은 첨부 불가 / 일일 업로드 제한 2MB)</label>
+                    <input type="file" id="event-post-file" multiple style="padding: 0.5rem; background: transparent; border: 1px dashed var(--border-color); width: 100%;">
+                </div>
+
+                <button class="btn" onclick="addEvent()">게시하기</button>
+            </div>
+
+            <table class="notice-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">제목</th>
+                        <th style="width: 25%;">작성자 (등급)</th>
+                        <th style="width: 20%;">마감까지</th>
+                        <th style="width: 15%;">등록일</th>
+                    </tr>
+                </thead>
+                <tbody id="event-list"></tbody>
+            </table>
+            <div id="event-pagination-controls" class="pagination"></div>
         </section>
 
         <section id="faq" class="section">
@@ -389,6 +428,7 @@
                 <span id="modal-author" style="font-size: 0.95rem; color: #fff; font-weight: 600; margin-right: 15px;"></span>
                 <span id="modal-date" style="font-size: 0.9rem; color: var(--text-secondary);"></span>
             </div>
+            <div id="notice-like-mount" class="like-mount"></div>
             <div style="width: 100%; height: 1px; background: var(--border-color); margin: 1rem 0;"></div>
             <p id="modal-text" style="line-height: 1.8; white-space: pre-wrap; font-size: 1.05rem;"></p>
             <div id="modal-file-box" style="margin-top: 1.5rem; padding: 0.8rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; display: none;">
@@ -412,6 +452,41 @@
         </div>
     </div>
 
+    <div id="event-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeEvent()">&times;</span>
+            <h2 id="event-modal-title" style="margin-bottom: 0.5rem; padding-right: 30px;"></h2>
+            <div style="margin-bottom: 0.5rem;">
+                <span id="event-modal-author" style="font-size: 0.95rem; color: #fff; font-weight: 600; margin-right: 15px;"></span>
+                <span id="event-modal-date" style="font-size: 0.9rem; color: var(--text-secondary);"></span>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <span id="event-modal-deadline" class="event-modal-deadline"></span>
+            </div>
+            <div id="event-like-mount" class="like-mount"></div>
+            <div style="width: 100%; height: 1px; background: var(--border-color); margin: 1rem 0;"></div>
+            <p id="event-modal-text" style="line-height: 1.8; white-space: pre-wrap; font-size: 1.05rem;"></p>
+            <div id="event-modal-file-box" style="margin-top: 1.5rem; padding: 0.8rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; display: none;">
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight:bold;">📁 첨부파일 목록</p>
+                <div id="event-modal-file-list"></div>
+            </div>
+            <button id="event-modal-delete-btn" class="btn" style="background: #cc3333; color: white; width: auto; margin-top: 1.5rem; display: none;" onclick="deleteCurrentEvent()">이벤트 삭제</button>
+            <div class="comment-box">
+                <h4 style="margin-bottom: 1rem; font-size: 1.2rem;">댓글 목록</h4>
+                <div id="event-comment-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;"></div>
+                <div id="event-comment-write-container" style="display: none;">
+                    <textarea id="event-comment-input" placeholder="댓글을 입력하세요. (1회 500바이트 이내, 하루 최대 10회 제한. 남을 비방하거나 부적절한 댓글을 달 경우 경고 또는 계정 삭제 조치가 이루어질 수 있습니다.)" style="width:100%; height:70px; background:var(--bg-primary); border:1px solid var(--border-color); color:white; padding:0.8rem; border-radius:4px; resize:none; font-size:0.95rem;"></textarea>
+                    <div style="text-align: right; margin-top: 0.5rem;">
+                        <button class="btn" style="width: auto; padding: 0.6rem 1.5rem; font-size: 0.9rem;" onclick="addEventComment()">댓글 등록</button>
+                    </div>
+                </div>
+                <div id="event-comment-guest-message" style="color: var(--text-secondary); font-style: italic; font-size: 0.9rem; text-align: center;">
+                    💡 로그인한 상태에서만 댓글 작성이 가능합니다.
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="faq-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeFaq()">&times;</span>
@@ -420,6 +495,7 @@
                 <span id="faq-modal-author" style="font-size: 0.95rem; color: #fff; font-weight: 600; margin-right: 15px;"></span>
                 <span id="faq-modal-date" style="font-size: 0.9rem; color: var(--text-secondary);"></span>
             </div>
+            <div id="faq-like-mount" class="like-mount"></div>
             <div style="width: 100%; height: 1px; background: var(--border-color); margin: 1rem 0;"></div>
             <p id="faq-modal-text" style="line-height: 1.8; white-space: pre-wrap; font-size: 1.05rem;"></p>
             <div class="comment-box">

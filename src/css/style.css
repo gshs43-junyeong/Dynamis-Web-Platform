@@ -305,3 +305,21 @@ body.menu-open {
 /* 3. 모달창 다중 첨부파일 다운로드 링크 (선택 사항) */
 .file-item-link { display: block; padding: 0.5rem; background: rgba(255,255,255,0.05); margin-bottom: 0.5rem; border-radius: 4px; color: #fff; text-decoration: none; font-size: 0.9rem; transition: 0.2s; }
 .file-item-link:hover { background: rgba(255,255,255,0.1); }
+
+/* 4. 기기 시계 오차 경고 배너 */
+.clock-warning-banner { margin-bottom: 1.25rem; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid rgba(255, 170, 0, 0.4); background: rgba(255, 170, 0, 0.12); color: #ffe6b0; font-size: 0.95rem; line-height: 1.5; }
+
+/* 5. 이벤트 마감 타이머 */
+.event-timer-cell { color: #7fd1a1; font-weight: 600; }
+.event-timer-expired { color: #ff6b6b !important; font-weight: 700; }
+.event-modal-deadline { font-size: 0.95rem; color: #7fd1a1; font-weight: 600; }
+
+/* 6. 좋아요(하트) 위젯 - 상세 화면 전용 */
+.like-mount { margin: 0.25rem 0 0.5rem; }
+.member-detail-like { margin-top: 0.75rem; }
+.like-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+.like-btn:hover:not(:disabled) { background: rgba(255, 92, 122, 0.15); border-color: rgba(255, 92, 122, 0.5); }
+.like-btn.liked { background: rgba(255, 92, 122, 0.12); border-color: rgba(255, 92, 122, 0.45); }
+.like-btn:disabled { cursor: default; opacity: 0.9; }
+.like-heart { font-size: 1.05rem; line-height: 1; }
+.like-count { font-variant-numeric: tabular-nums; }
