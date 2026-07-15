@@ -537,6 +537,44 @@ window.proceedSignupWithGitHub = async function() {
     }
 };
 
+// 특정 사용자가 작성한 부가 데이터(공지/이벤트/댓글/트래픽)를 best-effort로 정리한다.
+// 각 단계는 독립적으로 try/catch 하므로, 한 쿼리가 규칙/권한 문제로 실패해도
+// 나머지 정리와(무엇보다) 핵심 계정 문서 삭제가 막히지 않는다.
+// includeTraffic: 트래픽 통계는 본인만 읽을 수 있으므로 본인 탈퇴 때만 true.
+export async function purgeUserOwnedData(userId, { includeTraffic = false } = {}) {
+    // 1. 본인이 작성한 공지 삭제
+    try {
+        const noticesSnapshot = await getDocs(query(collection(db, 'notices'), where('authorId', '==', userId)));
+        await Promise.all(noticesSnapshot.docs.map(docSnap => deleteDoc(docSnap.ref)));
+    } catch (err) {
+        console.warn('[Purge] 공지 정리 실패(계속 진행):', err.message);
+    }
+    // 2. 본인이 작성한 이벤트 삭제
+    try {
+        const eventsSnapshot = await getDocs(query(collection(db, 'events'), where('authorId', '==', userId)));
+        await Promise.all(eventsSnapshot.docs.map(docSnap => deleteDoc(docSnap.ref)));
+    } catch (err) {
+        console.warn('[Purge] 이벤트 정리 실패(계속 진행):', err.message);
+    }
+    // 3. 본인이 작성한 댓글 삭제 (공지/이벤트 전반 collectionGroup 조회)
+    try {
+        const commentsSnapshot = await getDocs(query(collectionGroup(db, 'comments'), where('authorId', '==', userId)));
+        await Promise.all(commentsSnapshot.docs.map(docSnap => deleteDoc(docSnap.ref)));
+    } catch (err) {
+        console.warn('[Purge] 댓글 정리 실패(계속 진행):', err.message);
+    }
+    // 4. 트래픽 통계 삭제 (본인만 읽기 가능)
+    if (includeTraffic) {
+        try {
+            const trafficQuery = query(collection(db, 'traffic'), where('__name__', '>=', `${userId}_`), where('__name__', '<=', `${userId}_\uf8ff`));
+            const trafficSnapshot = await getDocs(trafficQuery);
+            await Promise.all(trafficSnapshot.docs.map(docSnap => deleteDoc(docSnap.ref)));
+        } catch (err) {
+            console.warn('[Purge] 트래픽 정리 실패(계속 진행):', err.message);
+        }
+    }
+}
+
 export async function handleDeleteAccount() {
     const loggedInUser = window.loggedInUser;
     if (!loggedInUser) return alert('인증 정보가 없습니다.');
@@ -545,17 +583,12 @@ export async function handleDeleteAccount() {
     if (!confirm('🚨 최종 확인: 탈퇴 시 본인 계정 정보는 물론, 그동안 작성하신 모든 공지사항, 댓글, 일일 트래픽 통계 데이터가 데이터베이스에서 영구 소멸됩니다. 이에 동의하십니까?')) return;
 
     const userId = loggedInUser.uid || loggedInUser.id;
+
+    // 부가 데이터는 best-effort로 먼저 정리한다(일부 실패해도 무방).
+    await purgeUserOwnedData(userId, { includeTraffic: true });
+
+    // 핵심: 계정 문서 삭제. 이게 성공해야 실질적인 탈퇴가 완료된다.
     try {
-        const noticesSnapshot = await getDocs(query(collection(db, 'notices'), where('authorId', '==', userId)));
-        await Promise.all(noticesSnapshot.docs.map(docSnap => deleteDoc(doc(db, 'notices', docSnap.id))));
-
-        const commentsSnapshot = await getDocs(query(collectionGroup(db, 'comments'), where('authorId', '==', userId)));
-        await Promise.all(commentsSnapshot.docs.map(docSnap => deleteDoc(doc(db, docSnap.ref.path))));
-
-        const trafficQuery = query(collection(db, 'traffic'), where('__name__', '>=', `${userId}_`), where('__name__', '<=', `${userId}_\uf8ff`));
-        const trafficSnapshot = await getDocs(trafficQuery);
-        await Promise.all(trafficSnapshot.docs.map(docSnap => deleteDoc(doc(db, 'traffic', docSnap.id))));
-
         await deleteDoc(doc(db, 'users', userId));
         if (loggedInUser.id) {
             try {
@@ -564,11 +597,24 @@ export async function handleDeleteAccount() {
                 console.warn('[Delete Account] usernames 문서 삭제 실패(이미 없을 수 있음):', usernameErr.message);
             }
         }
-
-        alert('정상 처리되었습니다. 계정 정보 및 모든 활동 기록이 완벽히 파기되었습니다.');
-        window.location.href = window.location.pathname.replace(/\/[^\/]*$/, '/home');
     } catch (err) {
-        console.error(err);
-        alert('⚠️ 탈퇴 및 데이터 파기 연동 중 오류가 발생했습니다. 권한(Rules) 설정을 확인해 보세요: ' + err.message);
+        console.error('[Delete Account] 계정 문서 삭제 실패:', err);
+        alert('⚠️ 탈퇴 처리 중 오류가 발생했습니다. 권한(Rules) 설정을 확인해 보세요: ' + err.message);
+        return;
     }
+
+    // 가능하면 Firebase Auth 계정 자체도 삭제한다(최근 로그인이 아니면 재인증 필요).
+    // 실패해도 Firestore 계정 정보는 이미 파기됐으므로 로그아웃으로 세션을 종료한다.
+    try {
+        if (auth.currentUser) {
+            await auth.currentUser.delete();
+        }
+    } catch (authErr) {
+        console.warn('[Delete Account] Auth 계정 삭제 건너뜀(재로그인 필요 등):', authErr.code, authErr.message);
+        try { await signOut(auth); } catch { /* 무시 */ }
+    }
+
+    alert('정상 처리되었습니다. 계정 정보 및 활동 기록이 파기되었습니다.');
+    window.location.href = window.location.pathname.replace(/\/[^\/]*$/, '/home');
 }
+

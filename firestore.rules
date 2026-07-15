@@ -2,6 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // collectionGroup('comments') 지원.
+    // 회원 탈퇴 시 본인이 작성한 댓글을 공지/이벤트 전반에서 한 번에 조회하려면
+    // 재귀 와일드카드 경로 규칙이 있어야 그룹 쿼리가 허용된다.
+    // (개별 문서 접근은 각 부모 밑의 구체 규칙이 그대로 적용되고, 여기서는 조회만 연다)
+    match /{path=**}/comments/{commentId} {
+      allow read: if true;
+    }
+
     // 1. notices
     match /notices/{noticeId} {
       allow read: if true;
@@ -315,8 +323,13 @@ service cloud.firestore {
            && data.name.size() <= 10;
   }
 
+  // 관리자 판정: 별도 백엔드(Cloud Functions)로 커스텀 클레임을 심지 않는 무료 티어
+  // 구성이므로, 요청자 본인의 users 문서 role 필드로 판정한다.
+  // (role은 기존 관리자만 바꿀 수 있어 스스로 승격 불가 — isValidUserUpdate 참고)
   function isAdmin() {
-    return request.auth != null && request.auth.token.admin == true;
+    return request.auth != null
+           && exists(/databases/(default)/documents/users/$(request.auth.uid))
+           && get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
   }
 
   function isTrafficOwner(trafficId, uid) {

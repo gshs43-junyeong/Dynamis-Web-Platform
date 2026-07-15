@@ -11,6 +11,15 @@ import { renderLikeWidget } from './likes.js';
 
 let selectedMemberData = null;
 let memberLikeUnsub = null;
+// 목록 버튼마다 붙는 하트 위젯의 구독 해제 함수들. 목록을 다시 그릴 때 모두 정리한다.
+let memberButtonLikeUnsubs = [];
+
+function clearMemberButtonLikeWidgets() {
+    memberButtonLikeUnsubs.forEach((fn) => {
+        try { fn(); } catch { /* 이미 해제됨 */ }
+    });
+    memberButtonLikeUnsubs = [];
+}
 
 function getMemberKey(member) {
     return member?.docId || member?.uid || member?.id || '';
@@ -126,6 +135,8 @@ export function listenMembersSection() {
         const gAdmin = document.getElementById('group-admin');
         const gMember = document.getElementById('group-member');
         const gHonored = document.getElementById('group-honored');
+        // 목록을 새로 그리기 전에 이전 버튼 하트 위젯 구독을 모두 해제 (누수 방지).
+        clearMemberButtonLikeWidgets();
         if (gAdmin) gAdmin.innerHTML = '';
         if (gMember) gMember.innerHTML = '';
         if (gHonored) gHonored.innerHTML = '';
@@ -144,20 +155,37 @@ export function listenMembersSection() {
             }
             seenMemberIdentityKeys.add(identityKey);
             members.push(u);
+
+            // 카드 = 선택 버튼 + 하트 위젯. (버튼 안에 버튼을 넣을 수 없어 형제로 배치)
+            const card = document.createElement('div');
+            card.className = 'member-option-card';
+
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'member-option-btn';
             button.dataset.memberKey = getMemberKey(u);
             button.textContent = formatUserIdentityLabel(u);
             button.addEventListener('click', () => handleMemberSelection(u));
+            card.appendChild(button);
+
+            // 목록 버튼의 하트: 상세 패널과 같은 users/{uid}/likes 를 구독하므로
+            // 어느 쪽에서 눌러도 개수가 양쪽 모두 실시간으로 동시 반영된다.
+            const likeMount = document.createElement('div');
+            likeMount.className = 'member-option-like';
+            card.appendChild(likeMount);
+            const memberKey = getMemberKey(u);
+            if (memberKey) {
+                memberButtonLikeUnsubs.push(renderLikeWidget(likeMount, ['users', memberKey]));
+            }
+
             if (u.role === 'admin') {
-                gAdmin?.appendChild(button);
+                gAdmin?.appendChild(card);
                 hasAdmin = true;
             } else if (u.role === 'member') {
-                gMember?.appendChild(button);
+                gMember?.appendChild(card);
                 hasMember = true;
             } else if (u.role === 'honored') {
-                gHonored?.appendChild(button);
+                gHonored?.appendChild(card);
                 hasHonored = true;
             }
         });

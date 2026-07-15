@@ -11,6 +11,7 @@ import {
 import { getRoleLabel } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { applyUserSessionUI } from './session.js';
+import { purgeUserOwnedData } from './auth.js';
 
 let latestUsersSnapshotDocs = null;
 
@@ -109,7 +110,7 @@ export function renderAdminUserConsole() {
             deleteBtn.type = 'button';
             deleteBtn.className = 'btn-mini btn-del';
             deleteBtn.textContent = '계정 삭제';
-            deleteBtn.addEventListener('click', () => deleteUserByAdmin(u.uid));
+            deleteBtn.addEventListener('click', () => deleteUserByAdmin(u.uid, u.id));
 
             actionTd.appendChild(warnBtn);
             actionTd.appendChild(deleteBtn);
@@ -161,12 +162,26 @@ export async function warnUser(userId) {
     }
 }
 
-export async function deleteUserByAdmin(userId) {
+export async function deleteUserByAdmin(userId, usernameId) {
     if (!ensureAdminAction()) return;
     if (!confirm('⚠️ 이 유저를 강제 탈퇴시키겠습니까? 삭제한 이후 복구가 불가합니다.')) return;
+
+    // 대상이 작성한 부가 데이터(공지/이벤트/댓글)를 best-effort로 정리한다.
+    // (트래픽 통계는 규칙상 본인만 읽을 수 있어 관리자가 지울 수 없으므로 제외)
+    await purgeUserOwnedData(userId, { includeTraffic: false });
+
     try {
+        // 관리자 권한으로 토큰을 새로 발급(role 반영) 후 삭제.
+        await firebaseAuth.currentUser?.getIdToken(true);
         await deleteDoc(doc(db, 'users', userId));
-        alert('계정 삭제를 완료했습니다.');
+        if (usernameId) {
+            try {
+                await deleteDoc(doc(db, 'usernames', usernameId));
+            } catch (unameErr) {
+                console.warn('[Admin] usernames 문서 삭제 실패(이미 없을 수 있음):', unameErr.message);
+            }
+        }
+        alert('계정 삭제를 완료했습니다. (해당 사용자의 Firebase 로그인 계정 자체는 관리자가 지울 수 없어, 본인이 재로그인하면 미가입 상태로 처리됩니다.)');
     } catch (err) {
         alert('계정 삭제에 실패했습니다: ' + err.message);
     }
