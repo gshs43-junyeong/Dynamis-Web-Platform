@@ -50,7 +50,7 @@ dynamis-platform/
 │       ├── auth.js            # ID 필터 검증, 로그인 유지 및 연쇄 회원 탈퇴 로직
 │       └── traffic.js         # DDoS 방어 일일 트래픽 측정 및 실시간 가산 트랜잭션
 ├── index.html                 # 단일 메인 인덱스 파일 (라우팅 복원 스크립트 내장)
-├── .gitignore                 # 단일 메인 인덱스 파일 (라우팅 복원 스크립트 내장)
+├── .gitignore                 # Admin의 다른 계정 접근 권한 우회
 ├── package.json               # 빌드 스크립트 및 디펜던시 정의 메타 데이터 파일
 ├── vite.config.js             # 깃허브 Pages 배포 경로 조정을 위한 Vite 설정 파일
 └── vercel.json                # 모든 경로 요청을 index.html로 연결
