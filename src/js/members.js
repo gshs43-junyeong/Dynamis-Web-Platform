@@ -7,8 +7,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { formatUserIdentityLabel, getRoleLabel } from './utils.js';
 import { loggedInUser } from './state.js';
+import { renderLikeWidget } from './likes.js';
 
 let selectedMemberData = null;
+let memberLikeUnsub = null;
 
 function getMemberKey(member) {
     return member?.docId || member?.uid || member?.id || '';
@@ -25,6 +27,8 @@ function syncMemberSelectionHighlight() {
 function renderMemberDetailPanel(member) {
     const panel = document.getElementById('member-detail-panel');
     if (!panel) return;
+
+    if (memberLikeUnsub) { memberLikeUnsub(); memberLikeUnsub = null; }
 
     if (!member) {
         panel.innerHTML = '<p style="color: var(--text-secondary);">멤버를 선택하면 설명을 확인할 수 있습니다.</p>';
@@ -50,7 +54,16 @@ function renderMemberDetailPanel(member) {
     role.textContent = getRoleLabel(member?.role);
     header.appendChild(role);
 
+    const likeMount = document.createElement('div');
+    likeMount.className = 'member-detail-like';
+    header.appendChild(likeMount);
+
     panel.appendChild(header);
+
+    const memberKey = member.docId || member.uid || member.id;
+    if (memberKey) {
+        memberLikeUnsub = renderLikeWidget(likeMount, ['users', memberKey]);
+    }
 
     const body = document.createElement('div');
     body.className = 'member-detail-body';

@@ -12,11 +12,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
+import { renderLikeWidget } from './likes.js';
 
 let notices = [];
 let displayNoticesGlobal = [];
 let currentNoticeDocId = null;
 let commentsSnapshotListener = null;
+let noticeLikeUnsub = null;
 let currentPage = 1;
 
 export async function addNotice() {
@@ -253,6 +255,9 @@ export function viewNotice(index) {
 
     if (modalDeleteBtn) modalDeleteBtn.style.display = (loggedInUser && loggedInUser.role === 'admin') ? 'block' : 'none';
 
+    if (noticeLikeUnsub) { noticeLikeUnsub(); noticeLikeUnsub = null; }
+    noticeLikeUnsub = renderLikeWidget(document.getElementById('notice-like-mount'), ['notices', n.docId]);
+
     if (fileListContainer) fileListContainer.innerHTML = '';
     const filesToRender = n.files || [];
 
@@ -409,6 +414,7 @@ export function closeNotice() {
     const noticeModal = document.getElementById('notice-modal');
     if (noticeModal) noticeModal.style.display = 'none';
     if (commentsSnapshotListener) commentsSnapshotListener();
+    if (noticeLikeUnsub) { noticeLikeUnsub(); noticeLikeUnsub = null; }
 }
 
 export function listenNotices() {

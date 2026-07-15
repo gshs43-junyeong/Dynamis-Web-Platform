@@ -12,6 +12,7 @@ function showSection(id) {
     const navId = {
         home: 'nav-home',
         notice: 'nav-notice',
+        event: 'nav-event',
         faq: 'nav-faq',
         members: 'nav-members',
         admin: 'nav-admin',
@@ -22,6 +23,7 @@ function showSection(id) {
     const mobileNavId = {
         home: 'mobile-nav-home',
         notice: 'mobile-nav-notice',
+        event: 'mobile-nav-event',
         faq: 'mobile-nav-faq',
         members: 'mobile-nav-members',
         admin: 'mobile-nav-admin',
@@ -37,6 +39,7 @@ function showSection(id) {
 const ROUTES = {
     '/home': { section: 'home' },
     '/notice': { section: 'notice' },
+    '/event': { section: 'event' },
     '/faq': { section: 'faq' },
     '/members': { section: 'members' },
     '/login': { section: 'login', guestOnly: true },
