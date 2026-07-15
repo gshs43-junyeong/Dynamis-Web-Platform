@@ -10,7 +10,7 @@
  (https://img.shields.io/badge/Language-HTML5%20%2F%20CSS3%20%2F%20Vanilla%20JS-F05340?style=flat-square)](https://github.com)
  ![Vite](https://img.shields.io/badge/Bundler-Vite-646CFF?style=flat-square&logo=vite)
  ![Firebase](https://img.shields.io/badge/Database-Firebase%20Firestore-FFCA28?style=flat-square&logo=firebase)
- ![App Check](https://img.shields.io/badge/Security-App%20Check%20reCAPTCHA%20v3-4285F4?style=flat-square&logo=google)
+ ![App Check](https://img.shields.io/badge/Security-App%20Check%20reCAPTCHA%20Enterprise-4285F4?style=flat-square&logo=google)
  ![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square)
 </div>
 
