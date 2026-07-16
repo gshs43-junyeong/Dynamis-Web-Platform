@@ -53,19 +53,26 @@ function renderMemberDetailPanel(member) {
     const header = document.createElement('div');
     header.className = 'member-detail-header';
 
+    // 이름 + 하트를 한 줄로 묶어 좌측에 배치.
+    const nameRow = document.createElement('div');
+    nameRow.className = 'member-detail-name-row';
+
     const title = document.createElement('h4');
     title.className = 'member-detail-title';
     title.textContent = formatUserIdentityLabel(member);
-    header.appendChild(title);
+    nameRow.appendChild(title);
 
+    const likeMount = document.createElement('div');
+    likeMount.className = 'member-detail-like';
+    nameRow.appendChild(likeMount);
+
+    header.appendChild(nameRow);
+
+    // 역할은 박스 우측 상단에 배치.
     const role = document.createElement('p');
     role.className = 'member-detail-role';
     role.textContent = getRoleLabel(member?.role);
     header.appendChild(role);
-
-    const likeMount = document.createElement('div');
-    likeMount.className = 'member-detail-like';
-    header.appendChild(likeMount);
 
     panel.appendChild(header);
 
