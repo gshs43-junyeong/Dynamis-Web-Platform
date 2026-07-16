@@ -122,17 +122,18 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 .member-group { margin-bottom: 2.5rem; }
 .member-group h4 { font-size: 1.3rem; margin-bottom: 1rem; color: #fff; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-color); }
 .member-ul { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
-.member-option-card { display: flex; flex-direction: column; gap: 0.5rem; }
-.member-option-like { display: flex; justify-content: center; }
-.member-option-like .like-btn { padding: 4px 12px; font-size: 0.85rem; }
-.member-option-btn { width: 100%; background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); font-weight: 500; text-align: center; color: var(--text-primary); cursor: pointer; transition: 0.2s ease; }
+.member-option-name { flex: 1; text-align: center; }
+.member-option-like { display: flex; align-items: center; flex: 0 0 auto; }
+.member-option-like .like-btn { padding: 3px 10px; font-size: 0.8rem; }
+.member-option-btn { display: flex; align-items: center; gap: 0.5rem; width: 100%; background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); font-weight: 500; color: var(--text-primary); cursor: pointer; transition: 0.2s ease; }
 .member-option-btn:hover { background: rgba(255,255,255,0.08); }
 .member-option-btn.active { border-color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); }
 .member-detail-panel { margin-top: 1.5rem; padding: 1.25rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); }
-.member-detail-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
+.member-detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; }
+.member-detail-name-row { display: flex; align-items: center; gap: 0.6rem; }
 .member-detail-panel > p:first-child { text-align: center; }
 .member-detail-title { font-size: 1.05rem; color: #fff; }
-.member-detail-role { color: var(--text-secondary); font-size: 0.9rem; }
+.member-detail-role { color: var(--text-secondary); font-size: 0.9rem; flex: 0 0 auto; }
 .member-detail-description { color: var(--text-secondary); line-height: 1.7; white-space: pre-wrap; }
 .member-edit-box { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
 .member-edit-textarea { width: 100%; min-height: 100px; padding: 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); resize: vertical; }

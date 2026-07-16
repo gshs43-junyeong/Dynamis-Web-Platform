@@ -53,19 +53,26 @@ function renderMemberDetailPanel(member) {
     const header = document.createElement('div');
     header.className = 'member-detail-header';
 
+    // 이름 + 하트를 한 줄로 묶어 좌측에 배치.
+    const nameRow = document.createElement('div');
+    nameRow.className = 'member-detail-name-row';
+
     const title = document.createElement('h4');
     title.className = 'member-detail-title';
     title.textContent = formatUserIdentityLabel(member);
-    header.appendChild(title);
+    nameRow.appendChild(title);
 
+    const likeMount = document.createElement('div');
+    likeMount.className = 'member-detail-like';
+    nameRow.appendChild(likeMount);
+
+    header.appendChild(nameRow);
+
+    // 역할은 박스 우측 상단에 배치.
     const role = document.createElement('p');
     role.className = 'member-detail-role';
     role.textContent = getRoleLabel(member?.role);
     header.appendChild(role);
-
-    const likeMount = document.createElement('div');
-    likeMount.className = 'member-detail-like';
-    header.appendChild(likeMount);
 
     panel.appendChild(header);
 
@@ -156,36 +163,44 @@ export function listenMembersSection() {
             seenMemberIdentityKeys.add(identityKey);
             members.push(u);
 
-            // 카드 = 선택 버튼 + 하트 위젯. (버튼 안에 버튼을 넣을 수 없어 형제로 배치)
-            const card = document.createElement('div');
-            card.className = 'member-option-card';
-
-            const button = document.createElement('button');
-            button.type = 'button';
+            // 버튼 내부 구성: [이름] .... [하트]
+            // 버튼 안에 버튼(하트)을 넣을 수 없어, 선택 요소는 div(role=button)로 만들고
+            // 하트만 실제 button으로 둔다.
+            const memberKey = getMemberKey(u);
+            const button = document.createElement('div');
             button.className = 'member-option-btn';
-            button.dataset.memberKey = getMemberKey(u);
-            button.textContent = formatUserIdentityLabel(u);
+            button.setAttribute('role', 'button');
+            button.tabIndex = 0;
+            button.dataset.memberKey = memberKey;
             button.addEventListener('click', () => handleMemberSelection(u));
-            card.appendChild(button);
+            button.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMemberSelection(u); }
+            });
 
-            // 목록 버튼의 하트: 상세 패널과 같은 users/{uid}/likes 를 구독하므로
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'member-option-name';
+            nameSpan.textContent = formatUserIdentityLabel(u);
+            button.appendChild(nameSpan);
+
+            // 이름 오른쪽 하트: 상세 패널과 같은 users/{uid}/likes 를 구독하므로
             // 어느 쪽에서 눌러도 개수가 양쪽 모두 실시간으로 동시 반영된다.
             const likeMount = document.createElement('div');
             likeMount.className = 'member-option-like';
-            card.appendChild(likeMount);
-            const memberKey = getMemberKey(u);
+            // 하트 클릭이 카드 선택으로 번지지 않도록 차단.
+            likeMount.addEventListener('click', (e) => e.stopPropagation());
+            button.appendChild(likeMount);
             if (memberKey) {
                 memberButtonLikeUnsubs.push(renderLikeWidget(likeMount, ['users', memberKey]));
             }
 
             if (u.role === 'admin') {
-                gAdmin?.appendChild(card);
+                gAdmin?.appendChild(button);
                 hasAdmin = true;
             } else if (u.role === 'member') {
-                gMember?.appendChild(card);
+                gMember?.appendChild(button);
                 hasMember = true;
             } else if (u.role === 'honored') {
-                gHonored?.appendChild(card);
+                gHonored?.appendChild(button);
                 hasHonored = true;
             }
         });
