@@ -65,6 +65,13 @@ function isProviderNotAllowedError(err) {
     return err?.code === 'auth/operation-not-allowed';
 }
 
+// 모바일 브라우저에서는 signInWithPopup이 신뢰할 수 없다(팝업 차단, 서드파티 쿠키/스토리지
+// 파티셔닝으로 인한 인증 핸드셰이크 실패 등). Firebase 공식 권장대로 모바일에서는 팝업을
+// 시도조차 하지 않고 바로 리디렉트 방식을 사용한다.
+function isMobileDevice() {
+    return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent);
+}
+
 function showProviderSetupGuide(providerName, err) {
     const currentOrigin = window.location.origin || 'http://localhost:5173';
     const redirectUri = `${currentOrigin}/__/auth/handler`;
@@ -247,22 +254,26 @@ async function signInWithProvider(provider, providerName) {
         console.warn('[Login] Failed to set persistence:', err.message);
     }
 
-    try {
-        await signInWithPopup(auth, provider);
-        return;
-    } catch (err) {
-        console.warn(`${providerName} popup login failed, fallback to redirect:`, err.code, err.message);
-        if (isProviderNotAllowedError(err)) {
-            clearPendingAuthIntent();
-            showProviderSetupGuide(providerName, err);
+    if (!isMobileDevice()) {
+        try {
+            await signInWithPopup(auth, provider);
             return;
+        } catch (err) {
+            console.warn(`${providerName} popup login failed, fallback to redirect:`, err.code, err.message);
+            if (isProviderNotAllowedError(err)) {
+                clearPendingAuthIntent();
+                showProviderSetupGuide(providerName, err);
+                return;
+            }
+            if (err.code !== 'auth/popup-blocked' && err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/operation-not-supported-in-this-environment') {
+                clearPendingAuthIntent();
+                setAuthStatus(`${providerName} 로그인 실패: ${err.message}`, 'error');
+                alert(`${providerName} 로그인 실패: ${err.message}`);
+                return;
+            }
         }
-        if (err.code !== 'auth/popup-blocked' && err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/operation-not-supported-in-this-environment') {
-            clearPendingAuthIntent();
-            setAuthStatus(`${providerName} 로그인 실패: ${err.message}`, 'error');
-            alert(`${providerName} 로그인 실패: ${err.message}`);
-            return;
-        }
+    } else {
+        console.log('[Login] Mobile device detected, skipping popup and using redirect directly for', providerName);
     }
 
     try {
@@ -461,22 +472,26 @@ window.proceedSignupWithGoogle = async function() {
     pendingAuthIntent = { type: 'signup', providerLabel: 'Google' };
     setAuthStatus('Google 회원가입 진행 중입니다...', 'info');
     
-    try {
-        await signInWithPopup(auth, googleProvider);
-        return;
-    } catch (err) {
-        console.warn('[Signup Flow] Google popup failed, fallback to redirect:', err.code, err.message);
-        if (isProviderNotAllowedError(err)) {
-            clearPendingAuthIntent();
-            showProviderSetupGuide('Google', err);
+    if (!isMobileDevice()) {
+        try {
+            await signInWithPopup(auth, googleProvider);
             return;
+        } catch (err) {
+            console.warn('[Signup Flow] Google popup failed, fallback to redirect:', err.code, err.message);
+            if (isProviderNotAllowedError(err)) {
+                clearPendingAuthIntent();
+                showProviderSetupGuide('Google', err);
+                return;
+            }
+            if (err.code !== 'auth/popup-blocked' && err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/operation-not-supported-in-this-environment') {
+                clearPendingAuthIntent();
+                setAuthStatus('Google 회원가입 실패: ' + err.message, 'error');
+                alert('Google 회원가입 실패: ' + err.message);
+                return;
+            }
         }
-        if (err.code !== 'auth/popup-blocked' && err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/operation-not-supported-in-this-environment') {
-            clearPendingAuthIntent();
-            setAuthStatus('Google 회원가입 실패: ' + err.message, 'error');
-            alert('Google 회원가입 실패: ' + err.message);
-            return;
-        }
+    } else {
+        console.log('[Signup Flow] Mobile device detected, skipping popup and using redirect directly for Google');
     }
 
     try {
@@ -504,22 +519,26 @@ window.proceedSignupWithGitHub = async function() {
     pendingAuthIntent = { type: 'signup', providerLabel: 'GitHub' };
     setAuthStatus('GitHub 회원가입 진행 중입니다...', 'info');
     
-    try {
-        await signInWithPopup(auth, githubProvider);
-        return;
-    } catch (err) {
-        console.warn('[Signup Flow] GitHub popup failed, fallback to redirect:', err.code, err.message);
-        if (isProviderNotAllowedError(err)) {
-            clearPendingAuthIntent();
-            showProviderSetupGuide('GitHub', err);
+    if (!isMobileDevice()) {
+        try {
+            await signInWithPopup(auth, githubProvider);
             return;
+        } catch (err) {
+            console.warn('[Signup Flow] GitHub popup failed, fallback to redirect:', err.code, err.message);
+            if (isProviderNotAllowedError(err)) {
+                clearPendingAuthIntent();
+                showProviderSetupGuide('GitHub', err);
+                return;
+            }
+            if (err.code !== 'auth/popup-blocked' && err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/operation-not-supported-in-this-environment') {
+                clearPendingAuthIntent();
+                setAuthStatus('GitHub 회원가입 실패: ' + err.message, 'error');
+                alert('GitHub 회원가입 실패: ' + err.message);
+                return;
+            }
         }
-        if (err.code !== 'auth/popup-blocked' && err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/operation-not-supported-in-this-environment') {
-            clearPendingAuthIntent();
-            setAuthStatus('GitHub 회원가입 실패: ' + err.message, 'error');
-            alert('GitHub 회원가입 실패: ' + err.message);
-            return;
-        }
+    } else {
+        console.log('[Signup Flow] Mobile device detected, skipping popup and using redirect directly for GitHub');
     }
 
     try {
