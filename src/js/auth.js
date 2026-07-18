@@ -151,8 +151,19 @@ function validateSignupInput(id, batch, name) {
 export function initializeAuthCallbacks(callback) {
     applyUserSessionUIFunc = callback;
 
+    // signInWithRedirect로 나갔다가 돌아왔을 때 실패하면 지금까지는 콘솔에만 찍히고
+    // 화면엔 아무 표시가 없어(특히 모바일은 콘솔을 볼 수 없으니) "그냥 안 된다"로만
+    // 보였다. 실제 에러 코드를 화면에 노출해 원인을 특정할 수 있게 한다.
     getRedirectResult(auth).catch((err) => {
         console.warn('redirect result error:', err.code, err.message);
+        clearPendingAuthIntent();
+        let hint = '';
+        if (err.code === 'auth/unauthorized-domain') {
+            hint = '\n(현재 접속 도메인이 Firebase 콘솔의 승인된 도메인 목록에 없습니다.)';
+        } else if (err.code === 'auth/account-exists-with-different-credential') {
+            hint = '\n(같은 이메일로 다른 로그인 방식이 이미 가입되어 있습니다.)';
+        }
+        setAuthStatus(`로그인 실패 (${err.code || 'unknown'}): ${err.message}${hint}`, 'error');
     });
 
     onAuthStateChanged(auth, async (user) => {
