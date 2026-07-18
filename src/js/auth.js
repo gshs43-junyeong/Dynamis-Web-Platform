@@ -69,7 +69,11 @@ function isProviderNotAllowedError(err) {
 // 파티셔닝으로 인한 인증 핸드셰이크 실패 등). Firebase 공식 권장대로 모바일에서는 팝업을
 // 시도조차 하지 않고 바로 리디렉트 방식을 사용한다.
 function isMobileDevice() {
-    return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent);
+    if (/Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent)) return true;
+    // iPadOS 13+ Safari는 기본적으로 데스크톱 Mac UA를 보고하므로(UA에 "iPad"/"Mobile"이
+    // 없음) 위 정규식만으로는 아이패드를 놓친다. 터치 지원 + Mac UA 조합으로 보완 판별.
+    if (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1) return true;
+    return false;
 }
 
 function showProviderSetupGuide(providerName, err) {
@@ -246,10 +250,16 @@ async function signInWithProvider(provider, providerName) {
     setAuthStatus(`${providerName} 로그인 진행 중입니다...`, 'info');
 
     try {
-        // Persistence 설정: 로그인 유지 체크 시 LOCAL, 미체크 시 SESSION
-        const selectedPersistence = shouldPersist ? browserLocalPersistence : browserSessionPersistence;
+        // Persistence 설정: 로그인 유지 체크 시 LOCAL, 미체크 시 SESSION.
+        // 단, 모바일은 무조건 signInWithRedirect를 타는데(아래 분기), SESSION persistence는
+        // sessionStorage 기반이라 구글/깃허브 계정 선택 화면으로 나갔다가 돌아오는 전체 탭
+        // 내비게이션 과정에서 iOS Safari의 ITP(교차 사이트 추적 방지) 등으로 인해 리디렉트
+        // 대기 상태가 유실되기 쉽다. "계정 선택 화면은 뜨는데 로그인이 완료되지 않고 그대로
+        // 멈추는" 증상의 주된 원인이라, 모바일에서는 체크박스 값과 무관하게 LOCAL persistence로
+        // 강제한다 (redirect 왕복을 안정적으로 버티는 IndexedDB/localStorage 기반).
+        const selectedPersistence = (shouldPersist || isMobileDevice()) ? browserLocalPersistence : browserSessionPersistence;
         await setPersistence(auth, selectedPersistence);
-        console.log('[Login] Persistence set to:', shouldPersist ? 'LOCAL (유지됨)' : 'SESSION (세션 종료 시 로그아웃)');
+        console.log('[Login] Persistence set to:', selectedPersistence === browserLocalPersistence ? 'LOCAL' : 'SESSION');
     } catch (err) {
         console.warn('[Login] Failed to set persistence:', err.message);
     }
