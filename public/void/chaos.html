@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noai,noimageai">
+<meta name="googlebot" content="noindex,nofollow">
+<title>DYNAMIS // NODE :: CHAOS</title>
+<style>
+:root{ --bg:#050805; --fg:#7CFF6B; --dim:#2f5a2a; --amber:#ffcf6b; --red:#ff4b4b; --panel:#0a120a; }
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{ background:var(--bg); color:var(--fg); font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:15px; line-height:1.6; text-shadow:0 0 4px rgba(124,255,107,.35); }
+.crt::before{ content:""; position:fixed; inset:0; z-index:9; pointer-events:none; background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0, rgba(0,0,0,.18) 1px, transparent 1px, transparent 3px); }
+.crt::after{ content:""; position:fixed; inset:0; z-index:9; pointer-events:none; background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); }
+#screen{ position:relative; z-index:2; min-height:100vh; max-width:900px; margin:0 auto; padding:2rem 1.4rem; }
+.bar{ display:flex; justify-content:space-between; border:1px solid var(--dim); border-radius:6px; padding:.5rem .9rem; margin-bottom:1.2rem; background:var(--panel); font-size:.8rem; letter-spacing:.05em; }
+.bar .t{color:var(--fg);font-weight:700;} .bar .s{color:var(--red);}
+#term .line{ margin:2px 0; white-space:pre-wrap; word-break:break-word; }
+.dim{color:var(--dim);} .amber{color:var(--amber);} .red{color:var(--red);}
+.banner{color:var(--fg);} .bright{color:#d7ffcf;text-shadow:0 0 8px rgba(124,255,107,.7);}
+.ok{color:var(--fg);text-shadow:0 0 10px rgba(124,255,107,.85);}
+.pixelbox{ margin:1.2rem 0; padding:1rem; border:1px solid var(--dim); border-radius:6px; background:#020402; display:inline-block; }
+canvas.pixelkey{ image-rendering:pixelated; display:block; }
+.node-inp{ display:flex; align-items:center; gap:.5rem; margin-top:1.2rem; border-top:1px solid var(--dim); padding-top:1rem; flex-wrap:wrap; }
+#nodekey{ flex:1; min-width:180px; background:transparent; border:none; border-bottom:1px solid var(--dim); outline:none; color:var(--fg); font-family:inherit; font-size:15px; text-shadow:inherit; padding:.2rem 0; }
+button.go{ background:var(--fg); color:#020402; border:none; border-radius:4px; padding:.45rem 1rem; font-family:inherit; font-weight:700; cursor:pointer; }
+@media (prefers-reduced-motion:reduce){ .crt::after{animation:none;} }
+</style>
+</head>
+<body class="crt">
+  <div id="screen">
+    <div class="bar"><span class="t">DYNAMIS // ROOT_ACCESS</span><span class="s">● NODE :: CHAOS</span></div>
+    <div id="term" aria-live="polite"></div>
+  </div>
+<script>
+(function(){
+  "use strict";
+  var CFG = {"sig":"DYN-ROOT","intro":[["[ NODE :: CHAOS ]  —  혼돈","banner"],["질서는 무너지고, 마지막 전에 다다른다.","dim"]],"pixelKey":null,"keyPrompt":"> 직전 노드(TELOS)의 파편 단어를 입력하라:","blob":"aCwxcdQ6sks4qxkUomBVcGDTRS7NTwCXFFFeMpQYCFjPXjOikdXPEyAwNz13rFCK04QO+f8LuSFJrhFOZnnNN05gun9rcKUyFG98asvk9MokBMIXDCvrzTI0Utu1WID9ptFb8CiTcOhYXH//5enOa+cKNqwsrQOJhmZDLd5vSK/vIai/87zX74TiUGf1cE8dIDCz/5lH4nVlVlZeGFrTy/Y/MNG4604KTglZiLZGbhxcrEzwWi089YQiSYlkkpy/3kfkkWgrGR+kBUry0gQj3spfixw0sPQZ5ShuCn4PQVafddtCRg29bJLqdH94dnF+5Vma/fmIxQr1nuKQpwW5nvctqn4="};
+  function norm(s){ return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+  function fnv1a(str){ var h=0x811c9dc5; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,0x01000193);} return h>>>0; }
+  function keystream(key,len){ var h=fnv1a(key)||0xA5A5A5A5; var b=new Uint8Array(len); var i=0;
+    while(i<len){ h^=h<<13;h>>>=0; h^=h>>>17; h^=h<<5;h>>>=0;
+      b[i++]=h&0xFF; if(i>=len)break; b[i++]=(h>>>8)&0xFF; if(i>=len)break;
+      b[i++]=(h>>>16)&0xFF; if(i>=len)break; b[i++]=(h>>>24)&0xFF; } return b; }
+  function decrypt(b64,key){ var bin=atob(b64); var by=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)by[i]=bin.charCodeAt(i);
+    var ks=keystream(key,by.length); var o=new Uint8Array(by.length); for(var j=0;j<by.length;j++)o[j]=by[j]^ks[j];
+    return new TextDecoder('utf-8').decode(o); }
+  function isBot(){
+    try{
+      if(navigator.webdriver) return true;
+      if(/bot|crawl|spider|slurp|gptbot|claude|anthropic|python-requests|curl|wget|bytespider|ccbot/i.test(navigator.userAgent||'')) return true;
+      if(!navigator.languages || navigator.languages.length===0) return true;
+      if(window.outerWidth===0 && window.outerHeight===0) return true;
+    }catch(e){ return true; }
+    return false;
+  }
+  var term;
+  function el(text,cls){ var d=document.createElement('div'); d.className='line'+(cls?(' '+cls):''); d.textContent=text; term.appendChild(d); return d; }
+  function gap(){ el(' '); }
+  function drawPixels(rows){
+    var cv=document.createElement('canvas'); cv.className='pixelkey';
+    var scale=9,pad=10; var h=rows.length,w=rows[0].length;
+    cv.width=w*scale+pad*2; cv.height=h*scale+pad*2;
+    var ctx=cv.getContext('2d');
+    ctx.fillStyle='#020402'; ctx.fillRect(0,0,cv.width,cv.height);
+    for(var y=0;y<h;y++){ for(var x=0;x<w;x++){ if(rows[y].charAt(x)==='1'){
+      var jx=(Math.random()-0.5)*1.6;
+      ctx.fillStyle='rgba(124,255,107,'+(0.72+Math.random()*0.28).toFixed(3)+')';
+      ctx.fillRect(pad+x*scale+jx, pad+y*scale, scale-1, scale-1);
+    }}}
+    var noise=Math.floor(w*h*0.14);
+    for(var n=0;n<noise;n++){ ctx.fillStyle='rgba(124,255,107,'+(Math.random()*0.22).toFixed(3)+')'; ctx.fillRect(pad+Math.random()*w*scale, pad+Math.random()*h*scale, 2,2); }
+    ctx.fillStyle='rgba(0,0,0,0.28)';
+    for(var s=0;s<cv.height;s+=3){ ctx.fillRect(0,s,cv.width,1); }
+    var box=document.createElement('div'); box.className='pixelbox'; box.appendChild(cv); term.appendChild(box);
+  }
+  function boot(){
+    term=document.getElementById('term');
+    if(isBot()){
+      el('╳ 자동화된 접근이 감지되었다.','red');
+      el('이 노드는 사람의 눈과 손에만 응답한다.','dim');
+      el('DYNAMIS 는 기계에게 문을 열지 않는다.','dim');
+      return;
+    }
+    CFG.intro.forEach(function(p){ el(p[0],p[1]); });
+    if(CFG.pixelKey){ drawPixels(CFG.pixelKey); }
+    var row=document.createElement('div'); row.className='node-inp';
+    var lab=document.createElement('span'); lab.className='amber'; lab.textContent=CFG.keyPrompt;
+    var inp=document.createElement('input'); inp.id='nodekey'; inp.autocomplete='off'; inp.autocapitalize='off'; inp.spellcheck=false; inp.setAttribute('aria-label','key');
+    var btn=document.createElement('button'); btn.className='go'; btn.textContent='ENTER';
+    row.appendChild(lab); row.appendChild(inp); row.appendChild(btn); term.appendChild(row);
+    var solved=false;
+    function attempt(){
+      if(solved) return;
+      var k=norm(inp.value);
+      if(!k){ return; }
+      var data=null;
+      try{ data=JSON.parse(decrypt(CFG.blob,k)); }catch(e){ data=null; }
+      if(data && data.sig===CFG.sig){
+        solved=true; inp.disabled=true; btn.disabled=true;
+        gap(); el('▓ 잠금 해제.','ok');
+        el('SHARD // '+data.shard,'bright');
+        gap(); data.next.forEach(function(p){ el(p[0],p[1]); });
+      } else {
+        el('✖ 복호화 실패. 열쇠가 틀렸다.','red');
+        inp.value='';
+      }
+    }
+    btn.addEventListener('click',attempt);
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); attempt(); } });
+    inp.focus();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+})();
+</script>
+</body>
+</html>
