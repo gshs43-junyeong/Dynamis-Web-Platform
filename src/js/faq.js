@@ -7,7 +7,8 @@ import {
     query,
     addDoc,
     orderBy,
-    getDocs
+    getDocs,
+    deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength } from './utils.js';
 import { loggedInUser } from './state.js';
@@ -186,6 +187,10 @@ function viewFaq(index) {
     if (answerWriteContainer) answerWriteContainer.style.display = canAnswer ? 'block' : 'none';
     if (answerGuestMessage) answerGuestMessage.style.display = canAnswer ? 'none' : 'block';
 
+    // 공지/이벤트와 달리 FAQ는 관리자뿐 아니라 부원도 삭제(모더레이션) 권한을 가진다.
+    const deleteBtn = document.getElementById('faq-modal-delete-btn');
+    if (deleteBtn) deleteBtn.style.display = canAnswer ? 'block' : 'none';
+
     if (faqLikeUnsub) { faqLikeUnsub(); faqLikeUnsub = null; }
     faqLikeUnsub = renderLikeWidget(document.getElementById('faq-like-mount'), ['faqs', faq.docId]);
 
@@ -267,6 +272,21 @@ export async function addFaqAnswer() {
     });
     if (input) input.value = '';
     alert('답변이 등록되었습니다.');
+}
+
+export async function deleteCurrentFaq() {
+    if (!loggedInUser || !['member', 'admin'].includes(loggedInUser.role)) {
+        return alert('부원 및 관리자만 FAQ를 삭제할 수 있습니다.');
+    }
+    if (!confirm('정말 이 FAQ 질문을 삭제 처리 하시겠습니까? 복구가 불가합니다.')) return;
+    if (!currentFaqDocId) return;
+    try {
+        await deleteDoc(doc(db, 'faqs', currentFaqDocId));
+        alert('성공적으로 FAQ가 영구 제거되었습니다.');
+        closeFaq();
+    } catch (err) {
+        alert('FAQ 삭제에 실패했습니다: ' + err.message);
+    }
 }
 
 export function closeFaq() {

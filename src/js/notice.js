@@ -10,7 +10,7 @@ import {
     deleteDoc,
     orderBy
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 
@@ -20,15 +20,30 @@ let currentNoticeDocId = null;
 let commentsSnapshotListener = null;
 let noticeLikeUnsub = null;
 let currentPage = 1;
+let activeTagFilter = null;
+
+// 태그 텍스트(한글)를 CSS 클래스에 쓸 수 있는 슬러그로 매핑.
+const TAG_SLUG_MAP = {
+    '학술 자료': 'academic',
+    '이벤트 안내': 'event',
+    '설문 조사': 'survey',
+    '기타': 'etc'
+};
+function tagSlug(tag) {
+    return TAG_SLUG_MAP[tag] || 'etc';
+}
 
 export async function addNotice() {
     const titleInput = document.getElementById('post-title');
     const contentInput = document.getElementById('post-content');
     const fileInput = document.getElementById('post-file');
+    const tagSelect = document.getElementById('post-tag');
 
     const title = titleInput?.value.trim();
     const content = contentInput?.value.trim();
+    const tag = tagSelect?.value || '';
     if (!title || !content) return alert('제목과 내용을 빠짐없이 기입해 주세요.');
+    if (!NOTICE_TAGS.includes(tag)) return alert('공지 태그를 선택해 주세요.');
     if (!loggedInUser) return alert('인증 세션이 만료되었습니다.');
 
     const needsNoticeTrafficCheck = loggedInUser.role !== 'admin';
@@ -91,6 +106,7 @@ export async function addNotice() {
     const date = new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, '');
     const noticePayload = {
         title,
+        tag,
         content,
         authorName: loggedInUser.name,
         authorBatch: loggedInUser.batch,
@@ -113,6 +129,7 @@ export async function addNotice() {
         if (titleInput) titleInput.value = '';
         if (contentInput) contentInput.value = '';
         if (fileInput) fileInput.value = '';
+        if (tagSelect) tagSelect.value = '';
         alert('공지사항이 성공적으로 등록되었습니다.');
     } catch (err) {
         alert('작성 실패 (파일 용량이 너무 크거나 서버 통신 오류입니다): ' + err.message);
@@ -132,12 +149,31 @@ export function renderNotices() {
     const pinHeader = document.getElementById('th-pin-header');
     if (pinHeader) pinHeader.style.display = isAdmin ? 'table-cell' : 'none';
 
-    displayNoticesGlobal = [...notices].sort((a, b) => {
+    const filteredNotices = activeTagFilter
+        ? notices.filter((n) => n.tag === activeTagFilter)
+        : notices;
+
+    displayNoticesGlobal = [...filteredNotices].sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
         return (b.timestamp || 0) - (a.timestamp || 0);
     });
+    updateTagFilterButtonsUI();
     renderNoticePage(currentPage);
+}
+
+// 공지 목록 상단 태그 필터 버튼 클릭 시 호출. 빈 문자열(또는 falsy 값)은 "전체"를 뜻한다.
+export function changeNoticeTagFilter(tag) {
+    activeTagFilter = tag || null;
+    currentPage = 1;
+    renderNotices();
+}
+
+function updateTagFilterButtonsUI() {
+    document.querySelectorAll('.notice-tag-filter-btn').forEach((btn) => {
+        const btnTag = btn.dataset.tag || '';
+        btn.classList.toggle('active', btnTag === (activeTagFilter || ''));
+    });
 }
 
 function renderNoticePage(pageNum) {
@@ -168,7 +204,15 @@ function renderNoticePage(pageNum) {
 
         const titleTd = document.createElement('td');
         titleTd.className = 'clickable-td';
-        titleTd.textContent = `${n.pinned ? '📌 [고정] ' : ''}${n.title || ''}${n.files && n.files.length ? ' 📎' : ''}`;
+        if (n.tag) {
+            const tagBadge = document.createElement('span');
+            tagBadge.className = `notice-tag-badge notice-tag-${tagSlug(n.tag)}`;
+            tagBadge.textContent = n.tag;
+            titleTd.appendChild(tagBadge);
+        }
+        const titleTextSpan = document.createElement('span');
+        titleTextSpan.textContent = `${n.pinned ? '📌 [고정] ' : ''}${n.title || ''}${n.files && n.files.length ? ' 📎' : ''}`;
+        titleTd.appendChild(titleTextSpan);
         titleTd.addEventListener('click', () => viewNotice(startIdx + index));
         tr.appendChild(titleTd);
 
@@ -241,6 +285,7 @@ export function viewNotice(index) {
     currentNoticeDocId = n.docId;
 
     const modalTitle = document.getElementById('modal-title');
+    const modalTag = document.getElementById('modal-tag');
     const modalAuthor = document.getElementById('modal-author');
     const modalDate = document.getElementById('modal-date');
     const modalText = document.getElementById('modal-text');
@@ -249,9 +294,18 @@ export function viewNotice(index) {
     const fileListContainer = document.getElementById('modal-file-list');
 
     if (modalTitle) modalTitle.innerText = n.title;
+    if (modalTag) {
+        if (n.tag) {
+            modalTag.textContent = n.tag;
+            modalTag.className = `notice-tag-badge notice-tag-${tagSlug(n.tag)}`;
+            modalTag.style.display = 'inline-block';
+        } else {
+            modalTag.style.display = 'none';
+        }
+    }
     if (modalAuthor) modalAuthor.innerText = `✍️ ${formatAuthorLabel(n)}`;
     if (modalDate) modalDate.innerText = `📅 ${n.date}`;
-    if (modalText) modalText.innerText = n.content;
+    if (modalText) modalText.innerHTML = linkifyText(n.content);
 
     if (modalDeleteBtn) modalDeleteBtn.style.display = (loggedInUser && loggedInUser.role === 'admin') ? 'block' : 'none';
 

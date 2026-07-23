@@ -20,6 +20,7 @@ import {
     closeNotice,
     deleteCurrentNotice,
     changePage,
+    changeNoticeTagFilter,
     listenNotices
 } from './notice.js';
 import {
@@ -30,7 +31,7 @@ import {
     changeEventPage,
     listenEvents
 } from './event.js';
-import { addFaqQuestion, addFaqAnswer, closeFaq, changeFaqPage, listenFaqs } from './faq.js';
+import { addFaqQuestion, addFaqAnswer, closeFaq, deleteCurrentFaq, changeFaqPage, listenFaqs } from './faq.js';
 import { listenMembersSection } from './members.js';
 import { listenAdminUserConsole, commitRoleChange, warnUser, deleteUserByAdmin } from './admin.js';
 import { openPuzzle } from './puzzle.js';
@@ -48,6 +49,7 @@ window.addComment = addComment;
 window.closeNotice = closeNotice;
 window.deleteCurrentNotice = deleteCurrentNotice;
 window.changePage = changePage;
+window.changeNoticeTagFilter = changeNoticeTagFilter;
 
 window.addEvent = addEvent;
 window.addEventComment = addEventComment;
@@ -58,6 +60,7 @@ window.changeEventPage = changeEventPage;
 window.addFaqQuestion = addFaqQuestion;
 window.addFaqAnswer = addFaqAnswer;
 window.closeFaq = closeFaq;
+window.deleteCurrentFaq = deleteCurrentFaq;
 window.changeFaqPage = changeFaqPage;
 
 window.commitRoleChange = commitRoleChange;

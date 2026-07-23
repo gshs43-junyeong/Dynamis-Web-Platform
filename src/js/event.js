@@ -11,7 +11,7 @@ import {
     deleteDoc,
     orderBy
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { serverNow, isClockOutOfSync } from './clock.js';
@@ -313,7 +313,7 @@ async function viewEvent(index) {
         const contentSnap = await getDoc(doc(db, 'events', ev.docId, 'content', 'main'));
         if (contentSnap.exists()) {
             const data = contentSnap.data();
-            if (modalText) modalText.innerText = data.content || '';
+            if (modalText) modalText.innerHTML = linkifyText(data.content || '');
             const filesToRender = data.files || [];
             if (filesToRender.length > 0 && fileListContainer) {
                 if (fileBox) fileBox.style.display = 'block';
