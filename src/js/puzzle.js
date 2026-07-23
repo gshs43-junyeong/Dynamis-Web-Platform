@@ -3,7 +3,7 @@
 // 퍼즐 사이트는 별도 리포지토리로 배포됩니다.
 // 배포가 끝나면 아래 PUZZLE_URL 한 줄만 채우면 버튼이 활성화됩니다.
 //   예) const PUZZLE_URL = 'https://gshs43-junyeong.github.io/dynamis-puzzle/';
-const PUZZLE_URL = '';
+const PUZZLE_URL = 'https://dynamis-terminal.vercel.app';
 
 // 아주 관찰력 좋은 방문자를 위한 작은 떡밥. (개발자 도구를 여는 사람들 몫)
 const WHISPER = [
