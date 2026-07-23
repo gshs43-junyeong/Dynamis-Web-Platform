@@ -63,13 +63,31 @@
             <div class="hero">
                 <div class="hero-logo-wrap">
                     <div class="hero-orb-field" aria-hidden="true">
-                        <span class="hero-orb hero-orb-trail-5"></span>
-                        <span class="hero-orb hero-orb-trail-4"></span>
-                        <span class="hero-orb hero-orb-trail-3"></span>
-                        <span class="hero-orb hero-orb-trail-2"></span>
-                        <span class="hero-orb hero-orb-trail-1"></span>
-                        <span class="hero-orb hero-orb-main"></span>
+                        <span class="hero-orb hero-orb-trail-9" data-base-delay="4.4"></span>
+                        <span class="hero-orb hero-orb-trail-8" data-base-delay="3.6"></span>
+                        <span class="hero-orb hero-orb-trail-7" data-base-delay="2.9"></span>
+                        <span class="hero-orb hero-orb-trail-6" data-base-delay="2.3"></span>
+                        <span class="hero-orb hero-orb-trail-5" data-base-delay="1.75"></span>
+                        <span class="hero-orb hero-orb-trail-4" data-base-delay="1.3"></span>
+                        <span class="hero-orb hero-orb-trail-3" data-base-delay="0.9"></span>
+                        <span class="hero-orb hero-orb-trail-2" data-base-delay="0.55"></span>
+                        <span class="hero-orb hero-orb-trail-1" data-base-delay="0.25"></span>
+                        <span class="hero-orb hero-orb-main" data-base-delay="0"></span>
                     </div>
+                    <script>
+                      (function () {
+                        // 새로고침할 때마다 34초 주기 중 임의의 시점에서 출발시켜, 오브가
+                        // "확률적으로 존재하고 자율적으로 움직이는" 느낌을 살짝 더한다.
+                        // 자취 점들 사이의 상대 간격(각자의 기본 delay)은 그대로 유지한 채
+                        // 전체를 같은 양만큼 밀어주므로 꼬리 모양은 변하지 않는다.
+                        var randomOffset = Math.random() * 34;
+                        document.querySelectorAll('.hero-orb-field .hero-orb').forEach(function (el) {
+                          var baseDelay = parseFloat(el.dataset.baseDelay || '0');
+                          var flickerDelay = el.classList.contains('hero-orb-main') ? ', ' + (Math.random() * 4.3).toFixed(2) + 's' : '';
+                          el.style.animationDelay = (baseDelay - randomOffset).toFixed(2) + 's' + flickerDelay;
+                        });
+                      })();
+                    </script>
                     <img src="logo.png" alt="Main Logo" style="height: 115px; width: auto; filter: invert(1);" onerror="this.style.display='none'">
                 </div>
                 <h1>Dynamis</h1>
