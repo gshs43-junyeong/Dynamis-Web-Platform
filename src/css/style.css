@@ -69,6 +69,31 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
     #home::before, .bg-blob { animation: none; }
 }
 
+/* 홈 히어로 아래를 가로지르며 끊임없이 흘러가는 곡선(웨이브) 장식.
+   SVG 한 주기(period)를 타일 배경으로 반복시키고, background-position을 정확히
+   타일 너비만큼 이동시켜 이어붙는 지점이 티 나지 않는 무한 루프를 만든다. */
+.wave-divider {
+    width: 100%;
+    height: 60px;
+    margin: -1.5rem 0 3rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M0,20 Q25,0 50,20 T100,20 L100,40 L0,40 Z' fill='rgba(255,255,255,0.05)'/%3E%3C/svg%3E"),
+                      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M0,24 Q25,44 50,24 T100,24' fill='none' stroke='rgba(255,255,255,0.16)' stroke-width='2'/%3E%3C/svg%3E");
+    background-repeat: repeat-x, repeat-x;
+    background-size: 220px 60px, 220px 60px;
+    background-position: 0 0, 0 0;
+    animation: waveFlow 18s linear infinite;
+    pointer-events: none;
+}
+/* 두 레이어(채워진 곡선 + 선 곡선)를 서로 반대 방향으로, 한 애니메이션 안에서 함께
+   움직인다 (background-position에 애니메이션을 두 개 걸면 나중 것만 적용되므로 하나로 합침). */
+@keyframes waveFlow {
+    from { background-position: 0 0, 0 0; }
+    to { background-position: -220px 0, 220px 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .wave-divider { animation: none; }
+}
+
 .hero { text-align: center; padding: 2rem 0 5rem 0; }
 .hero h1 { font-family: 'Italianno', cursive !important; font-size: 9.5rem; font-weight: 400; margin-bottom: 0.3rem; letter-spacing: 0; background: linear-gradient(180deg, #fff 40%, #444 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .hero .tagline { font-size: 1.25rem; color: var(--text-secondary); max-width: 720px; margin: 0 auto; word-break: keep-all; line-height: 1.8; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 1.5rem 0; }
@@ -109,6 +134,18 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 .admin-write { display: none; background: var(--bg-secondary); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 2rem; }
 .admin-write input, .admin-write textarea, .admin-write select { width: 100%; padding: 1rem; background: var(--bg-primary); border: 1px solid var(--border-color); color: white; border-radius: 4px; margin-bottom: 1rem; }
 .admin-write textarea { height: 150px; resize: none; }
+/* 브라우저 기본 select 화살표는 위치가 제각각이라 직접 그린 화살표로 교체하고,
+   오른쪽 여백을 넉넉히 줘서 텍스트/화살표가 겹치거나 한쪽으로 쏠리지 않게 한다. */
+.admin-write select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 2.5rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 14px;
+}
 
 .form-card { max-width: 450px; margin: 4rem auto; background: var(--bg-secondary); padding: 3rem; border-radius: 12px; border: 1px solid var(--border-color); }
 .form-group { margin-bottom: 1.5rem; }
