@@ -69,32 +69,55 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
     #home::before, .bg-blob { animation: none; }
 }
 
-/* 홈 히어로 아래를 가로지르며 끊임없이 흘러가는 곡선(웨이브) 장식.
-   SVG 한 주기(period)를 타일 배경으로 반복시키고, background-position을 정확히
-   타일 너비만큼 이동시켜 이어붙는 지점이 티 나지 않는 무한 루프를 만든다. */
-.wave-divider {
-    width: 100%;
-    height: 60px;
-    margin: -1.5rem 0 3rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M0,20 Q25,0 50,20 T100,20 L100,40 L0,40 Z' fill='rgba(255,255,255,0.05)'/%3E%3C/svg%3E"),
-                      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M0,24 Q25,44 50,24 T100,24' fill='none' stroke='rgba(255,255,255,0.16)' stroke-width='2'/%3E%3C/svg%3E");
-    background-repeat: repeat-x, repeat-x;
-    background-size: 220px 60px, 220px 60px;
-    background-position: 0 0, 0 0;
-    animation: waveFlow 18s linear infinite;
+.hero { position: relative; text-align: center; padding: 2rem 0 5rem 0; }
+
+/* 로고/제목 주위를 불규칙하게 떠다니다 부드럽게 나타나고 사라지는 곡선 장식.
+   각 곡선은 stroke만 있는 얇은 선이고, mask-image로 양 끝을 투명하게 페이드시켜
+   "그려지다 만 듯한" 잔선 느낌을 준다. 애니메이션은 좌우 왕복이 아니라 이동/회전/
+   확대가 서로 다른 시점에 겹치도록 짜서(균일하지 않은 keyframe 구간) 기계적으로
+   반복되는 느낌을 피하고, opacity가 0→peak→0으로 흘러 은은하게 명멸한다. */
+.hero-curve {
+    position: absolute;
+    z-index: -1;
+    width: 340px;
+    height: 220px;
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.85);
+    stroke-width: 1.4;
+    stroke-linecap: round;
     pointer-events: none;
+    opacity: 0;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 25%, black 75%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, black 25%, black 75%, transparent 100%);
 }
-/* 두 레이어(채워진 곡선 + 선 곡선)를 서로 반대 방향으로, 한 애니메이션 안에서 함께
-   움직인다 (background-position에 애니메이션을 두 개 걸면 나중 것만 적용되므로 하나로 합침). */
-@keyframes waveFlow {
-    from { background-position: 0 0, 0 0; }
-    to { background-position: -220px 0, 220px 0; }
+.hero-curve-1 { top: -30px; left: -6%; animation: curveDrift1 26s ease-in-out infinite; }
+.hero-curve-2 { top: 58%; right: -8%; width: 300px; height: 200px; animation: curveDrift2 32s ease-in-out infinite; animation-delay: -9s; }
+.hero-curve-3 { top: 18%; left: 58%; width: 260px; height: 180px; animation: curveDrift3 22s ease-in-out infinite; animation-delay: -15s; }
+
+@keyframes curveDrift1 {
+    0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
+    20%  { opacity: 0.22; }
+    45%  { transform: translate(22px, -16px) rotate(5deg) scale(1.04); opacity: 0.3; }
+    70%  { transform: translate(-14px, 10px) rotate(-4deg) scale(0.97); opacity: 0.14; }
+    100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
+}
+@keyframes curveDrift2 {
+    0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+    30%  { transform: translate(-20px, 14px) rotate(-6deg); opacity: 0.2; }
+    55%  { opacity: 0.26; }
+    80%  { transform: translate(12px, -10px) rotate(3deg); opacity: 0.1; }
+    100% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+}
+@keyframes curveDrift3 {
+    0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
+    25%  { transform: translate(16px, 12px) rotate(4deg) scale(1.05); opacity: 0.18; }
+    60%  { transform: translate(-18px, -8px) rotate(-5deg) scale(0.95); opacity: 0.25; }
+    85%  { opacity: 0.08; }
+    100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .wave-divider { animation: none; }
+    .hero-curve { animation: none; opacity: 0; }
 }
-
-.hero { text-align: center; padding: 2rem 0 5rem 0; }
 .hero h1 { font-family: 'Italianno', cursive !important; font-size: 9.5rem; font-weight: 400; margin-bottom: 0.3rem; letter-spacing: 0; background: linear-gradient(180deg, #fff 40%, #444 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .hero .tagline { font-size: 1.25rem; color: var(--text-secondary); max-width: 720px; margin: 0 auto; word-break: keep-all; line-height: 1.8; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 1.5rem 0; }
 
