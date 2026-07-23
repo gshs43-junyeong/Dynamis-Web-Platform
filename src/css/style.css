@@ -169,6 +169,12 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
     background-position: right 1rem center;
     background-size: 14px;
 }
+/* "태그를 선택하세요" placeholder 옵션이 선택된 동안(=아직 유효한 태그를 고르지
+   않은 상태)에는 다른 입력칸의 placeholder처럼 회색으로, 실제 태그를 고르면
+   다른 옵션들과 같은 흰색으로 자동 전환된다. */
+.admin-write select:invalid {
+    color: var(--text-secondary);
+}
 
 .form-card { max-width: 450px; margin: 4rem auto; background: var(--bg-secondary); padding: 3rem; border-radius: 12px; border: 1px solid var(--border-color); }
 .form-group { margin-bottom: 1.5rem; }
