@@ -165,6 +165,13 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 .admin-write { display: none; background: var(--bg-secondary); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 2rem; }
 .admin-write input, .admin-write textarea, .admin-write select { width: 100%; padding: 1rem; background: var(--bg-primary); border: 1px solid var(--border-color); color: white; border-radius: 4px; margin-bottom: 1rem; }
 .admin-write textarea { height: 150px; resize: none; }
+/* 브라우저 기본 placeholder 색상은 --text-secondary와 다를 수 있어(파이어폭스는
+   기본적으로 불투명도까지 낮춤) 태그 select의 placeholder(:invalid)와 색이
+   어긋나 보였다. 두 색을 동일하게 강제 통일. */
+.admin-write input::placeholder, .admin-write textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 1;
+}
 /* 브라우저 기본 select 화살표는 위치가 제각각이라 직접 그린 화살표로 교체하고,
    오른쪽 여백을 넉넉히 줘서 텍스트/화살표가 겹치거나 한쪽으로 쏠리지 않게 한다. */
 .admin-write select {
