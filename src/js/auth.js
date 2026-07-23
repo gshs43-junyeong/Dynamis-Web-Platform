@@ -249,24 +249,21 @@ async function signInWithProvider(provider, providerName) {
     pendingAuthIntent = { type: 'login', providerLabel: providerName };
     setAuthStatus(`${providerName} 로그인 진행 중입니다...`, 'info');
 
-    try {
-        // Persistence 설정: 로그인 유지 체크 시 LOCAL, 미체크 시 SESSION.
-        const selectedPersistence = shouldPersist ? browserLocalPersistence : browserSessionPersistence;
-        await setPersistence(auth, selectedPersistence);
-        console.log('[Login] Persistence set to:', selectedPersistence === browserLocalPersistence ? 'LOCAL' : 'SESSION');
-    } catch (err) {
-        console.warn('[Login] Failed to set persistence:', err.message);
-    }
-
-    // 모바일에서 signInWithRedirect를 강제했더니 Google은 계정 선택 후 로그인이
-    // 완료되지 않고, GitHub는 404로 아예 실패하는 것으로 확인됐다(데스크톱 팝업은
-    // 정상 동작). 같은 Firebase/OAuth 앱 설정에서 팝업만 작동하는 걸 보면 원인은
-    // 콘솔 설정이 아니라 리디렉트 경로 자체(모바일 크롬의 서드파티 스토리지 파티셔닝이
-    // authDomain↔앱 도메인 간 왕복에 필요한 상태 저장을 막는 것으로 추정)에 있다.
-    // 그래서 모바일도 다시 데스크톱과 동일하게 팝업을 우선 시도하고, 팝업 자체가
-    // 막힌 경우에만 리디렉트로 폴백한다.
+    // 모바일 크롬에서 signInWithPopup이 계속 "차단"되던 진짜 원인을 찾았다: 이전 코드는
+    // 팝업을 열기 전에 setPersistence()를 먼저 await 했는데, 그 사이 짧은 비동기 텀에서
+    // 클릭으로 얻은 user activation(사용자 제스처)이 소진되어, 뒤이은 signInWithPopup의
+    // window.open이 "사용자가 직접 연 것이 아닌" 팝업으로 취급되어 차단당한 것이다.
+    // (데스크톱은 이 텀에 관대해 문제가 안 드러났을 뿐이다.) 그래서 팝업을 클릭 직후
+    // 가장 먼저 시도하는 비동기 작업으로 옮기고, persistence는 로그인 성공 후에 설정한다.
     try {
         await signInWithPopup(auth, provider);
+        try {
+            const selectedPersistence = shouldPersist ? browserLocalPersistence : browserSessionPersistence;
+            await setPersistence(auth, selectedPersistence);
+            console.log('[Login] Persistence set to:', selectedPersistence === browserLocalPersistence ? 'LOCAL' : 'SESSION');
+        } catch (persistErr) {
+            console.warn('[Login] Failed to set persistence after popup login:', persistErr.message);
+        }
         return;
     } catch (err) {
         console.warn(`${providerName} popup login failed, fallback to redirect:`, err.code, err.message);
@@ -281,6 +278,14 @@ async function signInWithProvider(provider, providerName) {
             alert(`${providerName} 로그인 실패: ${err.message}`);
             return;
         }
+    }
+
+    // 팝업 자체가 진짜로 차단된 경우에만 여기로 온다 (드묾 — 위 수정으로 대부분 해결될 것).
+    try {
+        const selectedPersistence = shouldPersist ? browserLocalPersistence : browserSessionPersistence;
+        await setPersistence(auth, selectedPersistence);
+    } catch (err) {
+        console.warn('[Login] Failed to set persistence:', err.message);
     }
 
     try {
