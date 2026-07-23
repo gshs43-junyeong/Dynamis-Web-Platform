@@ -53,7 +53,9 @@ dynamis-platform/
 ├── .gitignore                 # Admin의 다른 계정 접근 권한 우회
 ├── package.json               # 빌드 스크립트 및 디펜던시 정의 메타 데이터 파일
 ├── vite.config.js             # 깃허브 Pages 배포 경로 조정을 위한 Vite 설정 파일
-└── vercel.json                # 모든 경로 요청을 index.html로 연결
+├── vercel.json                # 모든 경로 요청을 index.html로 연결
+├── firebase.json              # Firebase Hosting 배포 설정 (dist를 SPA로 서빙)
+└── .firebaserc                # Firebase Hosting 배포 대상 프로젝트 ID 고정
 ```
 
 ---
@@ -84,6 +86,17 @@ npm run dev
 npm run build
 ```
 - 빌드가 성공적으로 완료되면 루트 디렉토리에 **`dist/`** 폴더가 생성됩니다. 이 폴더 안에 들어가는 `index.html`, `404.html`, `.nojekyll`, 그리고 에셋 파일들 전체가 GitHub Pages 호스팅 서버로 전달됩니다.
+
+### 5. Firebase Hosting 배포 (모바일 소셜 로그인용, 권장)
+Google/GitHub 로그인은 Firebase Auth의 `authDomain`(`dynamis-web-platform-server.firebaseapp.com`)과 실제 사이트 도메인이 다르면, 모바일 브라우저의 서드파티 쿠키/스토리지 차단 정책 때문에 리디렉트 로그인이 완료되지 않을 수 있습니다. Firebase Hosting은 기본 도메인이 곧 `authDomain`과 동일한 `<프로젝트ID>.firebaseapp.com`이므로, 별도 커스텀 도메인 없이 여기에 배포하는 것만으로 두 도메인이 같아져 이 문제가 근본적으로 해결됩니다.
+
+```bash
+npm install -g firebase-tools   # 최초 1회만 (또는 npx firebase-tools 사용)
+firebase login                 # Firebase 콘솔 계정으로 로그인
+npm run deploy:firebase        # vite build 후 dist/를 Firebase Hosting에 배포
+```
+- 리포에는 `firebase.json`(Hosting 설정: `dist`를 정적 루트로, 모든 경로를 `index.html`로 SPA 리라이트)과 `.firebaserc`(프로젝트 ID 고정)가 포함되어 있어 별도 설정 없이 바로 배포할 수 있습니다.
+- 배포가 끝나면 `https://dynamis-web-platform-server.web.app` 또는 `https://dynamis-web-platform-server.firebaseapp.com` 주소로 접속해 실제 서비스 도메인으로 사용하면 됩니다. 이후 이 주소를 부원들에게 안내하거나 커스텀 도메인을 Firebase Hosting에 직접 연결하세요 (Vercel/GitHub Pages에 연결하면 다시 도메인이 갈라져 문제가 재발합니다).
 
 ---
 
