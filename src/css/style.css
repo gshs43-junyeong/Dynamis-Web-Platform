@@ -71,11 +71,11 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 
 .hero { position: relative; text-align: center; padding: 2rem 0 5rem 0; }
 
-/* 로고/제목 주위를 불규칙하게 떠다니다 부드럽게 나타나고 사라지는 곡선 장식.
+/* 로고/제목 주위를 가로질러 한 방향으로 계속 흘러가는 곡선 장식.
    각 곡선은 stroke만 있는 얇은 선이고, mask-image로 양 끝을 투명하게 페이드시켜
-   "그려지다 만 듯한" 잔선 느낌을 준다. 애니메이션은 좌우 왕복이 아니라 이동/회전/
-   확대가 서로 다른 시점에 겹치도록 짜서(균일하지 않은 keyframe 구간) 기계적으로
-   반복되는 느낌을 피하고, opacity가 0→peak→0으로 흘러 은은하게 명멸한다. */
+   "그려지다 만 듯한" 잔선 느낌을 준다. 왕복 없이 translateX로 한쪽 끝에서 반대쪽
+   끝까지 쭉 이동하며(파동처럼 y좌표와 회전이 함께 완만히 출렁인다), 이동 경로의
+   양 끝에서 opacity가 0이라 루프가 되돌아가는 지점이 보이지 않는다. */
 .hero-curve {
     position: absolute;
     z-index: -1;
@@ -90,30 +90,33 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
     -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 25%, black 75%, transparent 100%);
     mask-image: linear-gradient(90deg, transparent 0%, black 25%, black 75%, transparent 100%);
 }
-.hero-curve-1 { top: -30px; left: -6%; animation: curveDrift1 26s ease-in-out infinite; }
-.hero-curve-2 { top: 58%; right: -8%; width: 300px; height: 200px; animation: curveDrift2 32s ease-in-out infinite; animation-delay: -9s; }
-.hero-curve-3 { top: 18%; left: 58%; width: 260px; height: 180px; animation: curveDrift3 22s ease-in-out infinite; animation-delay: -15s; }
+.hero-curve-1 { top: -30px; left: -6%; animation: curveFlow1 22s linear infinite; }
+.hero-curve-2 { top: 58%; right: -8%; width: 300px; height: 200px; animation: curveFlow2 27s linear infinite; animation-delay: -9s; }
+.hero-curve-3 { top: 18%; left: 58%; width: 260px; height: 180px; animation: curveFlow3 24s linear infinite; animation-delay: -15s; }
 
-@keyframes curveDrift1 {
-    0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
-    20%  { opacity: 0.22; }
-    45%  { transform: translate(22px, -16px) rotate(5deg) scale(1.04); opacity: 0.3; }
-    70%  { transform: translate(-14px, 10px) rotate(-4deg) scale(0.97); opacity: 0.14; }
-    100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
+/* 왼쪽 → 오른쪽으로 계속 흐름 */
+@keyframes curveFlow1 {
+    0%   { transform: translate(-70px, 0) rotate(-2deg); opacity: 0; }
+    12%  { opacity: 0.28; }
+    50%  { transform: translate(190px, -18px) rotate(2deg); opacity: 0.3; }
+    88%  { opacity: 0.08; }
+    100% { transform: translate(460px, 10px) rotate(4deg); opacity: 0; }
 }
-@keyframes curveDrift2 {
-    0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
-    30%  { transform: translate(-20px, 14px) rotate(-6deg); opacity: 0.2; }
-    55%  { opacity: 0.26; }
-    80%  { transform: translate(12px, -10px) rotate(3deg); opacity: 0.1; }
-    100% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+/* 오른쪽 → 왼쪽으로 계속 흐름 (반대 방향이라 서로 교차하는 느낌) */
+@keyframes curveFlow2 {
+    0%   { transform: translate(70px, 0) rotate(2deg); opacity: 0; }
+    12%  { opacity: 0.24; }
+    50%  { transform: translate(-180px, 16px) rotate(-3deg); opacity: 0.26; }
+    88%  { opacity: 0.07; }
+    100% { transform: translate(-440px, -8px) rotate(-5deg); opacity: 0; }
 }
-@keyframes curveDrift3 {
-    0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
-    25%  { transform: translate(16px, 12px) rotate(4deg) scale(1.05); opacity: 0.18; }
-    60%  { transform: translate(-18px, -8px) rotate(-5deg) scale(0.95); opacity: 0.25; }
-    85%  { opacity: 0.08; }
-    100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0; }
+/* 왼쪽 → 오른쪽, 다른 속도/시작점으로 흐름 */
+@keyframes curveFlow3 {
+    0%   { transform: translate(-50px, 6px) rotate(1deg); opacity: 0; }
+    12%  { opacity: 0.2; }
+    50%  { transform: translate(150px, -12px) rotate(-2deg); opacity: 0.22; }
+    88%  { opacity: 0.06; }
+    100% { transform: translate(380px, 8px) rotate(3deg); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
     .hero-curve { animation: none; opacity: 0; }
