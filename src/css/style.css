@@ -147,44 +147,41 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 .hero-orb-species-3 { animation-name: heroOrbWander3; animation-duration: 31s; }
 .hero-orb-species-3.hero-orb-main { animation-name: heroOrbWander3, heroOrbFlicker; animation-duration: 31s, 5s; }
 
+/* 세 오브가 서로 겹쳐 보이지 않도록 각자 다른 구역(왼쪽/오른쪽/중앙 위쪽)을
+   맡아 돈다 — 원본(heroOrbWander)은 왼쪽, heroOrbWander2는 오른쪽, heroOrbWander3는
+   더 위쪽 중앙을 순회해 세 궤적의 영역이 서로 크게 겹치지 않는다. */
 @keyframes heroOrbWander2 {
-    0%   { transform: translate(-155px, -25px); }
-    10%  { transform: translate(-95px, -68px); }
-    20%  { transform: translate(-10px, -45px); }
-    30%  { transform: translate(80px, -70px); }
-    42%  { transform: translate(130px, -30px); }
-    55%  { transform: translate(90px, -60px); }
-    68%  { transform: translate(0px, -20px); }
-    80%  { transform: translate(-90px, -55px); }
-    92%  { transform: translate(-135px, -40px); }
-    100% { transform: translate(-155px, -25px); }
+    0%   { transform: translate(190px, -30px); }
+    12%  { transform: translate(160px, -68px); }
+    25%  { transform: translate(100px, -75px); }
+    38%  { transform: translate(50px, -45px); }
+    50%  { transform: translate(35px, -20px); }
+    62%  { transform: translate(65px, -55px); }
+    75%  { transform: translate(125px, -70px); }
+    88%  { transform: translate(175px, -40px); }
+    100% { transform: translate(190px, -30px); }
 }
 @keyframes heroOrbWander3 {
-    0%   { transform: translate(125px, -60px); }
-    12%  { transform: translate(60px, -25px); }
-    22%  { transform: translate(-30px, -65px); }
-    35%  { transform: translate(-105px, -35px); }
-    48%  { transform: translate(-145px, -70px); }
-    60%  { transform: translate(-70px, -50px); }
-    72%  { transform: translate(20px, -75px); }
-    85%  { transform: translate(95px, -45px); }
-    100% { transform: translate(125px, -60px); }
+    0%   { transform: translate(-85px, -60px); }
+    14%  { transform: translate(-40px, -90px); }
+    28%  { transform: translate(20px, -95px); }
+    42%  { transform: translate(80px, -75px); }
+    57%  { transform: translate(85px, -55px); }
+    71%  { transform: translate(30px, -65px); }
+    85%  { transform: translate(-45px, -85px); }
+    100% { transform: translate(-85px, -60px); }
 }
 
 @keyframes heroOrbWander {
-    0%   { transform: translate(-120px, -50px); }
-    9%   { transform: translate(-65px, -72px); }
-    17%  { transform: translate(25px, -62px); }
-    23%  { transform: translate(95px, -35px); }
-    34%  { transform: translate(120px, -15px); }
-    41%  { transform: translate(70px, -55px); }
-    50%  { transform: translate(0px, -75px); }
-    58%  { transform: translate(-75px, -60px); }
-    67%  { transform: translate(-125px, -30px); }
-    76%  { transform: translate(-95px, -65px); }
-    85%  { transform: translate(-35px, -45px); }
-    93%  { transform: translate(-90px, -58px); }
-    100% { transform: translate(-120px, -50px); }
+    0%   { transform: translate(-190px, -35px); }
+    12%  { transform: translate(-160px, -65px); }
+    25%  { transform: translate(-100px, -75px); }
+    38%  { transform: translate(-50px, -50px); }
+    50%  { transform: translate(-30px, -25px); }
+    62%  { transform: translate(-60px, -60px); }
+    75%  { transform: translate(-120px, -70px); }
+    88%  { transform: translate(-175px, -45px); }
+    100% { transform: translate(-190px, -35px); }
 }
 @media (prefers-reduced-motion: reduce) {
     .hero-orb { animation: none; opacity: 0; }
