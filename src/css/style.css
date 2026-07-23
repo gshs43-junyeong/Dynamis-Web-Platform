@@ -71,55 +71,40 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 
 .hero { position: relative; text-align: center; padding: 2rem 0 5rem 0; }
 
-/* 로고/제목 주위를 가로질러 한 방향으로 계속 흘러가는 곡선 장식.
-   각 곡선은 stroke만 있는 얇은 선이고, mask-image로 양 끝을 투명하게 페이드시켜
-   "그려지다 만 듯한" 잔선 느낌을 준다. 왕복 없이 translateX로 한쪽 끝에서 반대쪽
-   끝까지 쭉 이동하며(파동처럼 y좌표와 회전이 함께 완만히 출렁인다), 이동 경로의
-   양 끝에서 opacity가 0이라 루프가 되돌아가는 지점이 보이지 않는다. */
-.hero-curve {
-    position: absolute;
-    z-index: -1;
-    width: 340px;
-    height: 220px;
-    fill: none;
-    stroke: rgba(255, 255, 255, 0.85);
-    stroke-width: 1.4;
-    stroke-linecap: round;
-    pointer-events: none;
-    opacity: 0;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 25%, black 75%, transparent 100%);
-    mask-image: linear-gradient(90deg, transparent 0%, black 25%, black 75%, transparent 100%);
-}
-.hero-curve-1 { top: -30px; left: -6%; animation: curveFlow1 22s linear infinite; }
-.hero-curve-2 { top: 58%; right: -8%; width: 300px; height: 200px; animation: curveFlow2 27s linear infinite; animation-delay: -9s; }
-.hero-curve-3 { top: 18%; left: 58%; width: 260px; height: 180px; animation: curveFlow3 24s linear infinite; animation-delay: -15s; }
+/* 로고 위 / 태그라인 아래에 자리한 얇은 띠. 절대 위치가 아니라 문서 흐름상
+   실제 형제 요소로 배치했기 때문에, 어떻게 움직이든 로고·제목·설명 문구 위에
+   겹칠 수 없다 (텍스트 영역을 물리적으로 침범하지 않음이 보장됨).
 
-/* 왼쪽 → 오른쪽으로 계속 흐름 */
-@keyframes curveFlow1 {
-    0%   { transform: translate(-70px, 0) rotate(-2deg); opacity: 0; }
-    12%  { opacity: 0.28; }
-    50%  { transform: translate(190px, -18px) rotate(2deg); opacity: 0.3; }
-    88%  { opacity: 0.08; }
-    100% { transform: translate(460px, 10px) rotate(4deg); opacity: 0; }
+   "모양 하나가 이동"하는 것처럼 보이지 않도록, 하나의 도형을 옮기는 대신
+   서로 다른 주기/속도를 가진 두 개의 파동 타일을 겹쳐 background-position만
+   계속 한 방향으로 흘려보낸다 — 이러면 새 파동 마루가 왼쪽에서 끊임없이
+   흘러들어오고, 오른쪽으로 갈수록 mask-image가 투명해지며 옅어져 사라진다.
+   두 타일의 주기가 서로 어긋나 있어(140px vs 190px) 매번 조금씩 다른 모양의
+   파동이 겹쳐 보이므로 "불규칙"하게 느껴진다. */
+.hero-wave {
+    width: 100%;
+    max-width: 640px;
+    height: 46px;
+    margin: 0 auto;
+    background-repeat: repeat-x, repeat-x;
+    background-size: 140px 46px, 190px 46px;
+    background-position: 0 0, 0 0;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 46' preserveAspectRatio='none'%3E%3Cpath d='M0,23 Q35,8 70,23 T140,23' fill='none' stroke='rgba(255,255,255,0.55)' stroke-width='1.4'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 46' preserveAspectRatio='none'%3E%3Cpath d='M0,26 Q47,40 95,26 T190,26' fill='none' stroke='rgba(255,255,255,0.28)' stroke-width='1.2'/%3E%3C/svg%3E");
+    -webkit-mask-image: linear-gradient(to right, black 0%, black 45%, transparent 92%);
+    mask-image: linear-gradient(to right, black 0%, black 45%, transparent 92%);
+    animation: heroWaveFlow 9s linear infinite;
+    pointer-events: none;
 }
-/* 오른쪽 → 왼쪽으로 계속 흐름 (반대 방향이라 서로 교차하는 느낌) */
-@keyframes curveFlow2 {
-    0%   { transform: translate(70px, 0) rotate(2deg); opacity: 0; }
-    12%  { opacity: 0.24; }
-    50%  { transform: translate(-180px, 16px) rotate(-3deg); opacity: 0.26; }
-    88%  { opacity: 0.07; }
-    100% { transform: translate(-440px, -8px) rotate(-5deg); opacity: 0; }
-}
-/* 왼쪽 → 오른쪽, 다른 속도/시작점으로 흐름 */
-@keyframes curveFlow3 {
-    0%   { transform: translate(-50px, 6px) rotate(1deg); opacity: 0; }
-    12%  { opacity: 0.2; }
-    50%  { transform: translate(150px, -12px) rotate(-2deg); opacity: 0.22; }
-    88%  { opacity: 0.06; }
-    100% { transform: translate(380px, 8px) rotate(3deg); opacity: 0; }
+.hero-wave-top { margin-bottom: 1.75rem; }
+.hero-wave-bottom { margin-top: 1.75rem; }
+@keyframes heroWaveFlow {
+    from { background-position: 0 0, 0 0; }
+    to   { background-position: 140px 0, 190px 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .hero-curve { animation: none; opacity: 0; }
+    .hero-wave { animation: none; }
 }
 .hero h1 { font-family: 'Italianno', cursive !important; font-size: 9.5rem; font-weight: 400; margin-bottom: 0.3rem; letter-spacing: 0; background: linear-gradient(180deg, #fff 40%, #444 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .hero .tagline { font-size: 1.25rem; color: var(--text-secondary); max-width: 720px; margin: 0 auto; word-break: keep-all; line-height: 1.8; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 1.5rem 0; }
