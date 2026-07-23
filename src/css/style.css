@@ -71,40 +71,60 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 
 .hero { position: relative; text-align: center; padding: 2rem 0 5rem 0; }
 
-/* 로고 위 / 태그라인 아래에 자리한 얇은 띠. 절대 위치가 아니라 문서 흐름상
-   실제 형제 요소로 배치했기 때문에, 어떻게 움직이든 로고·제목·설명 문구 위에
-   겹칠 수 없다 (텍스트 영역을 물리적으로 침범하지 않음이 보장됨).
+/* 로고 주위를 떠다니는 흰 빛 오브 + 서서히 사라지는 자취.
+   기존 .bg-blob(은은한 배경 광원) 애니메이션과는 별개의 독립된 장식이다.
 
-   "모양 하나가 이동"하는 것처럼 보이지 않도록, 하나의 도형을 옮기는 대신
-   서로 다른 주기/속도를 가진 두 개의 파동 타일을 겹쳐 background-position만
-   계속 한 방향으로 흘려보낸다 — 이러면 새 파동 마루가 왼쪽에서 끊임없이
-   흘러들어오고, 오른쪽으로 갈수록 mask-image가 투명해지며 옅어져 사라진다.
-   두 타일의 주기가 서로 어긋나 있어(140px vs 190px) 매번 조금씩 다른 모양의
-   파동이 겹쳐 보이므로 "불규칙"하게 느껴진다. */
-.hero-wave {
-    width: 100%;
-    max-width: 640px;
-    height: 46px;
-    margin: 0 auto;
-    background-repeat: repeat-x, repeat-x;
-    background-size: 140px 46px, 190px 46px;
-    background-position: 0 0, 0 0;
-    background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 46' preserveAspectRatio='none'%3E%3Cpath d='M0,23 Q35,8 70,23 T140,23' fill='none' stroke='rgba(255,255,255,0.55)' stroke-width='1.4'/%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 46' preserveAspectRatio='none'%3E%3Cpath d='M0,26 Q47,40 95,26 T190,26' fill='none' stroke='rgba(255,255,255,0.28)' stroke-width='1.2'/%3E%3C/svg%3E");
-    -webkit-mask-image: linear-gradient(to right, black 0%, black 45%, transparent 92%);
-    mask-image: linear-gradient(to right, black 0%, black 45%, transparent 92%);
-    animation: heroWaveFlow 9s linear infinite;
+   .hero-logo-wrap이 로고 이미지만 감싸는 기준점 역할을 하고, .hero-orb-field는
+   그 기준점 주변으로만(inset 범위) 확장되어 있어 오브가 아무리 움직여도 h1/태그라인
+   쪽으로는 내려가지 않는다. 그 안에서도 z-index:-1로 로고/텍스트보다 뒤에 그려지므로
+   설령 겹치더라도 시각적으로 글자를 가리는 일이 없다.
+
+   자취(trail)는 진짜 잔상 렌더링이 아니라, 동일한 heroOrbWander 경로를 도는 점 5개를
+   음수 animation-delay로 살짝 앞선 시점에 위치시키고 크기/불투명도/blur를 점점 줄여
+   "혜성 꼬리"처럼 보이게 만든 것이다. 경로 자체는 구간마다 길이와 방향이 들쭉날쭉해
+   속도와 방향이 계속 바뀌는 것처럼 보이도록 손으로 불규칙하게 짰다. */
+.hero-logo-wrap { position: relative; display: inline-block; margin-bottom: 20px; }
+.hero-orb-field {
+    position: absolute;
+    inset: -90px -140px 10px -140px;
+    z-index: -1;
     pointer-events: none;
 }
-.hero-wave-top { margin-bottom: 1.75rem; }
-.hero-wave-bottom { margin-top: 1.75rem; }
-@keyframes heroWaveFlow {
-    from { background-position: 0 0, 0 0; }
-    to   { background-position: 140px 0, 190px 0; }
+.hero-orb {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffffff 0%, rgba(255, 255, 255, 0.85) 35%, rgba(255, 255, 255, 0) 70%);
+    box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.55), 0 0 26px 10px rgba(255, 255, 255, 0.22);
+    animation: heroOrbWander 34s ease-in-out infinite;
+}
+.hero-orb-trail-1 { opacity: 0.55; width: 12px; height: 12px; margin: -6px 0 0 -6px; filter: blur(1px); box-shadow: none; animation-delay: -0.6s; }
+.hero-orb-trail-2 { opacity: 0.35; width: 10px; height: 10px; margin: -5px 0 0 -5px; filter: blur(2px); box-shadow: none; animation-delay: -1.2s; }
+.hero-orb-trail-3 { opacity: 0.2; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; filter: blur(3px); box-shadow: none; animation-delay: -1.8s; }
+.hero-orb-trail-4 { opacity: 0.1; width: 8px; height: 8px; margin: -4px 0 0 -4px; filter: blur(4px); box-shadow: none; animation-delay: -2.4s; }
+.hero-orb-trail-5 { opacity: 0.05; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; filter: blur(5px); box-shadow: none; animation-delay: -3s; }
+
+@keyframes heroOrbWander {
+    0%   { transform: translate(-120px, -50px); }
+    9%   { transform: translate(-65px, -72px); }
+    17%  { transform: translate(25px, -62px); }
+    23%  { transform: translate(95px, -35px); }
+    34%  { transform: translate(120px, -15px); }
+    41%  { transform: translate(70px, -55px); }
+    50%  { transform: translate(0px, -75px); }
+    58%  { transform: translate(-75px, -60px); }
+    67%  { transform: translate(-125px, -30px); }
+    76%  { transform: translate(-95px, -65px); }
+    85%  { transform: translate(-35px, -45px); }
+    93%  { transform: translate(-90px, -58px); }
+    100% { transform: translate(-120px, -50px); }
 }
 @media (prefers-reduced-motion: reduce) {
-    .hero-wave { animation: none; }
+    .hero-orb { animation: none; opacity: 0; }
 }
 .hero h1 { font-family: 'Italianno', cursive !important; font-size: 9.5rem; font-weight: 400; margin-bottom: 0.3rem; letter-spacing: 0; background: linear-gradient(180deg, #fff 40%, #444 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .hero .tagline { font-size: 1.25rem; color: var(--text-secondary); max-width: 720px; margin: 0 auto; word-break: keep-all; line-height: 1.8; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 1.5rem 0; }
@@ -145,6 +165,13 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 .admin-write { display: none; background: var(--bg-secondary); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 2rem; }
 .admin-write input, .admin-write textarea, .admin-write select { width: 100%; padding: 1rem; background: var(--bg-primary); border: 1px solid var(--border-color); color: white; border-radius: 4px; margin-bottom: 1rem; }
 .admin-write textarea { height: 150px; resize: none; }
+/* 브라우저 기본 placeholder 색상은 --text-secondary와 다를 수 있어(파이어폭스는
+   기본적으로 불투명도까지 낮춤) 태그 select의 placeholder(:invalid)와 색이
+   어긋나 보였다. 두 색을 동일하게 강제 통일. */
+.admin-write input::placeholder, .admin-write textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 1;
+}
 /* 브라우저 기본 select 화살표는 위치가 제각각이라 직접 그린 화살표로 교체하고,
    오른쪽 여백을 넉넉히 줘서 텍스트/화살표가 겹치거나 한쪽으로 쏠리지 않게 한다. */
 .admin-write select {
