@@ -11,6 +11,11 @@
 
 /* 기본 글씨체 적용 구조 강화 */
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important; }
+/* html에도 overflow-x:hidden을 둬야 한다 — 루트(html)가 visible이면 뷰포트
+   스크롤 기준이 body로 넘어가는 게 원칙이지만, 실제로는 html 쪽이 visible로
+   남아있으면 (히어로 오브처럼) transform으로 뷰포트 밖까지 나가는 요소가 있을 때
+   가로 스크롤이 그대로 가능해지는 경우가 있어 body만으로는 보장되지 않는다. */
+html { overflow-x: hidden; }
 body { background-color: var(--bg-primary); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; }
 
 /* 헤더 */
@@ -147,41 +152,44 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 .hero-orb-species-3 { animation-name: heroOrbWander3; animation-duration: 31s; }
 .hero-orb-species-3.hero-orb-main { animation-name: heroOrbWander3, heroOrbFlicker; animation-duration: 31s, 5s; }
 
-/* 세 오브가 서로 겹쳐 보이지 않도록 각자 다른 구역(왼쪽/오른쪽/중앙 위쪽)을
-   맡아 돈다 — 원본(heroOrbWander)은 왼쪽, heroOrbWander2는 오른쪽, heroOrbWander3는
-   더 위쪽 중앙을 순회해 세 궤적의 영역이 서로 크게 겹치지 않는다. */
+/* 세 오브가 서로 멀리 떨어진 구역(왼쪽 아래/오른쪽 아래/중앙 위쪽)을 맡아 돈다.
+   가로(x)는 h1 텍스트가 이미 페이지 폭 전체를 차지하고 있어 안전과 무관하므로
+   범위를 크게 넓혀 세 궤적을 멀리 떼어놓았고, heroOrbWander3(중앙 위쪽)는
+   세로(y)도 나머지 둘보다 훨씬 위(-100~-185px)로 올려 로고 위 좁은 영역에서
+   세 오브가 몰리지 않도록 했다. 텍스트에 가장 가까이 접근하는 지점(-20~-35px)도
+   기존 안전 검증된 범위(-20px)보다 여유를 더 두었다. */
 @keyframes heroOrbWander2 {
-    0%   { transform: translate(190px, -30px); }
-    12%  { transform: translate(160px, -68px); }
-    25%  { transform: translate(100px, -75px); }
-    38%  { transform: translate(50px, -45px); }
-    50%  { transform: translate(35px, -20px); }
-    62%  { transform: translate(65px, -55px); }
-    75%  { transform: translate(125px, -70px); }
-    88%  { transform: translate(175px, -40px); }
-    100% { transform: translate(190px, -30px); }
+    0%   { transform: translate(420px, -30px); }
+    12%  { transform: translate(370px, -70px); }
+    25%  { transform: translate(290px, -100px); }
+    38%  { transform: translate(200px, -75px); }
+    50%  { transform: translate(150px, -25px); }
+    62%  { transform: translate(190px, -55px); }
+    75%  { transform: translate(290px, -90px); }
+    88%  { transform: translate(390px, -55px); }
+    100% { transform: translate(420px, -30px); }
 }
 @keyframes heroOrbWander3 {
-    0%   { transform: translate(-85px, -60px); }
-    14%  { transform: translate(-40px, -90px); }
-    28%  { transform: translate(20px, -95px); }
-    42%  { transform: translate(80px, -75px); }
-    57%  { transform: translate(85px, -55px); }
-    71%  { transform: translate(30px, -65px); }
-    85%  { transform: translate(-45px, -85px); }
-    100% { transform: translate(-85px, -60px); }
+    0%   { transform: translate(-180px, -100px); }
+    14%  { transform: translate(-90px, -160px); }
+    28%  { transform: translate(40px, -185px); }
+    42%  { transform: translate(150px, -150px); }
+    57%  { transform: translate(160px, -100px); }
+    71%  { transform: translate(60px, -130px); }
+    85%  { transform: translate(-100px, -175px); }
+    100% { transform: translate(-180px, -100px); }
 }
 
 @keyframes heroOrbWander {
-    0%   { transform: translate(-190px, -35px); }
-    12%  { transform: translate(-160px, -65px); }
-    25%  { transform: translate(-100px, -75px); }
-    38%  { transform: translate(-50px, -50px); }
-    50%  { transform: translate(-30px, -25px); }
-    62%  { transform: translate(-60px, -60px); }
-    75%  { transform: translate(-120px, -70px); }
-    88%  { transform: translate(-175px, -45px); }
-    100% { transform: translate(-190px, -35px); }
+    0%   { transform: translate(-420px, -40px); }
+    12%  { transform: translate(-380px, -85px); }
+    25%  { transform: translate(-300px, -105px); }
+    38%  { transform: translate(-220px, -80px); }
+    50%  { transform: translate(-160px, -35px); }
+    62%  { transform: translate(-200px, -60px); }
+    75%  { transform: translate(-300px, -95px); }
+    88%  { transform: translate(-390px, -60px); }
+    100% { transform: translate(-420px, -40px); }
 }
 @media (prefers-reduced-motion: reduce) {
     .hero-orb { animation: none; opacity: 0; }
