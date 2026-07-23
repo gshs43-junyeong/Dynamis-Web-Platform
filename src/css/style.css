@@ -152,12 +152,13 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 .hero-orb-species-3 { animation-name: heroOrbWander3; animation-duration: 31s; }
 .hero-orb-species-3.hero-orb-main { animation-name: heroOrbWander3, heroOrbFlicker; animation-duration: 31s, 5s; }
 
-/* 세 오브가 서로 멀리 떨어진 구역(왼쪽 아래/오른쪽 아래/중앙 위쪽)을 맡아 돈다.
+/* 세 오브가 서로 멀리 떨어진 구역(왼쪽 위/오른쪽/로고 왼쪽 아래)을 맡아 돈다.
    가로(x)는 h1 텍스트가 이미 페이지 폭 전체를 차지하고 있어 안전과 무관하므로
-   범위를 크게 넓혀 세 궤적을 멀리 떼어놓았고, heroOrbWander3(중앙 위쪽)는
-   세로(y)도 나머지 둘보다 훨씬 위(-100~-185px)로 올려 로고 위 좁은 영역에서
-   세 오브가 몰리지 않도록 했다. 텍스트에 가장 가까이 접근하는 지점(-20~-35px)도
-   기존 안전 검증된 범위(-20px)보다 여유를 더 두었다. */
+   범위를 크게 넓혀 세 궤적을 멀리 떼어놓았다. heroOrbWander3는 원래 로고 위
+   훨씬 높은 곳(-100~-185px)을 돌았는데 너무 위로 붕 떠 보인다는 피드백을 받아
+   로고보다 조금 아래(=원점에 더 가까운 -18~-60px)의 왼쪽 구역으로 낮춰
+   로고 근처를 떠다니는 느낌으로 바꿨다. 텍스트에 가장 가까이 접근하는 지점
+   (-18~-35px)도 기존 안전 검증된 범위(-20px)와 비슷한 수준의 여유를 유지한다. */
 @keyframes heroOrbWander2 {
     0%   { transform: translate(420px, -30px); }
     12%  { transform: translate(370px, -70px); }
@@ -170,14 +171,14 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
     100% { transform: translate(420px, -30px); }
 }
 @keyframes heroOrbWander3 {
-    0%   { transform: translate(-180px, -100px); }
-    14%  { transform: translate(-90px, -160px); }
-    28%  { transform: translate(40px, -185px); }
-    42%  { transform: translate(150px, -150px); }
-    57%  { transform: translate(160px, -100px); }
-    71%  { transform: translate(60px, -130px); }
-    85%  { transform: translate(-100px, -175px); }
-    100% { transform: translate(-180px, -100px); }
+    0%   { transform: translate(-60px, -20px); }
+    14%  { transform: translate(-120px, -45px); }
+    28%  { transform: translate(-200px, -55px); }
+    42%  { transform: translate(-180px, -35px); }
+    57%  { transform: translate(-100px, -18px); }
+    71%  { transform: translate(-40px, -30px); }
+    85%  { transform: translate(-90px, -50px); }
+    100% { transform: translate(-60px, -20px); }
 }
 
 @keyframes heroOrbWander {
