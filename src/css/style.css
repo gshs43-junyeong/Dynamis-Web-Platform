@@ -135,6 +135,42 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
     100% { opacity: 0.32; }
 }
 
+/* 로고 필드 안에 오브 2마리("종") 추가 — 같은 .hero-orb-field(로고 기준 이미
+   안전 검증된 좁은 영역) 안에서 서로 다른 경로(heroOrbWander2/3)로 움직인다.
+   처음엔 figure1/2 이미지 안(밝은 도해라 흰 오브가 안 보임), 그다음엔 페이지
+   좌우 여백(뷰포트가 좁으면 본문과 여백이 좁아져 실제로 텍스트와 겹침이 검출됨)에
+   둬봤지만 둘 다 안전을 보장할 수 없어 폐기하고, 검증된 로고 필드를 공유하는
+   이 방식으로 정착했다. y좌표를 원래 heroOrbWander처럼 항상 로고 중심보다 위쪽
+   (-20 ~ -75px)으로만 유지해 안전 범위를 그대로 물려받는다. */
+.hero-orb-species-2 { animation-name: heroOrbWander2; animation-duration: 27s; }
+.hero-orb-species-2.hero-orb-main { animation-name: heroOrbWander2, heroOrbFlicker; animation-duration: 27s, 3.6s; }
+.hero-orb-species-3 { animation-name: heroOrbWander3; animation-duration: 31s; }
+.hero-orb-species-3.hero-orb-main { animation-name: heroOrbWander3, heroOrbFlicker; animation-duration: 31s, 5s; }
+
+@keyframes heroOrbWander2 {
+    0%   { transform: translate(-155px, -25px); }
+    10%  { transform: translate(-95px, -68px); }
+    20%  { transform: translate(-10px, -45px); }
+    30%  { transform: translate(80px, -70px); }
+    42%  { transform: translate(130px, -30px); }
+    55%  { transform: translate(90px, -60px); }
+    68%  { transform: translate(0px, -20px); }
+    80%  { transform: translate(-90px, -55px); }
+    92%  { transform: translate(-135px, -40px); }
+    100% { transform: translate(-155px, -25px); }
+}
+@keyframes heroOrbWander3 {
+    0%   { transform: translate(125px, -60px); }
+    12%  { transform: translate(60px, -25px); }
+    22%  { transform: translate(-30px, -65px); }
+    35%  { transform: translate(-105px, -35px); }
+    48%  { transform: translate(-145px, -70px); }
+    60%  { transform: translate(-70px, -50px); }
+    72%  { transform: translate(20px, -75px); }
+    85%  { transform: translate(95px, -45px); }
+    100% { transform: translate(125px, -60px); }
+}
+
 @keyframes heroOrbWander {
     0%   { transform: translate(-120px, -50px); }
     9%   { transform: translate(-65px, -72px); }
