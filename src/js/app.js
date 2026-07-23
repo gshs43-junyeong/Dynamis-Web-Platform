@@ -34,8 +34,10 @@ import {
 import { addFaqQuestion, addFaqAnswer, closeFaq, deleteCurrentFaq, changeFaqPage, listenFaqs } from './faq.js';
 import { listenMembersSection } from './members.js';
 import { listenAdminUserConsole, commitRoleChange, warnUser, deleteUserByAdmin } from './admin.js';
+import { openPuzzle } from './puzzle.js';
 
 window.navigateTo = navigateTo;
+window.openPuzzle = openPuzzle;
 window.handleAuthNavClick = handleAuthNavClick;
 window.toggleMobileMenu = toggleMobileMenu;
 window.closeMobileMenu = closeMobileMenu;
