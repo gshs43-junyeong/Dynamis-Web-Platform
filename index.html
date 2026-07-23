@@ -130,14 +130,29 @@
             <div id="notice-write-box" class="admin-write">
                 <h3 style="margin-bottom: 1rem;">새 공지사항 작성</h3>
                 <input type="text" id="post-title" placeholder="제목">
+                <select id="post-tag">
+                    <option value="" disabled selected>태그를 선택하세요</option>
+                    <option value="학술 자료">학술 자료</option>
+                    <option value="이벤트 안내">이벤트 안내</option>
+                    <option value="설문 조사">설문 조사</option>
+                    <option value="기타">기타</option>
+                </select>
                 <textarea id="post-content" placeholder="내용을 입력하세요... (최대 2000바이트 제한)"></textarea>
-                
+
                 <div id="file-upload-container" style="margin-bottom: 1rem;">
                     <label style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.9rem;">파일 첨부 (명예부원은 첨부 불가 / 일일 업로드 제한 2MB)</label>
                     <input type="file" id="post-file" multiple style="padding: 0.5rem; background: transparent; border: 1px dashed var(--border-color); width: 100%;">
                 </div>
-                
+
                 <button class="btn" onclick="addNotice()">게시하기</button>
+            </div>
+
+            <div class="tag-filter-bar">
+                <button type="button" class="page-btn notice-tag-filter-btn active" data-tag="" onclick="changeNoticeTagFilter('')">전체</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="학술 자료" onclick="changeNoticeTagFilter('학술 자료')">학술 자료</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="이벤트 안내" onclick="changeNoticeTagFilter('이벤트 안내')">이벤트 안내</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="설문 조사" onclick="changeNoticeTagFilter('설문 조사')">설문 조사</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="기타" onclick="changeNoticeTagFilter('기타')">기타</button>
             </div>
 
             <table class="notice-table">
@@ -425,6 +440,7 @@
             <span class="close-modal" onclick="closeNotice()">&times;</span>
             <h2 id="modal-title" style="margin-bottom: 0.5rem; padding-right: 30px;"></h2>
             <div style="margin-bottom: 1rem;">
+                <span id="modal-tag" class="notice-tag-badge" style="display: none;"></span>
                 <span id="modal-author" style="font-size: 0.95rem; color: #fff; font-weight: 600; margin-right: 15px;"></span>
                 <span id="modal-date" style="font-size: 0.9rem; color: var(--text-secondary);"></span>
             </div>
@@ -498,6 +514,7 @@
             <div id="faq-like-mount" class="like-mount"></div>
             <div style="width: 100%; height: 1px; background: var(--border-color); margin: 1rem 0;"></div>
             <p id="faq-modal-text" style="line-height: 1.8; white-space: pre-wrap; font-size: 1.05rem;"></p>
+            <button id="faq-modal-delete-btn" class="btn" style="background: #cc3333; color: white; width: auto; margin-top: 1.5rem; display: none;" onclick="deleteCurrentFaq()">FAQ 삭제</button>
             <div class="comment-box">
                 <h4 style="margin-bottom: 1rem; font-size: 1.2rem;">답변 목록</h4>
                 <div id="faq-answer-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;"></div>
