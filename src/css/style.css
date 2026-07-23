@@ -11,11 +11,6 @@
 
 /* 기본 글씨체 적용 구조 강화 */
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important; }
-/* html에도 overflow-x:hidden을 둬야 한다 — 루트(html)가 visible이면 뷰포트
-   스크롤 기준이 body로 넘어가는 게 원칙이지만, 실제로는 html 쪽이 visible로
-   남아있으면 (히어로 오브처럼) transform으로 뷰포트 밖까지 나가는 요소가 있을 때
-   가로 스크롤이 그대로 가능해지는 경우가 있어 body만으로는 보장되지 않는다. */
-html { overflow-x: hidden; }
 body { background-color: var(--bg-primary); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; }
 
 /* 헤더 */
@@ -156,19 +151,24 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
    가로(x)는 h1 텍스트가 이미 페이지 폭 전체를 차지하고 있어 안전과 무관하므로
    범위를 크게 넓혀 세 궤적을 멀리 떼어놓았다. heroOrbWander3는 원래 로고 위
    훨씬 높은 곳(-100~-185px)을 돌았는데 너무 위로 붕 떠 보인다는 피드백을 받아
-   로고보다 조금 아래(=원점에 더 가까운 -18~-60px)의 왼쪽 구역으로 낮춰
-   로고 근처를 떠다니는 느낌으로 바꿨다. 텍스트에 가장 가까이 접근하는 지점
-   (-18~-35px)도 기존 안전 검증된 범위(-20px)와 비슷한 수준의 여유를 유지한다. */
+   로고보다 조금 아래(=원점에 더 가까운 -18~-60px)의 왼쪽 구역으로 낮췄다.
+
+   세로(y)는 heroOrbWander/heroOrbWander2도 최대 -70px까지만 올라가도록 낮춰뒀다 —
+   기존에 -100~-105px까지 올라가던 값은 실측(getBoundingClientRect)해보니 실제로
+   header(position:sticky, 뷰포트 상단 ~87px까지 차지)의 하단 경계에 거의 닿거나
+   살짝 겹쳐, 오브가 header의 불투명 배경에 잘려 보이는("상단 영역 위로 올라가
+   짤리는") 문제가 있었다. -70px 선에서는 header 하단까지 30px 넘게 여유가 있어
+   더 이상 겹치지 않는다. */
 @keyframes heroOrbWander2 {
-    0%   { transform: translate(420px, -30px); }
-    12%  { transform: translate(370px, -70px); }
-    25%  { transform: translate(290px, -100px); }
-    38%  { transform: translate(200px, -75px); }
-    50%  { transform: translate(150px, -25px); }
-    62%  { transform: translate(190px, -55px); }
-    75%  { transform: translate(290px, -90px); }
-    88%  { transform: translate(390px, -55px); }
-    100% { transform: translate(420px, -30px); }
+    0%   { transform: translate(420px, -22px); }
+    12%  { transform: translate(370px, -50px); }
+    25%  { transform: translate(290px, -70px); }
+    38%  { transform: translate(200px, -52px); }
+    50%  { transform: translate(150px, -18px); }
+    62%  { transform: translate(190px, -38px); }
+    75%  { transform: translate(290px, -63px); }
+    88%  { transform: translate(390px, -38px); }
+    100% { transform: translate(420px, -22px); }
 }
 @keyframes heroOrbWander3 {
     0%   { transform: translate(-60px, -20px); }
@@ -182,15 +182,15 @@ main { max-width: 1100px; margin: 0 auto; padding: 4rem 2rem; position: relative
 }
 
 @keyframes heroOrbWander {
-    0%   { transform: translate(-420px, -40px); }
-    12%  { transform: translate(-380px, -85px); }
-    25%  { transform: translate(-300px, -105px); }
-    38%  { transform: translate(-220px, -80px); }
-    50%  { transform: translate(-160px, -35px); }
-    62%  { transform: translate(-200px, -60px); }
-    75%  { transform: translate(-300px, -95px); }
-    88%  { transform: translate(-390px, -60px); }
-    100% { transform: translate(-420px, -40px); }
+    0%   { transform: translate(-420px, -30px); }
+    12%  { transform: translate(-380px, -60px); }
+    25%  { transform: translate(-300px, -70px); }
+    38%  { transform: translate(-220px, -55px); }
+    50%  { transform: translate(-160px, -25px); }
+    62%  { transform: translate(-200px, -42px); }
+    75%  { transform: translate(-300px, -65px); }
+    88%  { transform: translate(-390px, -42px); }
+    100% { transform: translate(-420px, -30px); }
 }
 @media (prefers-reduced-motion: reduce) {
     .hero-orb { animation: none; opacity: 0; }
