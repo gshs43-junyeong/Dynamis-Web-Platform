@@ -1,0 +1,16 @@
+    <script>
+      (function () {
+        // 오브 그룹(로고 / figure1 / figure2)마다 페이지를 새로고침할 때 각자 독립적으로
+        // 임의의 시점에서 출발시킨다 — 그룹별로 다른 난수를 뽑아야 세 무리가 서로 다른
+        // 위상으로 움직인다 (같은 난수를 쓰면 셋이 마치 하나처럼 동기화되어 보임).
+        // 그룹 내부(자취 점들 사이)의 상대 간격(각자의 기본 delay)은 그대로 유지된다.
+        var groupOffsets = {};
+        document.querySelectorAll('.hero-orb[data-orb-group]').forEach(function (el) {
+          var group = el.dataset.orbGroup;
+          if (!(group in groupOffsets)) groupOffsets[group] = Math.random() * 34;
+          var baseDelay = parseFloat(el.dataset.baseDelay || '0');
+          var flickerDelay = el.classList.contains('hero-orb-main') ? ', ' + (Math.random() * 4.3).toFixed(2) + 's' : '';
+          el.style.animationDelay = (baseDelay - groupOffsets[group]).toFixed(2) + 's' + flickerDelay;
+        });
+      })();
+    </script>

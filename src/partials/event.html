@@ -1,0 +1,35 @@
+        <section id="event" class="section">
+            <h2 style="margin-bottom: 0.5rem;">Event</h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 2rem;">Dynamis에서 주최하는 행사 안내입니다. 마감 기한이 지나면 내용을 확인할 수 없습니다.</p>
+
+            <div id="event-write-box" class="admin-write" style="display: none;">
+                <h3 style="margin-bottom: 1rem;">새 이벤트 작성</h3>
+                <input type="text" id="event-post-title" placeholder="행사 제목">
+                <textarea id="event-post-content" placeholder="행사 내용을 입력하세요... (최대 2000바이트 제한)"></textarea>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.9rem;">마감 기한 (이 시각이 지나면 열람 불가)</label>
+                    <input type="datetime-local" id="event-deadline-input" style="padding: 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); color: white; border-radius: 4px; width: 100%; max-width: 320px;">
+                </div>
+
+                <div id="event-file-upload-container" style="margin-bottom: 1rem;">
+                    <label style="display:block; margin-bottom:0.5rem; color:var(--text-secondary); font-size:0.9rem;">파일 첨부 (명예부원은 첨부 불가 / 일일 업로드 제한 2MB)</label>
+                    <input type="file" id="event-post-file" multiple style="padding: 0.5rem; background: transparent; border: 1px dashed var(--border-color); width: 100%;">
+                </div>
+
+                <button class="btn" onclick="addEvent()">게시하기</button>
+            </div>
+
+            <table class="notice-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">제목</th>
+                        <th style="width: 25%;">작성자 (등급)</th>
+                        <th style="width: 20%;">마감까지</th>
+                        <th style="width: 15%;">등록일</th>
+                    </tr>
+                </thead>
+                <tbody id="event-list"></tbody>
+            </table>
+            <div id="event-pagination-controls" class="pagination"></div>
+        </section>

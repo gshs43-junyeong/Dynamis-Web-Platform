@@ -1,0 +1,22 @@
+    <header>
+        <div class="logo-area" onclick="navigateTo('/home')">
+            <img src="logo.png" alt="Dynamis Logo" style="height: 38px; width: auto; filter: invert(1);" onerror="this.style.display='none'">
+            <div class="logo-text">Dynamis</div>
+        </div>
+        <nav>
+            <ul>
+                <li><a onclick="navigateTo('/home')" id="nav-home" class="active">Home</a></li>
+                <li><a onclick="navigateTo('/notice')" id="nav-notice">Notice</a></li>
+                <li><a onclick="navigateTo('/event')" id="nav-event">Event</a></li>
+                <li><a onclick="navigateTo('/faq')" id="nav-faq">FAQ</a></li>
+                <li><a onclick="navigateTo('/members')" id="nav-members">Members</a></li>
+                <li><a onclick="handleAuthNavClick()" id="nav-login">Login</a></li>
+                <li id="admin-menu" style="display: none;"><a onclick="navigateTo('/admin')" id="nav-admin">Admin</a></li>
+            </ul>
+        </nav>
+        <div class="hamburger-menu" id="hamburger-menu" onclick="toggleMobileMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </header>

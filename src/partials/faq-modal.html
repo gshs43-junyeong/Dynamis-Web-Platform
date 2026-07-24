@@ -1,0 +1,27 @@
+    <div id="faq-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeFaq()">&times;</span>
+            <h2 id="faq-modal-title" style="margin-bottom: 0.5rem; padding-right: 30px;"></h2>
+            <div style="margin-bottom: 1rem;">
+                <span id="faq-modal-author" style="font-size: 0.95rem; color: #fff; font-weight: 600; margin-right: 15px;"></span>
+                <span id="faq-modal-date" style="font-size: 0.9rem; color: var(--text-secondary);"></span>
+            </div>
+            <div id="faq-like-mount" class="like-mount"></div>
+            <div style="width: 100%; height: 1px; background: var(--border-color); margin: 1rem 0;"></div>
+            <p id="faq-modal-text" style="line-height: 1.8; white-space: pre-wrap; font-size: 1.05rem;"></p>
+            <button id="faq-modal-delete-btn" class="btn" style="background: #cc3333; color: white; width: auto; margin-top: 1.5rem; display: none;" onclick="deleteCurrentFaq()">FAQ 삭제</button>
+            <div class="comment-box">
+                <h4 style="margin-bottom: 1rem; font-size: 1.2rem;">답변 목록</h4>
+                <div id="faq-answer-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;"></div>
+                <div id="faq-answer-write-container" style="display: none;">
+                    <textarea id="faq-answer-input" placeholder="답변을 입력하세요. (각 질문당 최대 2개, 1000바이트 이내)" style="width:100%; height:70px; background:var(--bg-primary); border:1px solid var(--border-color); color:white; padding:0.8rem; border-radius:4px; resize:none; font-size:0.95rem;"></textarea>
+                    <div style="text-align: right; margin-top: 0.5rem;">
+                        <button class="btn" style="width: auto; padding: 0.6rem 1.5rem; font-size: 0.9rem;" onclick="addFaqAnswer()">답변 등록</button>
+                    </div>
+                </div>
+                <div id="faq-answer-guest-message" style="color: var(--text-secondary); font-style: italic; font-size: 0.9rem; text-align: center;">
+                    💡 부원 및 관리자만 답변 작성이 가능합니다.
+                </div>
+            </div>
+        </div>
+    </div>
