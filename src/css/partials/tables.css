@@ -1,0 +1,9 @@
+/* 테이블 스타일 */
+.notice-table { width: 100%; border-collapse: collapse; background: var(--bg-secondary); border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); margin-top: 1rem; }
+.notice-table th { padding: 1.2rem; background: var(--bg-tertiary); color: var(--text-secondary); text-align: left; font-weight: 600; }
+.notice-table td { padding: 1.2rem; border-bottom: 1px solid var(--border-color); }
+.notice-table .clickable-td { cursor: pointer; }
+.notice-table tr:hover .clickable-td { background: rgba(255,255,255,0.04); color: #fff; }
+
+.pin-col { text-align: center; width: 60px; }
+.pin-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #fff; }
