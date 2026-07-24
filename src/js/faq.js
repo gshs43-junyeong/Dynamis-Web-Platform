@@ -10,7 +10,7 @@ import {
     getDocs,
     deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorBatchName, getByteLength } from './utils.js';
 import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';
 
@@ -106,7 +106,7 @@ function renderFaqPage(pageNum) {
         const authorTd = document.createElement('td');
         authorTd.style.color = 'var(--text-secondary)';
         authorTd.style.fontSize = '0.95rem';
-        authorTd.textContent = formatAuthorLabel(faq);
+        authorTd.textContent = formatAuthorBatchName(faq);
         tr.appendChild(authorTd);
 
         const dateTd = document.createElement('td');
@@ -177,7 +177,7 @@ function viewFaq(index) {
     const text = document.getElementById('faq-modal-text');
 
     if (title) title.innerText = faq.title || faq.question || '';
-    if (author) author.innerText = `✍️ ${formatAuthorLabel(faq)}`;
+    if (author) author.innerText = `✍️ ${formatAuthorBatchName(faq)}`;
     if (date) date.innerText = `📅 ${faq.date || ''}`;
     if (text) text.innerText = faq.content || faq.question || '';
 
@@ -221,7 +221,7 @@ function viewFaq(index) {
                 const authorSpan = document.createElement('span');
                 authorSpan.style.color = '#fff';
                 authorSpan.style.fontWeight = '700';
-                authorSpan.textContent = formatAuthorLabel(answer);
+                authorSpan.textContent = formatAuthorBatchName(answer);
                 const dateSpan = document.createElement('span');
                 dateSpan.textContent = answer.date || '';
                 header.appendChild(authorSpan);
