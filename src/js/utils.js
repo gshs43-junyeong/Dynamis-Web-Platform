@@ -24,6 +24,12 @@ export function formatAuthorLabel(author) {
     return `사용자 (${role})`;
 }
 
+export function formatAuthorBatchName(author) {
+    const name = author?.authorName || '알수없음';
+    const batch = author?.authorBatch || '';
+    return batch ? `${batch} ${name}` : name;
+}
+
 export function formatUserIdentityLabel(user) {
     if (!user) return '비로그인';
     const batch = user.batch ? `${user.batch}` : '';

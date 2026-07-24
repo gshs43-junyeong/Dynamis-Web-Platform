@@ -35,6 +35,7 @@ import { addFaqQuestion, addFaqAnswer, closeFaq, deleteCurrentFaq, changeFaqPage
 import { listenMembersSection } from './members.js';
 import { listenAdminUserConsole, commitRoleChange, warnUser, deleteUserByAdmin } from './admin.js';
 import { openPuzzle } from './puzzle.js';
+import { initScrollReveal } from './reveal.js';
 
 window.navigateTo = navigateTo;
 window.openPuzzle = openPuzzle;
@@ -82,6 +83,7 @@ function initSystemConfiguration() {
     listenMembersSection();
     listenAdminUserConsole();
     renderRoute();
+    initScrollReveal();
 }
 
 auth.initializeAuthCallbacks(applyUserSessionUI);
