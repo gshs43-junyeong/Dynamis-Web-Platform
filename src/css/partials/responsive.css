@@ -1,0 +1,30 @@
+/* 반응형 스타일 */
+@media (max-width: 1080px) {
+    header { padding: 1.25rem 20px; }
+    .logo-area { gap: 8px; }
+    .logo-text { font-size: 2rem; }
+
+    nav { display: none; }
+    .hamburger-menu { display: flex; }
+}
+
+@media (max-width: 768px) {
+    header { padding: 1.5rem 15px; }
+    .logo-area { gap: 8px; }
+    .logo-text { font-size: 1.8rem; }
+    
+    main { padding: 2rem 1rem; }
+    .hero h1 { font-size: 6rem; }
+    .hero img { height: 80px !important; margin-bottom: 10px !important; }
+    .hero .tagline { font-size: 1rem; padding: 1rem 0; }
+    
+    .feature-grid { grid-template-columns: 1fr; }
+    .content-card { padding: 1.5rem; }
+    .member-ul { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+    .logo-text { font-size: 1.4rem; }
+    .hero h1 { font-size: 4rem; }
+    .hero img { height: 60px !important; margin-bottom: 8px !important; }
+}

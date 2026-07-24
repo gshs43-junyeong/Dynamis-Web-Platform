@@ -1,0 +1,37 @@
+/* 입력 폼 가이드 */
+.admin-write { display: none; background: var(--bg-secondary); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 2rem; }
+.admin-write input, .admin-write textarea, .admin-write select { width: 100%; padding: 1rem; background: var(--bg-primary); border: 1px solid var(--border-color); color: white; border-radius: 4px; margin-bottom: 1rem; }
+.admin-write textarea { height: 150px; resize: none; }
+/* 브라우저 기본 placeholder 색상은 --text-secondary와 다를 수 있어(파이어폭스는
+   기본적으로 불투명도까지 낮춤) 태그 select의 placeholder(:invalid)와 색이
+   어긋나 보였다. 두 색을 동일하게 강제 통일. */
+.admin-write input::placeholder, .admin-write textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 1;
+}
+/* 브라우저 기본 select 화살표는 위치가 제각각이라 직접 그린 화살표로 교체하고,
+   오른쪽 여백을 넉넉히 줘서 텍스트/화살표가 겹치거나 한쪽으로 쏠리지 않게 한다. */
+.admin-write select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 2.5rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 14px;
+}
+/* "태그를 선택하세요" placeholder 옵션이 선택된 동안(=아직 유효한 태그를 고르지
+   않은 상태)에는 다른 입력칸의 placeholder처럼 회색으로, 실제 태그를 고르면
+   다른 옵션들과 같은 흰색으로 자동 전환된다. */
+.admin-write select:invalid {
+    color: var(--text-secondary);
+}
+
+.form-card { max-width: 450px; margin: 4rem auto; background: var(--bg-secondary); padding: 3rem; border-radius: 12px; border: 1px solid var(--border-color); }
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; }
+.form-group input, .form-group select { width: 100%; padding: 0.8rem; background: var(--bg-primary); border: 1px solid var(--border-color); color: white; border-radius: 4px; }
+
+.btn { width: 100%; padding: 1rem; background: white; color: black; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; transition: 0.2s; text-align: center; display: inline-block; text-decoration: none; }
+.btn:hover { opacity: 0.8; }

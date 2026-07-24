@@ -1,0 +1,27 @@
+:root {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #161616;
+    --bg-tertiary: #242424;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --accent-color: #ffffff;
+    --border-color: #333333;
+    --modal-bg: rgba(0, 0, 0, 0.9);
+}
+
+/* 기본 글씨체 적용 구조 강화 */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important; }
+body { background-color: var(--bg-primary); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; }
+
+/* 헤더 */
+header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.5rem 10%; background-color: rgba(10, 10, 10, 0.95);
+    border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100;
+}
+.logo-area { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.logo-text { font-family: 'Italianno', cursive !important; font-size: 2.4rem; font-weight: 400; letter-spacing: 0; color: var(--text-primary); line-height: 1; }
+
+nav ul { display: flex; list-style: none; gap: 2rem; align-items: center; }
+nav a { color: var(--text-secondary); text-decoration: none; font-weight: 500; cursor: pointer; transition: 0.3s; }
+nav a:hover, nav a.active { color: var(--text-primary); }

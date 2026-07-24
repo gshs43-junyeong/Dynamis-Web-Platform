@@ -1,0 +1,5 @@
+/* 댓글 스타일 */
+.comment-box { margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; }
+.comment-item { background: var(--bg-primary); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 0.8rem; position: relative; }
+.comment-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
+.comment-body { font-size: 0.95rem; white-space: pre-wrap; word-break: break-all; }

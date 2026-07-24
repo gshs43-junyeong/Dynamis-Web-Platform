@@ -1,0 +1,161 @@
+/* 홈 - 배경 그리드 무늬 (서서히 흘러가는 애니메이션 추가) */
+#home::before {
+    content: ""; position: absolute; top: -4rem; left: -50vw; width: 200vw; height: 150%;
+    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px; background-position: center; z-index: -2; pointer-events: none;
+    opacity: 0.7; animation: gridDrift 40s linear infinite;
+}
+@keyframes gridDrift {
+    from { background-position: 0px 0px, 0px 0px; }
+    to { background-position: 80px 120px, 80px 120px; }
+}
+
+/* 홈 화면 전용 애니메이션 배경 (은은하게 떠다니는 빛 덩어리) */
+.bg-blob { position: absolute; border-radius: 50%; filter: blur(90px); z-index: -1; pointer-events: none; will-change: transform; }
+.bg-blob-1 { width: 420px; height: 420px; top: -140px; left: -120px; background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%); animation: blobFloat1 22s ease-in-out infinite; }
+.bg-blob-2 { width: 380px; height: 380px; top: 10%; right: -120px; background: radial-gradient(circle, rgba(140,160,255,0.16), transparent 70%); animation: blobFloat2 26s ease-in-out infinite; }
+.bg-blob-3 { width: 320px; height: 320px; bottom: -100px; left: 30%; background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%); animation: blobFloat3 30s ease-in-out infinite; }
+@keyframes blobFloat1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(70px, 90px) scale(1.15); }
+}
+@keyframes blobFloat2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-90px, 50px) scale(1.1); }
+}
+@keyframes blobFloat3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(60px, -70px) scale(0.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+    #home::before, .bg-blob { animation: none; }
+}
+
+.hero { position: relative; text-align: center; padding: 2rem 0 5rem 0; }
+
+/* 로고 주위를 떠다니는 흰 빛 오브 + 오브가 지나간 자리에 서서히 사라지는 자취.
+   기존 .bg-blob(은은한 배경 광원) 애니메이션과는 별개의 독립된 장식이다.
+
+   .hero-logo-wrap이 로고 이미지만 감싸는 기준점 역할을 하고, .hero-orb-field는
+   그 기준점 주변으로만(inset 범위) 확장되어 있어 오브가 아무리 움직여도 h1/태그라인
+   쪽으로는 내려가지 않는다. 그 안에서도 z-index:-1로 로고/텍스트보다 뒤에 그려지므로
+   설령 겹치더라도 시각적으로 글자를 가리는 일이 없다.
+
+   자취(trail)는 진짜 잔상 렌더링이 아니라, 동일한 heroOrbWander 경로를 도는 점 9개를
+   "양수" animation-delay로 조금씩 늦게 출발시켜 오브보다 항상 뒤처지게(=오브가 이미
+   지나간 위치) 만든 것이다 (CSS에서 양수 delay는 그만큼 애니메이션 진행이 늦어지므로
+   과거 시점을 보여준다 — 음수를 쓰면 반대로 오브보다 앞서가 버린다). 간격을 촘촘하게
+   잡고 각 점마다 blur를 더해 경계를 흐려서 개별 점이 아니라 하나의 연속된 줄기처럼
+   보이도록 했다. 경로 자체는 구간마다 길이와 방향이 들쭉날쭉해 속도와 방향이 계속
+   바뀌는 것처럼 보이도록 손으로 불규칙하게 짰다.
+
+   오브 본체도 항상 밝게 켜져 있지 않고 heroOrbFlicker로 불투명도가 불규칙하게
+   출렁이며, 페이지 진입 시 인라인 스크립트가 34초 주기 중 임의의 지점에서 시작하게
+   만들어(자취 상대 간격은 유지) "확률적으로 존재하고 자율적으로 움직이는" 느낌을
+   더했다 — 존재 자체가 옅고 일정하지 않다는 점에서 전자구름에 빗댄 표현. */
+.hero-logo-wrap { position: relative; display: inline-block; margin-bottom: 20px; }
+.hero-orb-field {
+    position: absolute;
+    inset: -90px -140px 10px -140px;
+    z-index: -1;
+    pointer-events: none;
+}
+.hero-orb {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffffff 0%, rgba(255, 255, 255, 0.8) 40%, rgba(255, 255, 255, 0) 72%);
+    animation: heroOrbWander 34s ease-in-out infinite;
+}
+.hero-orb-main {
+    box-shadow: 0 0 9px 3px rgba(255, 255, 255, 0.35), 0 0 18px 7px rgba(255, 255, 255, 0.14);
+    filter: blur(0.4px);
+    animation: heroOrbWander 34s ease-in-out infinite, heroOrbFlicker 4.3s ease-in-out infinite;
+}
+.hero-orb-trail-1 { opacity: 0.38; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; filter: blur(1.1px); animation-delay: 0.25s; }
+.hero-orb-trail-2 { opacity: 0.3; width: 10px; height: 10px; margin: -5px 0 0 -5px; filter: blur(1.6px); animation-delay: 0.55s; }
+.hero-orb-trail-3 { opacity: 0.23; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; filter: blur(2.1px); animation-delay: 0.9s; }
+.hero-orb-trail-4 { opacity: 0.17; width: 8px; height: 8px; margin: -4px 0 0 -4px; filter: blur(2.6px); animation-delay: 1.3s; }
+.hero-orb-trail-5 { opacity: 0.12; width: 8px; height: 8px; margin: -4px 0 0 -4px; filter: blur(3.1px); animation-delay: 1.75s; }
+.hero-orb-trail-6 { opacity: 0.08; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; filter: blur(3.6px); animation-delay: 2.3s; }
+.hero-orb-trail-7 { opacity: 0.05; width: 6px; height: 6px; margin: -3px 0 0 -3px; filter: blur(4.1px); animation-delay: 2.9s; }
+.hero-orb-trail-8 { opacity: 0.03; width: 6px; height: 6px; margin: -3px 0 0 -3px; filter: blur(4.6px); animation-delay: 3.6s; }
+.hero-orb-trail-9 { opacity: 0.015; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; filter: blur(5px); animation-delay: 4.4s; }
+
+@keyframes heroOrbFlicker {
+    0%   { opacity: 0.32; }
+    18%  { opacity: 0.55; }
+    31%  { opacity: 0.38; }
+    47%  { opacity: 0.62; }
+    60%  { opacity: 0.28; }
+    74%  { opacity: 0.5; }
+    88%  { opacity: 0.36; }
+    100% { opacity: 0.32; }
+}
+
+/* 로고 필드 안에 오브 2마리("종") 추가 — 같은 .hero-orb-field(로고 기준 이미
+   안전 검증된 좁은 영역) 안에서 서로 다른 경로(heroOrbWander2/3)로 움직인다.
+   처음엔 figure1/2 이미지 안(밝은 도해라 흰 오브가 안 보임), 그다음엔 페이지
+   좌우 여백(뷰포트가 좁으면 본문과 여백이 좁아져 실제로 텍스트와 겹침이 검출됨)에
+   둬봤지만 둘 다 안전을 보장할 수 없어 폐기하고, 검증된 로고 필드를 공유하는
+   이 방식으로 정착했다. y좌표를 원래 heroOrbWander처럼 항상 로고 중심보다 위쪽
+   (-20 ~ -75px)으로만 유지해 안전 범위를 그대로 물려받는다. */
+.hero-orb-species-2 { animation-name: heroOrbWander2; animation-duration: 27s; }
+.hero-orb-species-2.hero-orb-main { animation-name: heroOrbWander2, heroOrbFlicker; animation-duration: 27s, 3.6s; }
+.hero-orb-species-3 { animation-name: heroOrbWander3; animation-duration: 31s; }
+.hero-orb-species-3.hero-orb-main { animation-name: heroOrbWander3, heroOrbFlicker; animation-duration: 31s, 5s; }
+
+/* 세 오브가 서로 멀리 떨어진 구역(왼쪽 위/오른쪽/로고 왼쪽 아래)을 맡아 돈다.
+   가로(x)는 h1 텍스트가 이미 페이지 폭 전체를 차지하고 있어 안전과 무관하므로
+   범위를 크게 넓혀 세 궤적을 멀리 떼어놓았다. heroOrbWander3는 원래 로고 위
+   훨씬 높은 곳(-100~-185px)을 돌았는데 너무 위로 붕 떠 보인다는 피드백을 받아
+   로고보다 조금 아래(=원점에 더 가까운 -18~-60px)의 왼쪽 구역으로 낮췄다.
+
+   세로(y)는 heroOrbWander/heroOrbWander2도 최대 -70px까지만 올라가도록 낮춰뒀다 —
+   기존에 -100~-105px까지 올라가던 값은 실측(getBoundingClientRect)해보니 실제로
+   header(position:sticky, 뷰포트 상단 ~87px까지 차지)의 하단 경계에 거의 닿거나
+   살짝 겹쳐, 오브가 header의 불투명 배경에 잘려 보이는("상단 영역 위로 올라가
+   짤리는") 문제가 있었다. -70px 선에서는 header 하단까지 30px 넘게 여유가 있어
+   더 이상 겹치지 않는다. */
+@keyframes heroOrbWander2 {
+    0%   { transform: translate(420px, -22px); }
+    12%  { transform: translate(370px, -50px); }
+    25%  { transform: translate(290px, -70px); }
+    38%  { transform: translate(200px, -52px); }
+    50%  { transform: translate(150px, -18px); }
+    62%  { transform: translate(190px, -38px); }
+    75%  { transform: translate(290px, -63px); }
+    88%  { transform: translate(390px, -38px); }
+    100% { transform: translate(420px, -22px); }
+}
+@keyframes heroOrbWander3 {
+    0%   { transform: translate(-60px, -20px); }
+    14%  { transform: translate(-120px, -45px); }
+    28%  { transform: translate(-200px, -55px); }
+    42%  { transform: translate(-180px, -35px); }
+    57%  { transform: translate(-100px, -18px); }
+    71%  { transform: translate(-40px, -30px); }
+    85%  { transform: translate(-90px, -50px); }
+    100% { transform: translate(-60px, -20px); }
+}
+
+@keyframes heroOrbWander {
+    0%   { transform: translate(-420px, -30px); }
+    12%  { transform: translate(-380px, -60px); }
+    25%  { transform: translate(-300px, -70px); }
+    38%  { transform: translate(-220px, -55px); }
+    50%  { transform: translate(-160px, -25px); }
+    62%  { transform: translate(-200px, -42px); }
+    75%  { transform: translate(-300px, -65px); }
+    88%  { transform: translate(-390px, -42px); }
+    100% { transform: translate(-420px, -30px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hero-orb { animation: none; opacity: 0; }
+}
+.hero h1 { font-family: 'Italianno', cursive !important; font-size: 9.5rem; font-weight: 400; margin-bottom: 0.3rem; letter-spacing: 0; background: linear-gradient(180deg, #fff 40%, #444 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero .tagline { font-size: 1.25rem; color: var(--text-secondary); max-width: 720px; margin: 0 auto; word-break: keep-all; line-height: 1.8; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 1.5rem 0; }
