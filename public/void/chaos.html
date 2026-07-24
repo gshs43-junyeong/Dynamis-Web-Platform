@@ -36,7 +36,7 @@ button.go{ background:var(--fg); color:#020402; border:none; border-radius:4px; 
 <script>
 (function(){
   "use strict";
-  var CFG = {"sig":"DYN-ROOT","intro":[["[ NODE :: CHAOS ]  —  혼돈","banner"],["질서는 무너지고, 마지막 전에 다다른다.","dim"]],"pixelKey":null,"keyPrompt":"> 직전 노드(TELOS)의 파편 단어를 입력하라:","blob":"aCwxcdQ6sks4qxkUomBVcGDTRS7NTwCXFFFeMpQYCFjPXjOikdXPEyAwNz13rFCK04QO+f8LuSFJrhFOZnnNN05gun9rcKUyFG98asvk9MokBMIXDCvrzTI0Utu1WID9ptFb8CiTcOhYXH//5enOa+cKNqwsrQOJhmZDLd5vSK/vIai/87zX74TiUGf1cE8dIDCz/5lH4nVlVlZeGFrTy/Y/MNG4604KTglZiLZGbhxcrEzwWi089YQiSYlkkpy/3kfkkWgrGR+kBUry0gQj3spfixw0sPQZ5ShuCn4PQVafddtCRg29bJLqdH94dnF+5Vma/fmIxQr1nuKQpwW5nvctqn4="};
+  var CFG = {"sig":"DYN-ROOT","intro":[["[ NODE :: CHAOS ]  —  혼돈","banner"],["질서는 무너지고, 마지막 전에 다다른다.","dim"]],"pixelKey":null,"keyPrompt":"> 직전 노드(TELOS)의 파편 단어를 입력하라:","blob":"aCwxcdQ6sks4qxkUomBVcGDTRS7NTwCXFFFeMpQYCFjPXjOikdXPEyAwNz13rFCK04QO+f8LuSFJrhFOZnnNN05gun9rcKUyFG98asvk9MokBMIXDCvrzTI0Utu1WID9ptFb8CiTcOhYXH//5enOa+cKNqwsrQOJhmZDLVGZoiUr3DcPPzMWPs1mg7Ywp7ZPqP93OmmnsrkbcyHga/Wzhe9WS/0YK/toECMiCcb4BHFFKEz3Vnwr9Z15DdYh35Czw0eq7mhSWU3tOGrqhQBYtJjQZZnobQy4G90Z1KbE6NslD2+el7t3m8deoLHitPumD5v9QwRCG60t6vL58ACYoaEStj5+QHVyScdfmUqZyWcJBZxCD+vPTdAKWw9PCLnxF6JqyK+duzCKO0idXvaqCGQpIdIfXGk6cQQXamc514xi8M1c8Xw="};
   function norm(s){ return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
   function fnv1a(str){ var h=0x811c9dc5; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,0x01000193);} return h>>>0; }
   function keystream(key,len){ var h=fnv1a(key)||0xA5A5A5A5; var b=new Uint8Array(len); var i=0;
