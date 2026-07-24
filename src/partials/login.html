@@ -1,0 +1,16 @@
+        <section id="login" class="section">
+            <div id="login-form-box" class="form-card">
+                <h2 style="text-align: center; margin-bottom: 2rem;">Login</h2>
+                <button class="btn" style="width:100%; margin-bottom: 0.75rem; padding: 0.8rem 1rem;" onclick="handleLoginWithGoogle()">Google 계정으로 로그인</button>
+                <button class="btn" style="width:100%; margin-bottom: 1.5rem; padding: 0.8rem 1rem;" onclick="handleLoginWithGitHub()">GitHub 계정으로 로그인</button>
+                
+                <label class="signup-consent-item">
+                    <input type="checkbox" id="login-persist-checkbox" class="signup-consent-checkbox">
+                    <span class="signup-consent-text">로그인 상태 유지</span>
+                </label>
+                
+                <div style="text-align: center; margin-top: 1rem; font-size: 0.95rem; color:var(--text-secondary);">
+                    아직 계정을 만들지 않으셨나요? <a onclick="navigateTo('/signup')" style="cursor:pointer; color:inherit; font-weight:700; text-decoration:underline;">회원가입</a>
+                </div>
+            </div>
+        </section>
