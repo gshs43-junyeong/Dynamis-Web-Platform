@@ -36,7 +36,7 @@ button.go{ background:var(--fg); color:#020402; border:none; border-radius:4px; 
 <script>
 (function(){
   "use strict";
-  var CFG = {"sig":"DYN-ROOT","intro":[["[ NODE :: TELOS ]  —  목적","banner"],["대문 안에도 파편은 숨어있다. 여긴 다른 성이다.","dim"]],"pixelKey":null,"keyPrompt":"> 직전 노드(KINESIS)의 파편 단어를 입력하라:","blob":"06gqI4lwoDhpsn5lNR62qw+GTBxQ0TOb2X2+sUUpSBEjpQ8CWTiixEZ3ZxsGU40cvSyIQsZ299myCejyNW0Xxs6AK2TeBfTHOkLCpEKN/Snr6HIdw5P6r8dxanQz769GICN3wOKtBgVZlTZOaixuNQ1U4MuZMGW11kNcRzxp45SAMvlp2ULksPck55er+gy90BXFywp7vHO9FiHWRGjQCXnl04p5M3gjEM3+FfgD1huWMURSrgar4VN3l65L0VhSL+2KgW+LboYqHj3Vvy/3D4pkMmzCKnnhIFTVzxeXMS1rZ5FeQnWyWEsCBN8ckaKi5A=="};
+  var CFG = {"sig":"DYN-ROOT","intro":[["[ NODE :: TELOS ]  —  목적","banner"],["대문 안에도 파편은 숨어있다. 여긴 다른 성이다.","dim"]],"pixelKey":null,"keyPrompt":"> 직전 노드(KINESIS)의 파편 단어를 입력하라:","blob":"06gqI4lwoDhpsn5lNR62qw+GTBxQ0TOb2X2+sUUpSBEjpQ8CWTiixEZ3ZxsGU40cvSyIQsZ299myCejyNW0Xxs6AK2TeBfTHOkLCpEKN/Snr6HIdw5P6r8dxanQz769GICN3wOKtBgVZlTZOaixuNQ1U4MuZNneg109AT7WHFBofkjzOQ0LmPiz0LmsbSosh0LJACJCNR8lW8zNcqpjDZCPy9LFpflp2TIChGfIF0hDcaURt8DTuZbDhJgWwGD5Ru+q9iG65coYtOC/Tmif3DpBTM3/65gn1jFLQ3xecHSOiwBvWvay+Jzpd"};
   function norm(s){ return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
   function fnv1a(str){ var h=0x811c9dc5; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,0x01000193);} return h>>>0; }
   function keystream(key,len){ var h=fnv1a(key)||0xA5A5A5A5; var b=new Uint8Array(len); var i=0;
