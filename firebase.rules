@@ -17,10 +17,17 @@ service cloud.firestore {
       // 작성 권한은 서버가 users 문서의 실제 role로 판정한다.
       // 클라이언트가 보낸 authorRole/authorName/authorBatch는 신뢰하지 않고
       // 요청자 본인의 users 문서와 일치하는지 대조한다(작성자·등급 사칭 차단).
+      //
+      // pinned: "고정"은 관리자 전용 기능(togglePin())이지만, 클라이언트가 항상
+      // pinned:false로 생성해 왔을 뿐 규칙에는 이를 강제하는 조건이 없었다. 즉
+      // 일반 부원도 addDoc 시 pinned:true를 직접 실어 보내면 자기 글을 최상단에
+      // 셀프 고정할 수 있었다(에뮬레이터로 실측 확인). 생성 시 관리자가 아니면
+      // pinned는 반드시 false여야 한다.
       allow create: if canPostNotice()
                     && isValidNotice(request.resource.data)
                     && isAuthenticAuthor(request.resource.data)
                     && isAllowedAttachment(request.resource.data)
+                    && (isAdmin() || request.resource.data.get('pinned', false) == false)
                     && underQuota('noticeCount', 5);
 
       allow update: if request.auth != null
@@ -31,7 +38,10 @@ service cloud.firestore {
                        && request.resource.data.authorId == resource.data.authorId
                        && request.resource.data.authorName == resource.data.authorName
                        && request.resource.data.authorBatch == resource.data.authorBatch
-                       && request.resource.data.authorRole == resource.data.authorRole)
+                       && request.resource.data.authorRole == resource.data.authorRole
+                       // pinned 변경도 관리자 전용: 본인 수정 경로에서는 값을 그대로 유지해야 한다
+                       // (마찬가지로 실측 확인된 셀프 고정 우회 — update 경로도 동일하게 막는다).
+                       && request.resource.data.get('pinned', false) == resource.data.get('pinned', false))
                       || isAdmin()
                     );
 
