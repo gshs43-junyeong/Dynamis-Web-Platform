@@ -123,7 +123,10 @@ async function resolveUniqueSignupProfile(id, batch, name) {
 function validateSignupInput(id, batch, name) {
     const idRegex = /^[A-Za-z0-9_]{4,20}$/;
     const batchRegex = /^\d{2,2}기$/;
-    const nameRegex = /^[\s\S]{3,10}$/;
+    // 실명 입력란이므로 한글/영문/숫자/공백만 허용한다. 예전에는 아무 문자나
+    // 통과시켜서 <, >, 따옴표 같은 마크업 문자가 그대로 저장되고, 이 이름이
+    // 화면 곳곳(작성자 표기 등)에서 다시 렌더링됐다.
+    const nameRegex = /^[0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ ]{3,10}$/;
 
     if (!idRegex.test(id)) {
         return '아이디는 4~20자이며 영문, 숫자, 언더바(_)만 사용할 수 있습니다.';
@@ -132,7 +135,7 @@ function validateSignupInput(id, batch, name) {
         return '기수는 예: 42기 형태로 2자리 숫자 + 기로 입력해 주세요.';
     }
     if (!nameRegex.test(name)) {
-        return '이름은 3~10자 이내로 입력해 주세요.';
+        return '이름은 한글/영문/숫자 3~10자로 입력해 주세요. (특수문자 불가)';
     }
     return null;
 }
@@ -440,13 +443,22 @@ window.showSignupPreview = async function(id, batch, name, provider) {
         console.error('[Signup Preview] Error checking duplicates:', err);
     }
     
-    // 경고 메시지 표시
+    // 경고 메시지 표시.
+    // 문구에 사용자가 입력한 이름/기수가 섞여 들어가므로 innerHTML로 조립하면
+    // 입력값이 그대로 마크업으로 해석된다. textContent로만 넣는다.
+    warningsBox.textContent = '';
     if (duplicateWarnings.length > 0) {
         warningsBox.style.display = 'block';
-        warningsBox.innerHTML = duplicateWarnings.map(w => `<p style="color: #ff5555; margin: 0.4rem 0; font-size: 0.95rem;">${w}</p>`).join('');
+        duplicateWarnings.forEach((w) => {
+            const p = document.createElement('p');
+            p.style.color = '#ff5555';
+            p.style.margin = '0.4rem 0';
+            p.style.fontSize = '0.95rem';
+            p.textContent = w;
+            warningsBox.appendChild(p);
+        });
     } else {
         warningsBox.style.display = 'none';
-        warningsBox.innerHTML = '';
     }
     
     // 중복 여부에 따라 버튼 활성/비활성화

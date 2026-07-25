@@ -11,7 +11,7 @@ import {
     deleteDoc,
     orderBy
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText, isSafeAttachmentData } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { serverNow, isClockOutOfSync } from './clock.js';
@@ -405,6 +405,10 @@ async function viewEvent(index) {
 
 async function executeFileDownloadSecure(size, dataStr, nameStr) {
     if (!loggedInUser) return alert('다운로드는 로그인된 회원 정보 세션이 있어야 동작합니다.');
+    if (!isSafeAttachmentData(dataStr)) {
+        alert('⛔ 첨부파일 형식이 올바르지 않아 다운로드를 차단했습니다. 관리자에게 신고해 주세요.');
+        return;
+    }
     if (loggedInUser.role !== 'admin') {
         const isDownloadAllowed = await verifyAndIncrementTraffic(firebaseAuth.currentUser?.uid, 'downloadBytes', size || 0, 5 * 1024 * 1024);
         if (!isDownloadAllowed) {

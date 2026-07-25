@@ -33,7 +33,7 @@ import {
 } from './event.js';
 import { addFaqQuestion, addFaqAnswer, closeFaq, deleteCurrentFaq, changeFaqPage, listenFaqs } from './faq.js';
 import { listenMembersSection } from './members.js';
-import { listenAdminUserConsole, commitRoleChange, warnUser, deleteUserByAdmin } from './admin.js';
+import { syncAdminUserConsole, commitRoleChange, warnUser, deleteUserByAdmin } from './admin.js';
 import { openPuzzle } from './puzzle.js';
 import { initScrollReveal } from './reveal.js';
 
@@ -81,7 +81,7 @@ function initSystemConfiguration() {
     listenEvents();
     listenFaqs();
     listenMembersSection();
-    listenAdminUserConsole();
+    syncAdminUserConsole();
     renderRoute();
     initScrollReveal();
 }

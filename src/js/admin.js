@@ -14,11 +14,31 @@ import { applyUserSessionUI } from './session.js';
 import { purgeUserOwnedData } from './auth.js';
 
 let latestUsersSnapshotDocs = null;
+let adminUsersUnsub = null;
 
-export function listenAdminUserConsole() {
-    onSnapshot(collection(db, 'users'), (snapshot) => {
+// 관리자 콘솔용 users 전체 구독은 관리자로 로그인했을 때만 연다.
+// 예전에는 앱 시작 시 무조건 구독해서, 비로그인 방문자까지 전체 회원 문서를
+// 실시간으로 받아 메모리에 들고 있었다(경고 누적 횟수 등 운영 정보 포함).
+export function syncAdminUserConsole() {
+    const isAdmin = !!loggedInUser && loggedInUser.role === 'admin';
+
+    if (!isAdmin) {
+        if (adminUsersUnsub) { adminUsersUnsub(); adminUsersUnsub = null; }
+        latestUsersSnapshotDocs = null;
+        renderAdminUserConsole();
+        return;
+    }
+
+    if (adminUsersUnsub) {
+        renderAdminUserConsole();
+        return;
+    }
+
+    adminUsersUnsub = onSnapshot(collection(db, 'users'), (snapshot) => {
         latestUsersSnapshotDocs = snapshot.docs;
         renderAdminUserConsole();
+    }, (err) => {
+        console.warn('[Admin] 회원 목록 구독 실패:', err?.message || err);
     });
 }
 
