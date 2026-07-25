@@ -496,10 +496,6 @@ service cloud.firestore {
     return isAdmin() || quotaSpent(field, limit);
   }
 
-  function isTrafficOwner(trafficId, uid) {
-    return trafficId.matches('^' + uid + '_.*');
-  }
-
   // 클라이언트가 보낸 timestamp가 서버시각과 20분(1,200,000ms) 이내인지.
   // 컴퓨터 시계를 크게 조작한 상태의 쓰기를 서버가 거부한다.
   function isFreshTimestamp(ts) {
