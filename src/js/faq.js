@@ -1,5 +1,5 @@
 import { db, auth as firebaseAuth } from './firebase-config.js';
-import { checkTrafficAllowed, commitTrafficIncrement } from './traffic.js';
+import { readTrafficState, withinLimit, currentCount, stageQuota } from './traffic.js';
 import {
     collection,
     doc,
@@ -8,7 +8,8 @@ import {
     addDoc,
     orderBy,
     getDocs,
-    deleteDoc
+    deleteDoc,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { ITEMS_PER_PAGE, formatAuthorBatchName, getByteLength } from './utils.js';
 import { loggedInUser } from './state.js';
@@ -41,15 +42,17 @@ export async function addFaqQuestion() {
         return;
     }
 
-    const needsFaqTrafficCheck = loggedInUser.role !== 'admin';
-    if (needsFaqTrafficCheck) {
-        const faqTrafficResult = await checkTrafficAllowed(firebaseAuth.currentUser?.uid, 'faqQuestionCount', 1, 1);
-        if (!faqTrafficResult.allowed) {
-            if (faqTrafficResult.error) {
-                alert('⚠️ 작성 가능 여부를 확인하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n(' + (faqTrafficResult.message || '') + ')');
-            } else {
-                alert(`❌ [작성 제한] 오늘은 이미 FAQ 질문을 등록했습니다. 하루 최대 1회만 가능합니다. (현재 누적: ${faqTrafficResult.currentVal}회)`);
-            }
+    const uid = firebaseAuth.currentUser?.uid;
+    const isAdmin = loggedInUser.role === 'admin';
+    let trafficState = null;
+    if (!isAdmin) {
+        trafficState = await readTrafficState(uid);
+        if (!trafficState.ok) {
+            alert('⚠️ 작성 가능 여부를 확인하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n(' + (trafficState.message || '') + ')');
+            return;
+        }
+        if (!withinLimit(trafficState, 'faqQuestionCount', 1, 1)) {
+            alert(`❌ [작성 제한] 오늘은 이미 FAQ 질문을 등록했습니다. 하루 최대 1회만 가능합니다. (현재 누적: ${currentCount(trafficState, 'faqQuestionCount')}회)`);
             return;
         }
     }
@@ -61,15 +64,15 @@ export async function addFaqQuestion() {
         authorName: loggedInUser.name,
         authorBatch: loggedInUser.batch,
         authorRole: loggedInUser.role,
-        authorId: firebaseAuth.currentUser?.uid,
+        authorId: uid,
         date,
         timestamp: Date.now()
     };
     try {
-        await addDoc(collection(db, 'faqs'), newFaq);
-        if (needsFaqTrafficCheck) {
-            await commitTrafficIncrement(firebaseAuth.currentUser?.uid, 'faqQuestionCount', 1);
-        }
+        const batch = writeBatch(db);
+        batch.set(doc(collection(db, 'faqs')), newFaq);
+        if (!isAdmin) stageQuota(batch, uid, trafficState, { faqQuestionCount: 1 });
+        await batch.commit();
         if (titleInput) titleInput.value = '';
         if (contentInput) contentInput.value = '';
         currentFaqPage = 1;

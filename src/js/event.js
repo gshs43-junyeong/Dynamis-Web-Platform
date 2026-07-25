@@ -1,5 +1,5 @@
 import { db, auth as firebaseAuth } from './firebase-config.js';
-import { verifyAndIncrementTraffic, checkTrafficAllowed, commitTrafficIncrement } from './traffic.js';
+import { readTrafficState, withinLimit, stageQuota, checkAndRecordDownload } from './traffic.js';
 import {
     collection,
     doc,
@@ -9,9 +9,10 @@ import {
     query,
     addDoc,
     deleteDoc,
-    orderBy
+    orderBy,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText, isSafeAttachmentData } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { serverNow, isClockOutOfSync } from './clock.js';
@@ -78,28 +79,30 @@ export async function addEvent() {
     if (!Number.isFinite(deadline)) return alert('마감 기한 형식이 올바르지 않습니다.');
     if (deadline <= serverNow()) return alert('마감 기한은 현재 시각 이후여야 합니다.');
 
-    const needsEventTrafficCheck = loggedInUser.role !== 'admin';
-    if (needsEventTrafficCheck) {
+    const uid = firebaseAuth.currentUser?.uid;
+    const isAdmin = loggedInUser.role === 'admin';
+
+    let trafficState = null;
+    if (!isAdmin) {
         const contentBytes = getByteLength(content);
         if (contentBytes > 2000) {
             alert(`❌ [바이트 초과] 이벤트 본문 크기가 2000바이트를 초과하여 게시할 수 없습니다. (현재: ${contentBytes}바이트)`);
             return;
         }
 
-        const eventTrafficResult = await checkTrafficAllowed(firebaseAuth.currentUser?.uid, 'eventCount', 1, 5);
-        if (!eventTrafficResult.allowed) {
-            if (eventTrafficResult.error) {
-                alert('⚠️ 작성 가능 여부를 확인하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n(' + (eventTrafficResult.message || '') + ')');
-            } else {
-                alert('❌ [작성 빈도 제한] 하루 최대 이벤트 작성 한도(5회)를 초과하여 차단되었습니다.');
-            }
+        trafficState = await readTrafficState(uid);
+        if (!trafficState.ok) {
+            alert('⚠️ 작성 가능 여부를 확인하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n(' + (trafficState.message || '') + ')');
+            return;
+        }
+        if (!withinLimit(trafficState, 'eventCount', 1, 5)) {
+            alert('❌ [작성 빈도 제한] 하루 최대 이벤트 작성 한도(5회)를 초과하여 차단되었습니다.');
             return;
         }
     }
 
     const uploadedFilesArray = [];
     let totalNewSize = 0;
-    const needsUploadTrafficCheck = fileInput?.files.length > 0 && loggedInUser.role !== 'admin';
     if (fileInput?.files.length > 0) {
         if (loggedInUser.role === 'honored') {
             alert('❌ 명예부원 등급은 파일 업로드가 절대 허용되지 않습니다.');
@@ -110,15 +113,20 @@ export async function addEvent() {
             totalNewSize += fileInput.files[i].size;
         }
 
-        if (needsUploadTrafficCheck) {
+        // 개별 파일이 너무 크면 FileReader로 전체를 메모리에 올리기 전에 즉시 막는다.
+        // 관리자 계정도 예외가 없다 — 예전에는 아래 일일 한도 체크만 관리자에게
+        // 생략됐을 뿐 이 검사 자체가 없어서, 큰 파일을 선택하면 서버에 닿기도 전에
+        // 브라우저가 멈추거나 크래시할 수 있었다.
+        const oversizedFile = Array.from(fileInput.files).find((f) => f.size > MAX_ATTACHMENT_FILE_BYTES);
+        if (oversizedFile) {
+            alert(`❌ [파일 크기 초과] "${oversizedFile.name}" 파일이 첨부 가능한 개별 용량(${Math.floor(MAX_ATTACHMENT_FILE_BYTES / 1024)}KB)을 초과합니다.`);
+            return;
+        }
+
+        if (!isAdmin) {
             const uploadLimit = 2 * 1024 * 1024;
-            const uploadTrafficResult = await checkTrafficAllowed(firebaseAuth.currentUser?.uid, 'uploadBytes', totalNewSize, uploadLimit);
-            if (!uploadTrafficResult.allowed) {
-                if (uploadTrafficResult.error) {
-                    alert('⚠️ 업로드 가능 여부를 확인하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n(' + (uploadTrafficResult.message || '') + ')');
-                } else {
-                    alert('⚠️ [업로드 제한] 하루 최대 파일 업로드 총량(2MB)을 초과하였거나 이번 파일이 허용치를 초과했습니다.');
-                }
+            if (!withinLimit(trafficState, 'uploadBytes', totalNewSize, uploadLimit)) {
+                alert('⚠️ [업로드 제한] 하루 최대 파일 업로드 총량(2MB)을 초과하였거나 이번 파일이 허용치를 초과했습니다.');
                 return;
             }
         }
@@ -133,6 +141,13 @@ export async function addEvent() {
             });
             uploadedFilesArray.push({ fileName: file.name, fileSize: file.size, fileData: data });
         }
+
+        // 인코딩(base64) 후 합계가 서버 규칙의 상한을 넘지 않는지 마지막으로 확인.
+        const totalEncodedBytes = uploadedFilesArray.reduce((sum, f) => sum + f.fileData.length, 0);
+        if (totalEncodedBytes > MAX_ATTACHMENT_TOTAL_ENCODED_BYTES) {
+            alert('❌ [첨부 합계 초과] 첨부파일들의 합계 용량이 허용치를 초과합니다. 파일 수를 줄이거나 더 작은 파일로 시도해 주세요.');
+            return;
+        }
     }
 
     const date = new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, '');
@@ -142,24 +157,30 @@ export async function addEvent() {
         authorName: loggedInUser.name,
         authorBatch: loggedInUser.batch,
         authorRole: loggedInUser.role,
-        authorId: firebaseAuth.currentUser?.uid,
+        authorId: uid,
         date,
         deadline,
         timestamp: Date.now()
     };
 
     try {
-        const eventRef = await addDoc(collection(db, 'events'), eventCard);
+        // 카드와 카운터는 한 배치로 원자적으로 쓴다(규칙이 getAfter로 대조).
+        // 본문은 부모 카드가 커밋된 뒤에 써야 한다 — 본문 규칙이 부모 문서를
+        // get()으로 읽어 작성자를 확인하므로 같은 배치에 넣으면 아직 없는 것으로 보인다.
+        const eventRef = doc(collection(db, 'events'));
+        const batch = writeBatch(db);
+        batch.set(eventRef, eventCard);
+        if (!isAdmin) {
+            const deltas = { eventCount: 1 };
+            if (totalNewSize > 0) deltas.uploadBytes = totalNewSize;
+            stageQuota(batch, uid, trafficState, deltas);
+        }
+        await batch.commit();
+
         await setDoc(doc(db, 'events', eventRef.id, 'content', 'main'), {
             content,
             files: uploadedFilesArray
         });
-        if (needsEventTrafficCheck) {
-            await commitTrafficIncrement(firebaseAuth.currentUser?.uid, 'eventCount', 1);
-        }
-        if (needsUploadTrafficCheck) {
-            await commitTrafficIncrement(firebaseAuth.currentUser?.uid, 'uploadBytes', totalNewSize);
-        }
         if (titleInput) titleInput.value = '';
         if (contentInput) contentInput.value = '';
         if (deadlineInput) deadlineInput.value = '';
@@ -410,7 +431,7 @@ async function executeFileDownloadSecure(size, dataStr, nameStr) {
         return;
     }
     if (loggedInUser.role !== 'admin') {
-        const isDownloadAllowed = await verifyAndIncrementTraffic(firebaseAuth.currentUser?.uid, 'downloadBytes', size || 0, 5 * 1024 * 1024);
+        const isDownloadAllowed = await checkAndRecordDownload(firebaseAuth.currentUser?.uid, size || 0, 5 * 1024 * 1024);
         if (!isDownloadAllowed) {
             alert('❌ [다운로드 제한] 하루 최대 파일 다운로드 총량(5MB) 한도를 초과하여 다운로드가 차단되었습니다.');
             return;
@@ -430,37 +451,40 @@ export async function addEventComment() {
     const commentVal = input?.value.trim();
     if (!commentVal) return;
 
-    if (loggedInUser.role !== 'admin') {
+    const uid = firebaseAuth.currentUser?.uid;
+    const isAdmin = loggedInUser.role === 'admin';
+    let trafficState = null;
+    if (!isAdmin) {
         const bytes = getByteLength(commentVal);
         if (bytes > 500) {
             alert(`❌ [바이트 초과] 댓글 크기가 500바이트를 초과하여 등록할 수 없습니다. (현재: ${bytes}바이트)`);
             return;
         }
-        const commentTrafficResult = await checkTrafficAllowed(firebaseAuth.currentUser?.uid, 'commentCount', 1, 10);
-        if (!commentTrafficResult.allowed) {
-            if (commentTrafficResult.error) {
-                alert('⚠️ 작성 가능 여부를 확인하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n(' + (commentTrafficResult.message || '') + ')');
-            } else {
-                alert('❌ [작성 빈도 제한] 하루 최대 댓글 작성 가능 횟수(10회)를 초과하여 차단되었습니다.');
-            }
+        trafficState = await readTrafficState(uid);
+        if (!trafficState.ok) {
+            alert('⚠️ 작성 가능 여부를 확인하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\n(' + (trafficState.message || '') + ')');
+            return;
+        }
+        if (!withinLimit(trafficState, 'commentCount', 1, 10)) {
+            alert('❌ [작성 빈도 제한] 하루 최대 댓글 작성 가능 횟수(10회)를 초과하여 차단되었습니다.');
             return;
         }
     }
 
     const date = new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, '');
     try {
-        await addDoc(collection(doc(db, 'events', currentEventDocId), 'comments'), {
+        const batch = writeBatch(db);
+        batch.set(doc(collection(doc(db, 'events', currentEventDocId), 'comments')), {
             content: commentVal,
             authorName: loggedInUser.name,
             authorBatch: loggedInUser.batch,
             authorRole: loggedInUser.role,
-            authorId: firebaseAuth.currentUser?.uid,
+            authorId: uid,
             date,
             timestamp: Date.now()
         });
-        if (loggedInUser.role !== 'admin') {
-            await commitTrafficIncrement(firebaseAuth.currentUser?.uid, 'commentCount', 1);
-        }
+        if (!isAdmin) stageQuota(batch, uid, trafficState, { commentCount: 1 });
+        await batch.commit();
         if (input) input.value = '';
         alert('댓글이 성공적으로 등록되었습니다.');
     } catch (err) {

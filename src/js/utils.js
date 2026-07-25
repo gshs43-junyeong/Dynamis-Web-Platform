@@ -57,18 +57,30 @@ export function getByteLength(str) {
 
 // 첨부파일 href 검증.
 //
-// files[].fileData는 Firestore 문서에 그대로 담겨 오는 값이라, 규칙만으로는
-// "리스트인지" 정도밖에 검사할 수 없다. 즉 SDK/REST로 문서를 직접 쓰면 이 문자열은
-// 완전히 공격자 통제 하에 놓인다. 그런데 다운로드 처리에서 이 값을 <a>.href에 넣고
-// click()을 부르므로, 값이 'javascript:...'이면 download 속성이 붙어 있어도
-// 그대로 실행된다(브라우저에서 실측 확인함 — download는 javascript: 스킴을
-// 다운로드로 바꿔주지 않는다). 저장형 XSS가 되므로 스킴을 화이트리스트로 막는다.
+// files[].fileData는 SDK/REST로 문서를 직접 쓰면 공격자 통제 하에 놓일 수 있는
+// 값이다(서버 규칙은 문자열 길이 상한을 검사하지만 내용 자체는 검사하지 않는다).
+// 다운로드 처리에서 이 값을 <a>.href에 넣고 click()을 부르므로, 값이
+// 'javascript:...'이면 download 속성이 붙어 있어도 그대로 실행된다(브라우저에서
+// 실측 확인함 — download는 javascript: 스킴을 다운로드로 바꿔주지 않는다).
+// 저장형 XSS가 되므로 스킴을 화이트리스트로 막는다.
 //
 // 정상 업로드 경로(FileReader.readAsDataURL)는 항상 'data:'로 시작하므로
 // data: 이외의 스킴은 전부 조작된 값으로 간주하고 거부한다.
 export function isSafeAttachmentData(dataStr) {
     return typeof dataStr === 'string' && /^data:[a-z0-9.+-]+\/[a-z0-9.+-]*[;,]/i.test(dataStr);
 }
+
+// 첨부파일 용량 상한. firebase.rules의 isAllowedAttachment()와 반드시 같은 값을
+// 유지해야 한다 — 여기서 막으면 큰 파일을 FileReader로 읽어 브라우저 메모리에
+// 올리기 전에 끝나고(관리자 계정도 예외 없음), 실수로 통과해도 서버가 최종
+// 방어선으로 다시 막는다.
+//
+// MAX_ATTACHMENT_FILE_BYTES: 원본 파일 크기 상한(base64 인코딩 시 약 4/3로
+// 늘어나므로, 서버의 파일당 700,000자 상한보다 넉넉히 낮게 잡아 인코딩 후에도
+// 항상 서버 한도 안에 들어오게 한다).
+// MAX_ATTACHMENT_TOTAL_ENCODED_BYTES: 인코딩 후 첨부 합계 상한(서버와 동일한 값).
+export const MAX_ATTACHMENT_FILE_BYTES = 500 * 1024;
+export const MAX_ATTACHMENT_TOTAL_ENCODED_BYTES = 900000;
 
 export const NOTICE_TAGS = ['학술 자료', '이벤트 안내', '설문 조사', '기타'];
 

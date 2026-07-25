@@ -20,7 +20,8 @@ service cloud.firestore {
       allow create: if canPostNotice()
                     && isValidNotice(request.resource.data)
                     && isAuthenticAuthor(request.resource.data)
-                    && isAllowedAttachment(request.resource.data);
+                    && isAllowedAttachment(request.resource.data)
+                    && underQuota('noticeCount', 5);
 
       allow update: if request.auth != null
                     && (
@@ -41,7 +42,8 @@ service cloud.firestore {
         allow read: if true;
         allow create: if request.auth != null
                       && isValidComment(request.resource.data)
-                      && isAuthenticAuthor(request.resource.data);
+                      && isAuthenticAuthor(request.resource.data)
+                      && underQuota('commentCount', 10);
         allow update, delete: if request.auth != null
                               && (resource.data.authorId == request.auth.uid || isAdmin());
       }
@@ -64,7 +66,8 @@ service cloud.firestore {
 
       allow create: if canPostNotice()
                     && isValidEvent(request.resource.data)
-                    && isAuthenticAuthor(request.resource.data);
+                    && isAuthenticAuthor(request.resource.data)
+                    && underQuota('eventCount', 5);
 
       allow update: if request.auth != null
                     && (
@@ -99,7 +102,8 @@ service cloud.firestore {
         allow read: if true;
         allow create: if request.auth != null
                       && isValidComment(request.resource.data)
-                      && isAuthenticAuthor(request.resource.data);
+                      && isAuthenticAuthor(request.resource.data)
+                      && underQuota('commentCount', 10);
         allow update, delete: if request.auth != null
                               && (resource.data.authorId == request.auth.uid || isAdmin());
       }
@@ -147,7 +151,8 @@ service cloud.firestore {
       // 다만 작성자 표기는 본인 users 문서와 대조한다.
       allow create: if request.auth != null
                     && isValidFaq(request.resource.data)
-                    && isAuthenticAuthor(request.resource.data);
+                    && isAuthenticAuthor(request.resource.data)
+                    && underQuota('faqQuestionCount', 1);
 
       allow update, delete: if request.auth != null
                               && (resource.data.authorId == request.auth.uid || isModerator());
@@ -173,17 +178,15 @@ service cloud.firestore {
       }
     }
 
-    // 4. traffic
-    match /traffic/{trafficId} {
-      allow read: if request.auth != null
-                  && isTrafficOwner(trafficId, request.auth.uid);
+    // 4. traffic (사용자당 1문서. 날짜는 y/m/d 정수 필드로 들고 있다 — 아래 주석 참고)
+    match /traffic/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
 
       allow create, update: if request.auth != null
-                   && isTrafficOwner(trafficId, request.auth.uid)
+                   && request.auth.uid == uid
                    && isValidTraffic(request.resource.data);
 
-      allow delete: if request.auth != null
-                    && isTrafficOwner(trafficId, request.auth.uid);
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     // 5. usernames
@@ -256,12 +259,47 @@ service cloud.firestore {
   }
 
   // 첨부파일 정책: 명예부원은 첨부 불가(클라이언트 UI뿐 아니라 서버에서도 차단),
-  // 그 외 등급도 파일 개수를 제한한다.
+  // 파일 개수를 제한하고, 파일당 바이트 크기도 서버에서 직접 검증한다.
+  //
+  // 예전에는 업로드 용량 체크가 클라이언트(traffic.js의 일일 2MB 예산)에만 있었고,
+  // 그마저 관리자 계정은 건너뛰었다. 규칙은 files가 list인지, 개수가 10개 이하인지만
+  // 봤을 뿐 각 파일의 fileData(base64) 실제 길이는 전혀 검증하지 않았다. 즉 UI를
+  // 거치지 않고 Firestore SDK를 직접 호출하면(또는 관리자 계정이면) 바이트 제한이
+  // 사실상 없었다.
+  //
+  // Firestore 문서 자체가 1MiB로 하드캡되어 있어 "수백 GB짜리 업로드"는 애초에
+  // 불가능하지만(에뮬레이터로 실측: 2MB 첨부부터 INVALID_ARGUMENT로 거부됨), 900KB에
+  // 가까운 파일을 반복해서 채워 넣는 방식으로 무료 티어의 저장 용량(총 1GiB)을
+  // 서서히 소진시킬 수 있었다. 파일당 700KB로 제한해 이 경로를 막는다.
+  //
+  // 파일별 상한과 별개로 "첨부 합계"까지 규칙에서 직접 더해 검증하는 버전도
+  // 시도했으나, getAfter() 기반 일일 한도 검사(underQuota)와 같은 배치에 있을 때
+  // 에뮬레이터에서 재현 가능한 이상 동작(각 함수는 단독으로는 정상 동작하는데
+  // 함께 쓰면 통과되어 버림)이 나와 제외했다. 파일 개수(≤10) × 파일당 상한만으로도
+  // 결국 Firestore의 문서당 1MiB 하드캡에 걸리므로, 합계를 직접 검사하지 않아도
+  // "수백 GB" 같은 극단적 크기는 여전히 막힌다.
   function isAllowedAttachment(data) {
     return !('files' in data)
            || (data.files is list
                && data.files.size() <= 10
-               && (data.files.size() == 0 || selfRole() != 'honored'));
+               && (data.files.size() == 0 || selfRole() != 'honored')
+               && filesWithinPerFileLimit(data.files, 700000));
+  }
+
+  // Firestore 규칙 언어에는 리스트에 대한 map/reduce가 없어, 최대 개수(10)만큼
+  // 인덱스를 직접 펼쳐 쓴다. size()가 그보다 작은 인덱스는 존재 자체를 먼저
+  // 확인(단락 평가)해 인덱스 초과 오류 없이 안전하게 스킵한다.
+  function filesWithinPerFileLimit(files, maxBytes) {
+    return (files.size() < 1  || files[0].fileData.size() <= maxBytes)
+        && (files.size() < 2  || files[1].fileData.size() <= maxBytes)
+        && (files.size() < 3  || files[2].fileData.size() <= maxBytes)
+        && (files.size() < 4  || files[3].fileData.size() <= maxBytes)
+        && (files.size() < 5  || files[4].fileData.size() <= maxBytes)
+        && (files.size() < 6  || files[5].fileData.size() <= maxBytes)
+        && (files.size() < 7  || files[6].fileData.size() <= maxBytes)
+        && (files.size() < 8  || files[7].fileData.size() <= maxBytes)
+        && (files.size() < 9  || files[8].fileData.size() <= maxBytes)
+        && (files.size() < 10 || files[9].fileData.size() <= maxBytes);
   }
 
   function isValidNotice(data) {
@@ -389,7 +427,8 @@ service cloud.firestore {
 
   function isValidTraffic(data) {
     return data is map
-           && data.keys().hasOnly(['noticeCount', 'eventCount', 'uploadBytes', 'downloadBytes', 'commentCount', 'faqQuestionCount'])
+           && data.keys().hasOnly(['y', 'm', 'd', 'noticeCount', 'eventCount', 'uploadBytes', 'downloadBytes', 'commentCount', 'faqQuestionCount'])
+           && data.y is int && data.m is int && data.d is int
            && (!('noticeCount' in data) || (data.noticeCount is int && data.noticeCount >= 0 && data.noticeCount <= 1000))
            && (!('eventCount' in data) || (data.eventCount is int && data.eventCount >= 0 && data.eventCount <= 1000))
            && (!('uploadBytes' in data) || (data.uploadBytes is int && data.uploadBytes >= 0 && data.uploadBytes <= 1073741824))
@@ -407,6 +446,54 @@ service cloud.firestore {
            && data.name is string
            && data.name.size() >= 3
            && data.name.size() <= 10;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 일일 한도 강제
+  //
+  // 예전에는 카운터 증가가 본문 쓰기와 별개의 요청이라, 클라이언트가 그냥
+  // 증가를 호출하지 않으면 한도가 무의미했다(규칙이 traffic을 보지 않았음).
+  //
+  // getAfter()는 배치/트랜잭션이 커밋된 "후"의 상태를 보여준다. 이를 이용해
+  // 본문 생성을 "같은 배치 안에서 카운터가 정확히 +1 되었을 것"에 묶으면,
+  // 카운터를 빼먹은 단독 쓰기는 서버가 거부한다.
+  //
+  // 날짜를 문자열 대신 y/m/d 정수로 두는 이유: 규칙에는 zero-padding이 없어
+  // 'YYYY-MM-DD' 문자열을 만들 수 없다. request.time은 UTC이므로 KST(+9h)로 옮겨
+  // 비교하며, 지난 날짜의 카운터를 그대로 들고 오는 리셋 우회도 막힌다.
+  // ---------------------------------------------------------------------------
+
+  function trafficRef() {
+    return /databases/(default)/documents/traffic/$(request.auth.uid);
+  }
+
+  function kstNow() {
+    return request.time + duration.value(9, 'h');
+  }
+
+  function isTodayKst(d) {
+    return d.get('y', 0) == kstNow().year()
+           && d.get('m', 0) == kstNow().month()
+           && d.get('d', 0) == kstNow().day();
+  }
+
+  // 커밋 후 카운터가 "오늘 날짜"로 정확히 +1 되었고 한도 이내인가?
+  function quotaSpent(field, limit) {
+    return isTodayKst(getAfter(trafficRef()).data)
+           && getAfter(trafficRef()).data.get(field, -1) == expectedCount(field)
+           && getAfter(trafficRef()).data.get(field, -1) <= limit;
+  }
+
+  // 오늘 첫 사용이면 1, 이미 오늘 기록이 있으면 직전 값 + 1.
+  function expectedCount(field) {
+    return (exists(trafficRef()) && isTodayKst(get(trafficRef()).data))
+           ? get(trafficRef()).data.get(field, 0) + 1
+           : 1;
+  }
+
+  // 관리자는 기존 동작대로 한도에서 제외된다.
+  function underQuota(field, limit) {
+    return isAdmin() || quotaSpent(field, limit);
   }
 
   function isTrafficOwner(trafficId, uid) {

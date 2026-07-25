@@ -599,11 +599,10 @@ export async function purgeUserOwnedData(userId, { includeTraffic = false } = {}
         console.warn('[Purge] 댓글 정리 실패(계속 진행):', err.message);
     }
     // 4. 트래픽 통계 삭제 (본인만 읽기 가능)
+    // 문서 ID가 traffic/{uid}_{날짜} 에서 traffic/{uid} 로 바뀌어 단일 문서를 지운다.
     if (includeTraffic) {
         try {
-            const trafficQuery = query(collection(db, 'traffic'), where('__name__', '>=', `${userId}_`), where('__name__', '<=', `${userId}_\uf8ff`));
-            const trafficSnapshot = await getDocs(trafficQuery);
-            await Promise.all(trafficSnapshot.docs.map(docSnap => deleteDoc(docSnap.ref)));
+            await deleteDoc(doc(db, 'traffic', userId));
         } catch (err) {
             console.warn('[Purge] 트래픽 정리 실패(계속 진행):', err.message);
         }
