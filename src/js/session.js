@@ -3,6 +3,7 @@ import { formatUserIdentityLabel, formatUserDisplayLabel } from './utils.js';
 import { BASE_PATH, renderRoute, navigateTo } from './router.js';
 import { renderNotices } from './notice.js';
 import { syncAdminUserConsole } from './admin.js';
+import { syncMembersSection } from './members.js';
 import { verifyClock } from './clock.js';
 
 // 로그인 상태 변화(auth 콜백)에 따라 화면 전체의 세션 의존 UI를 갱신한다.
@@ -10,6 +11,7 @@ export function applyUserSessionUI(user) {
     const normalizedUser = user && user.isAnonymous ? null : user;
     setLoggedInUser(normalizedUser);
     syncAdminUserConsole();
+    syncMembersSection();
 
     const welcomeUser = document.getElementById('welcome-user');
     const userRoleDisplay = document.getElementById('user-role-display');

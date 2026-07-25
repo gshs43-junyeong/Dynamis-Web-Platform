@@ -32,7 +32,7 @@ import {
     listenEvents
 } from './event.js';
 import { addFaqQuestion, addFaqAnswer, closeFaq, deleteCurrentFaq, changeFaqPage, listenFaqs } from './faq.js';
-import { listenMembersSection } from './members.js';
+import { syncMembersSection } from './members.js';
 import { syncAdminUserConsole, commitRoleChange, warnUser, deleteUserByAdmin } from './admin.js';
 import { openPuzzle } from './puzzle.js';
 import { initScrollReveal } from './reveal.js';
@@ -80,7 +80,7 @@ function initSystemConfiguration() {
     listenNotices();
     listenEvents();
     listenFaqs();
-    listenMembersSection();
+    syncMembersSection();
     syncAdminUserConsole();
     renderRoute();
     initScrollReveal();
