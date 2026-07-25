@@ -11,7 +11,7 @@ import {
     orderBy,
     writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 
@@ -82,6 +82,16 @@ export async function addNotice() {
             totalNewSize += fileInput.files[i].size;
         }
 
+        // 개별 파일이 너무 크면 FileReader로 전체를 메모리에 올리기 전에 즉시 막는다.
+        // 관리자 계정도 예외가 없다 — 예전에는 아래 일일 한도 체크만 관리자에게
+        // 생략됐을 뿐 이 검사 자체가 없어서, 큰 파일을 선택하면 서버에 닿기도 전에
+        // 브라우저가 멈추거나 크래시할 수 있었다.
+        const oversizedFile = Array.from(fileInput.files).find((f) => f.size > MAX_ATTACHMENT_FILE_BYTES);
+        if (oversizedFile) {
+            alert(`❌ [파일 크기 초과] "${oversizedFile.name}" 파일이 첨부 가능한 개별 용량(${Math.floor(MAX_ATTACHMENT_FILE_BYTES / 1024)}KB)을 초과합니다.`);
+            return;
+        }
+
         if (!isAdmin) {
             const uploadLimit = 2 * 1024 * 1024;
             if (!withinLimit(trafficState, 'uploadBytes', totalNewSize, uploadLimit)) {
@@ -99,6 +109,13 @@ export async function addNotice() {
                 reader.readAsDataURL(file);
             });
             uploadedFilesArray.push({ fileName: file.name, fileSize: file.size, fileData: data });
+        }
+
+        // 인코딩(base64) 후 합계가 서버 규칙의 상한을 넘지 않는지 마지막으로 확인.
+        const totalEncodedBytes = uploadedFilesArray.reduce((sum, f) => sum + f.fileData.length, 0);
+        if (totalEncodedBytes > MAX_ATTACHMENT_TOTAL_ENCODED_BYTES) {
+            alert('❌ [첨부 합계 초과] 첨부파일들의 합계 용량이 허용치를 초과합니다. 파일 수를 줄이거나 더 작은 파일로 시도해 주세요.');
+            return;
         }
     }
 
