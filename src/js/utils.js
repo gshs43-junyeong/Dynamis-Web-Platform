@@ -55,6 +55,21 @@ export function getByteLength(str) {
     return new TextEncoder().encode(str).length;
 }
 
+// 첨부파일 href 검증.
+//
+// files[].fileData는 Firestore 문서에 그대로 담겨 오는 값이라, 규칙만으로는
+// "리스트인지" 정도밖에 검사할 수 없다. 즉 SDK/REST로 문서를 직접 쓰면 이 문자열은
+// 완전히 공격자 통제 하에 놓인다. 그런데 다운로드 처리에서 이 값을 <a>.href에 넣고
+// click()을 부르므로, 값이 'javascript:...'이면 download 속성이 붙어 있어도
+// 그대로 실행된다(브라우저에서 실측 확인함 — download는 javascript: 스킴을
+// 다운로드로 바꿔주지 않는다). 저장형 XSS가 되므로 스킴을 화이트리스트로 막는다.
+//
+// 정상 업로드 경로(FileReader.readAsDataURL)는 항상 'data:'로 시작하므로
+// data: 이외의 스킴은 전부 조작된 값으로 간주하고 거부한다.
+export function isSafeAttachmentData(dataStr) {
+    return typeof dataStr === 'string' && /^data:[a-z0-9.+-]+\/[a-z0-9.+-]*[;,]/i.test(dataStr);
+}
+
 export const NOTICE_TAGS = ['학술 자료', '이벤트 안내', '설문 조사', '기타'];
 
 // URL은 http(s):// 또는 www.로 시작하는 형태만 인식한다 (javascript: 등 다른 스킴은
