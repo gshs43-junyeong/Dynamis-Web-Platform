@@ -266,6 +266,15 @@ export function initializeAuthCallbacks(callback) {
                     batch: resolvedProfile.batch,
                     name: resolvedProfile.name
                 });
+                // 부원 목록은 비로그인 방문자에게도 보여야 하므로, 공개해도 되는
+                // 필드만 담은 공개 프로필을 함께 만든다 (firebase.rules 참고).
+                await setDoc(doc(db, 'memberProfiles', user.uid), {
+                    uid: user.uid,
+                    batch: resolvedProfile.batch,
+                    name: resolvedProfile.name,
+                    role: 'general',
+                    description: ''
+                });
                 clearPendingSignupData();
                 const createdUserDoc = await getDoc(userDocRef);
                 console.log('[Auth State] New user profile created successfully:', createdUserDoc.data().name);
@@ -659,6 +668,11 @@ export async function handleDeleteAccount() {
     // 핵심: 계정 문서 삭제. 이게 성공해야 실질적인 탈퇴가 완료된다.
     try {
         await deleteDoc(doc(db, 'users', userId));
+        try {
+            await deleteDoc(doc(db, 'memberProfiles', userId));
+        } catch (profileErr) {
+            console.warn('[Delete Account] 공개 프로필 삭제 실패(이미 없을 수 있음):', profileErr.message);
+        }
         if (loggedInUser.id) {
             try {
                 await deleteDoc(doc(db, 'usernames', loggedInUser.id));

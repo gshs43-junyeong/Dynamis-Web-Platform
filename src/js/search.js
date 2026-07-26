@@ -99,7 +99,7 @@ function collectResults(term) {
             open: () => { navigateTo('/faq'); openFaqById(f.docId); }
         }));
 
-    // 부원 목록은 로그인 상태에서만 불러와지므로(보안 규칙), 비로그인 시 자동으로 빈 결과가 된다.
+    // 부원 공개 프로필(memberProfiles)은 비로그인도 읽을 수 있어 로그인 없이 검색된다.
     getMembers()
         .filter((u) => normalize(formatUserIdentityLabel(u)).includes(term) || normalize(u.name).includes(term) || normalize(u.batch).includes(term))
         .slice(0, MAX_PER_GROUP)

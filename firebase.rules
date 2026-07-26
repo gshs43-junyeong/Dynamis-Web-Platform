@@ -170,6 +170,27 @@ service cloud.firestore {
       }
     }
 
+    // 5-b. memberProfiles: 부원 소개용 "공개" 프로필 (비로그인도 열람 가능)
+    //
+    // users/{uid}는 로그인해야 읽을 수 있다. 같은 문서 안에 경고 누적 횟수
+    // (warnings, hasUnseenWarning)와 로그인 아이디(id) 같은 비공개 정보가 함께
+    // 들어 있는데, Firestore 규칙은 "문서에서 일부 필드만 읽게" 하는 걸 지원하지
+    // 않아 공개로 열면 그것들까지 통째로 노출되기 때문이다.
+    //
+    // 부원 소개(이름/기수/등급/설명)는 방문자에게도 보여주고 싶으므로, 공개해도
+    // 되는 네 필드만 이 컬렉션에 따로 복제해 두고 여기만 공개로 연다.
+    // 원본은 여전히 users 문서이고 이 컬렉션은 그 투영(projection)일 뿐이다.
+    match /memberProfiles/{userId} {
+      allow read: if true;
+
+      allow create, update: if request.auth != null
+                    && (request.auth.uid == userId || isAdmin())
+                    && isValidMemberProfile(request.resource.data, userId);
+
+      allow delete: if request.auth != null
+                    && (request.auth.uid == userId || isAdmin());
+    }
+
     match /faqs/{faqId} {
       allow read: if true;
 
@@ -461,6 +482,27 @@ service cloud.firestore {
            && (!('downloadBytes' in data) || (data.downloadBytes is int && data.downloadBytes >= 0 && data.downloadBytes <= 1073741824))
            && (!('commentCount' in data) || (data.commentCount is int && data.commentCount >= 0 && data.commentCount <= 1000))
            && (!('faqQuestionCount' in data) || (data.faqQuestionCount is int && data.faqQuestionCount >= 0 && data.faqQuestionCount <= 1000));
+  }
+
+  function userDoc(userId) {
+    return get(/databases/(default)/documents/users/$(userId)).data;
+  }
+
+  // 공개 프로필은 users 문서의 투영이므로 담을 수 있는 필드를 네 개로 못 박고,
+  // 이름·기수·등급은 반드시 원본 users 문서의 값과 같아야 한다.
+  // 이 대조가 없으면 누구나 자기 공개 프로필의 role만 'admin'으로 적어 부원
+  // 목록에서 관리자로 행세할 수 있다(목록이 이 값을 그대로 렌더링하므로).
+  function isValidMemberProfile(data, userId) {
+    return data is map
+           && data.keys().hasOnly(['uid', 'name', 'batch', 'role', 'description'])
+           && data.keys().hasAll(['uid', 'name', 'batch', 'role'])
+           && data.uid == userId
+           && exists(/databases/(default)/documents/users/$(userId))
+           && data.name == userDoc(userId).name
+           && data.batch == userDoc(userId).batch
+           && data.role == userDoc(userId).role
+           && (!('description' in data)
+               || (data.description is string && data.description.size() <= 2000));
   }
 
   function isValidUsername(data) {

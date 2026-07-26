@@ -5,6 +5,7 @@ import {
     getDoc,
     onSnapshot,
     updateDoc,
+    setDoc,
     deleteDoc,
     increment
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -12,6 +13,7 @@ import { getRoleLabel } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { applyUserSessionUI } from './session.js';
 import { purgeUserOwnedData } from './auth.js';
+import { getMembers } from './members.js';
 
 let latestUsersSnapshotDocs = null;
 let adminUsersUnsub = null;
@@ -37,9 +39,51 @@ export function syncAdminUserConsole() {
     adminUsersUnsub = onSnapshot(collection(db, 'users'), (snapshot) => {
         latestUsersSnapshotDocs = snapshot.docs;
         renderAdminUserConsole();
+        backfillMemberProfiles(snapshot.docs);
     }, (err) => {
         console.warn('[Admin] 회원 목록 구독 실패:', err?.message || err);
     });
+}
+
+// 공개 프로필(memberProfiles) 일괄 보정.
+//
+// memberProfiles가 생기기 전에 가입한 계정은 공개 프로필 문서가 없어 비로그인
+// 방문자의 부원 목록에 나타나지 않는다. 각자 로그인하면 본인 것이 자동으로
+// 만들어지지만(members.js), 오래 접속하지 않는 부원은 계속 비어 있게 된다.
+// 관리자만 남의 공개 프로필을 쓸 수 있으므로, 관리자 콘솔이 열려 있는 동안
+// 빠졌거나 값이 어긋난 것만 골라 채운다.
+//
+// 비교 대상은 members.js가 이미 구독 중인 공개 프로필 캐시라 읽기가 늘지 않고,
+// 이미 맞는 계정은 건너뛰므로 평상시 쓰기도 0건이다.
+async function backfillMemberProfiles(userDocs) {
+    const profileByUid = new Map(getMembers().map((m) => [m.uid || m.docId, m]));
+
+    const stale = userDocs
+        .map((docSnap) => ({ ...docSnap.data(), uid: docSnap.data().uid || docSnap.id }))
+        .filter((u) => {
+            const current = profileByUid.get(u.uid);
+            if (!current) return true;
+            return (current.name || '') !== (u.name || '')
+                || (current.batch || '') !== (u.batch || '')
+                || (current.role || '') !== (u.role || 'general')
+                || (current.description || '') !== (u.description || '');
+        });
+    if (!stale.length) return;
+
+    for (const u of stale) {
+        try {
+            await setDoc(doc(db, 'memberProfiles', u.uid), {
+                uid: u.uid,
+                name: u.name || '',
+                batch: u.batch || '',
+                role: u.role || 'general',
+                description: u.description || ''
+            });
+        } catch (err) {
+            console.warn(`[Admin] 공개 프로필 보정 실패 (${u.uid}):`, err?.message || err);
+        }
+    }
+    console.log(`[Admin] 공개 프로필 ${stale.length}건 보정 완료.`);
 }
 
 export function renderAdminUserConsole() {
@@ -155,6 +199,9 @@ export async function commitRoleChange(userId, targetRole) {
     console.log('[Admin Debug] 관리자 본인 loggedInUser.role:', loggedInUser?.role);
     try {
         await updateDoc(doc(db, 'users', userId), { role: roleToApply });
+        // 공개 프로필의 등급도 맞춰준다. 규칙이 users 문서의 값과 대조하므로
+        // 한 배치로 묶으면 get()이 커밋 전 값(=예전 등급)을 봐서 거부된다 — 순차로 쓴다.
+        await syncMemberProfileRole(userId, roleToApply);
         alert('해당 회원의 등급 권한이 성공적으로 업데이트되었습니다.');
         if (loggedInUser && firebaseAuth.currentUser?.uid === userId) {
             const userSnapshot = await getDoc(doc(db, 'users', userId));
@@ -163,6 +210,23 @@ export async function commitRoleChange(userId, targetRole) {
     } catch (err) {
         console.error('[Admin Debug] commitRoleChange 에러 상세:', err.code, err.message);
         alert('등급 변경에 실패했습니다: ' + err.message);
+    }
+}
+
+async function syncMemberProfileRole(userId, role) {
+    try {
+        const userSnap = await getDoc(doc(db, 'users', userId));
+        if (!userSnap.exists()) return;
+        const u = userSnap.data();
+        await setDoc(doc(db, 'memberProfiles', userId), {
+            uid: userId,
+            name: u.name || '',
+            batch: u.batch || '',
+            role,
+            description: u.description || ''
+        });
+    } catch (err) {
+        console.warn('[Admin] 공개 프로필 등급 반영 실패:', err?.message || err);
     }
 }
 
@@ -194,6 +258,11 @@ export async function deleteUserByAdmin(userId, usernameId) {
         // 관리자 권한으로 토큰을 새로 발급(role 반영) 후 삭제.
         await firebaseAuth.currentUser?.getIdToken(true);
         await deleteDoc(doc(db, 'users', userId));
+        try {
+            await deleteDoc(doc(db, 'memberProfiles', userId));
+        } catch (profileErr) {
+            console.warn('[Admin] 공개 프로필 삭제 실패(이미 없을 수 있음):', profileErr.message);
+        }
         if (usernameId) {
             try {
                 await deleteDoc(doc(db, 'usernames', usernameId));
