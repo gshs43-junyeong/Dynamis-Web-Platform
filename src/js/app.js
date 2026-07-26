@@ -9,6 +9,10 @@
 //   admin.js   - 관리자 콘솔
 //   likes.js   - 좋아요(하트) 위젯
 //   clock.js   - 기기/서버 시계 오차 검사
+//   dashboard.js - 홈 라이브 대시보드(현황 통계 + 최근 글 미리보기)
+//   search.js    - 통합 검색 커맨드 팔레트 (⌘K / Ctrl+K)
+//   unread.js    - 마지막 방문 이후 올라온 글 NEW 표시
+//   scrollui.js  - 읽기 진행 바 및 맨 위로 버튼
 import * as auth from './auth.js';
 import { navigateTo, handleAuthNavClick, renderRoute, toggleMobileMenu, closeMobileMenu } from './router.js';
 import { applyUserSessionUI } from './session.js';
@@ -36,9 +40,15 @@ import { syncMembersSection } from './members.js';
 import { syncAdminUserConsole, commitRoleChange, warnUser, deleteUserByAdmin } from './admin.js';
 import { openPuzzle } from './puzzle.js';
 import { initScrollReveal } from './reveal.js';
+import { initDashboard } from './dashboard.js';
+import { initSearch, openSearch, closeSearch } from './search.js';
+import { initUnreadTracking } from './unread.js';
+import { initScrollUI } from './scrollui.js';
 
 window.navigateTo = navigateTo;
 window.openPuzzle = openPuzzle;
+window.openSearch = openSearch;
+window.closeSearch = closeSearch;
 window.handleAuthNavClick = handleAuthNavClick;
 window.toggleMobileMenu = toggleMobileMenu;
 window.closeMobileMenu = closeMobileMenu;
@@ -82,6 +92,14 @@ function initSystemConfiguration() {
     listenFaqs();
     syncMembersSection();
     syncAdminUserConsole();
+
+    // 아래 4개는 위 구독들이 bus로 흘려보내는 데이터를 재사용하기만 한다
+    // (Firestore 추가 구독 없음). 그래서 반드시 listen* 다음에 초기화한다.
+    initDashboard();
+    initSearch();
+    initUnreadTracking();
+    initScrollUI();
+
     renderRoute();
     initScrollReveal();
 }

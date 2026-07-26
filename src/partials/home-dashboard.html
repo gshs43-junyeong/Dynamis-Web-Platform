@@ -1,0 +1,36 @@
+            <div class="content-card dashboard-card" id="home-dashboard">
+                <div class="dash-head">
+                    <h3>동아리 현황</h3>
+                    <span class="dash-live" title="공지·이벤트·질문이 등록되면 새로고침 없이 즉시 반영됩니다.">
+                        <span class="dash-live-dot" aria-hidden="true"></span>LIVE
+                    </span>
+                </div>
+
+                <div class="dash-stat-grid" id="dash-stat-grid"></div>
+
+                <div class="dash-cols">
+                    <div class="dash-col">
+                        <div class="dash-col-head">
+                            <h4>최근 공지</h4>
+                            <button type="button" class="dash-more" onclick="navigateTo('/notice')">전체 보기 →</button>
+                        </div>
+                        <div class="dash-list" id="dash-recent-notices"></div>
+                    </div>
+
+                    <div class="dash-col">
+                        <div class="dash-col-head">
+                            <h4>마감 임박 이벤트</h4>
+                            <button type="button" class="dash-more" onclick="navigateTo('/event')">전체 보기 →</button>
+                        </div>
+                        <div class="dash-list" id="dash-upcoming-events"></div>
+                    </div>
+
+                    <div class="dash-col">
+                        <div class="dash-col-head">
+                            <h4>최근 질문</h4>
+                            <button type="button" class="dash-more" onclick="navigateTo('/faq')">전체 보기 →</button>
+                        </div>
+                        <div class="dash-list" id="dash-latest-faqs"></div>
+                    </div>
+                </div>
+            </div>

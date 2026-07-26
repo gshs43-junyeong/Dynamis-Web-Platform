@@ -14,6 +14,8 @@ import {
 import { ITEMS_PER_PAGE, formatAuthorBatchName, getByteLength } from './utils.js';
 import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';
+import { emit, EVENTS } from './bus.js';
+import { isUnread, createNewBadge } from './unread.js';
 
 let faqs = [];
 let displayFaqsGlobal = [];
@@ -103,6 +105,7 @@ function renderFaqPage(pageNum) {
         const questionTd = document.createElement('td');
         questionTd.className = 'clickable-td';
         questionTd.textContent = faq.title || faq.question || '';
+        if (isUnread('faq', faq.timestamp)) questionTd.appendChild(createNewBadge());
         questionTd.addEventListener('click', () => viewFaq(startIdx + index));
         tr.appendChild(questionTd);
 
@@ -170,7 +173,15 @@ export function changeFaqPage(pageNum) {
 }
 
 function viewFaq(index) {
-    const faq = displayFaqsGlobal[index];
+    openFaqDetail(displayFaqsGlobal[index]);
+}
+
+// docId로 바로 상세를 연다 (홈 대시보드 / 통합 검색 진입점).
+export function openFaqById(docId) {
+    openFaqDetail(faqs.find((f) => f.docId === docId));
+}
+
+function openFaqDetail(faq) {
     if (!faq) return;
     currentFaqDocId = faq.docId;
 
@@ -299,6 +310,11 @@ export function closeFaq() {
     if (faqLikeUnsub) { faqLikeUnsub(); faqLikeUnsub = null; }
 }
 
+// 현재 메모리에 올라와 있는 FAQ 목록(읽기 전용 사본).
+export function getFaqs() {
+    return faqs.slice();
+}
+
 export function listenFaqs() {
     onSnapshot(collection(db, 'faqs'), (querySnapshot) => {
         faqs = [];
@@ -308,5 +324,6 @@ export function listenFaqs() {
             faqs.push(data);
         });
         renderFaqs();
+        emit(EVENTS.FAQS_CHANGED, faqs);
     });
 }

@@ -16,6 +16,8 @@ import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText, isSafeAt
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { serverNow, isClockOutOfSync } from './clock.js';
+import { emit, EVENTS } from './bus.js';
+import { isUnread, createNewBadge } from './unread.js';
 
 let events = [];
 let displayEventsGlobal = [];
@@ -215,6 +217,7 @@ function renderEventPage(pageNum) {
         const titleTd = document.createElement('td');
         titleTd.className = 'clickable-td';
         titleTd.textContent = `${ev.title || ''}`;
+        if (isUnread('event', ev.timestamp)) titleTd.appendChild(createNewBadge());
         titleTd.addEventListener('click', () => viewEvent(startIdx + index));
         tr.appendChild(titleTd);
 
@@ -291,7 +294,15 @@ export function changeEventPage(pageNum) {
 }
 
 async function viewEvent(index) {
-    const ev = displayEventsGlobal[index];
+    return openEventDetail(displayEventsGlobal[index]);
+}
+
+// docId로 바로 상세를 연다 (홈 대시보드 / 통합 검색 진입점).
+export async function openEventById(docId) {
+    return openEventDetail(events.find((ev) => ev.docId === docId));
+}
+
+async function openEventDetail(ev) {
     if (!ev) return;
 
     const expired = (ev.deadline || 0) - serverNow() <= 0;
@@ -514,6 +525,11 @@ export function closeEvent() {
     if (eventLikeUnsub) { eventLikeUnsub(); eventLikeUnsub = null; }
 }
 
+// 현재 메모리에 올라와 있는 이벤트 목록(읽기 전용 사본).
+export function getEvents() {
+    return events.slice();
+}
+
 export function listenEvents() {
     if (!timerInterval) {
         timerInterval = setInterval(updateTimerCells, 1000);
@@ -526,5 +542,6 @@ export function listenEvents() {
             events.push(data);
         });
         renderEvents();
+        emit(EVENTS.EVENTS_CHANGED, events);
     });
 }

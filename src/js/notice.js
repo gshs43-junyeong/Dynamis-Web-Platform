@@ -14,6 +14,8 @@ import {
 import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
+import { emit, EVENTS } from './bus.js';
+import { isUnread, createNewBadge } from './unread.js';
 
 let notices = [];
 let displayNoticesGlobal = [];
@@ -233,6 +235,7 @@ function renderNoticePage(pageNum) {
         const titleTextSpan = document.createElement('span');
         titleTextSpan.textContent = `${n.pinned ? '📌 [고정] ' : ''}${n.title || ''}${n.files && n.files.length ? ' 📎' : ''}`;
         titleTd.appendChild(titleTextSpan);
+        if (isUnread('notice', n.timestamp)) titleTd.appendChild(createNewBadge());
         titleTd.addEventListener('click', () => viewNotice(startIdx + index));
         tr.appendChild(titleTd);
 
@@ -300,7 +303,16 @@ export function changePage(pageNum) {
 }
 
 export function viewNotice(index) {
-    const n = displayNoticesGlobal[index];
+    openNoticeDetail(displayNoticesGlobal[index]);
+}
+
+// docId로 바로 상세를 연다. 홈 대시보드·통합 검색처럼 목록 인덱스를 모르는
+// 곳에서 쓰기 위한 진입점 (태그 필터에 걸려 목록에 없는 글도 열 수 있다).
+export function openNoticeById(docId) {
+    openNoticeDetail(notices.find((n) => n.docId === docId));
+}
+
+function openNoticeDetail(n) {
     if (!n) return;
     currentNoticeDocId = n.docId;
 
@@ -498,6 +510,12 @@ export function closeNotice() {
     if (noticeLikeUnsub) { noticeLikeUnsub(); noticeLikeUnsub = null; }
 }
 
+// 현재 메모리에 올라와 있는 공지 목록(읽기 전용 사본).
+// 홈 대시보드·통합 검색이 Firestore를 다시 구독하지 않고 이 값을 재사용한다.
+export function getNotices() {
+    return notices.slice();
+}
+
 export function listenNotices() {
     onSnapshot(collection(db, 'notices'), (querySnapshot) => {
         notices = [];
@@ -507,5 +525,6 @@ export function listenNotices() {
             notices.push(data);
         });
         renderNotices();
+        emit(EVENTS.NOTICES_CHANGED, notices);
     });
 }

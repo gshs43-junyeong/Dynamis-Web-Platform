@@ -8,8 +8,11 @@ import {
 import { formatUserIdentityLabel, getRoleLabel } from './utils.js';
 import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';
+import { emit, EVENTS } from './bus.js';
 
 let selectedMemberData = null;
+// 마지막으로 렌더된 부원 목록. 홈 대시보드/통합 검색이 재구독 없이 재사용한다.
+let memberCache = [];
 let memberLikeUnsub = null;
 // 목록 버튼마다 붙는 하트 위젯의 구독 해제 함수들. 목록을 다시 그릴 때 모두 정리한다.
 let memberButtonLikeUnsubs = [];
@@ -155,6 +158,8 @@ export function syncMembersSection() {
         if (gMember) gMember.innerHTML = '';
         if (gHonored) gHonored.innerHTML = '';
         renderMemberDetailPanel(null);
+        memberCache = [];
+        emit(EVENTS.MEMBERS_CHANGED, memberCache);
         return;
     }
 
@@ -244,5 +249,13 @@ export function syncMembersSection() {
             renderMemberDetailPanel(null);
         }
         syncMemberSelectionHighlight();
+        memberCache = members;
+        emit(EVENTS.MEMBERS_CHANGED, memberCache);
     });
+}
+
+// 현재 메모리에 올라와 있는 부원 목록(읽기 전용 사본).
+// users 컬렉션은 로그인 상태에서만 읽을 수 있으므로, 비로그인 시에는 빈 배열이다.
+export function getMembers() {
+    return memberCache.slice();
 }

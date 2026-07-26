@@ -1,0 +1,50 @@
+/* 통합 검색 (커맨드 팔레트) */
+
+/* 헤더에 검색 버튼이 추가되면서 자식이 늘었다. space-between으로 흩어지지 않도록
+   로고만 왼쪽에 고정하고 나머지는 오른쪽으로 모은다. */
+header { justify-content: flex-end; gap: 1.5rem; }
+.logo-area { margin-right: auto; }
+
+.search-trigger { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.04); color: var(--text-secondary); font-size: 0.85rem; cursor: pointer; transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease; }
+.search-trigger:hover { color: #fff; border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); }
+.search-trigger-icon { font-size: 1.05rem; line-height: 1; }
+.search-trigger kbd { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-secondary); }
+
+.search-modal { display: none; position: fixed; inset: 0; z-index: 200; background: var(--modal-bg); backdrop-filter: blur(4px); align-items: flex-start; justify-content: center; padding: 12vh 1rem 2rem; }
+body.search-open { overflow: hidden; }
+
+.search-panel { width: min(680px, 100%); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,0.6); overflow: hidden; display: flex; flex-direction: column; max-height: 70vh; animation: searchPop 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes searchPop { from { opacity: 0; transform: translateY(-12px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .search-panel { animation: none; } }
+
+.search-input-row { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); }
+.search-input-icon { color: var(--text-secondary); font-size: 1.3rem; line-height: 1; }
+.search-input-row input { flex: 1; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 1.05rem; padding: 0; }
+.search-input-row input::placeholder { color: var(--text-secondary); }
+.search-close { background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 6px; padding: 4px 9px; font-size: 0.72rem; cursor: pointer; transition: color 0.2s ease, border-color 0.2s ease; }
+.search-close:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+
+.search-results { overflow-y: auto; padding: 0.5rem 0; flex: 1; }
+.search-group { padding: 0.65rem 1.25rem 0.35rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-secondary); }
+.search-item { padding: 0.6rem 1.25rem; cursor: pointer; border-left: 3px solid transparent; transition: background 0.15s ease, border-color 0.15s ease; }
+.search-item.active { background: rgba(255,255,255,0.07); border-left-color: #fff; }
+.search-item-title { color: #fff; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-item-sub { color: var(--text-secondary); font-size: 0.82rem; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-item-meta { color: #6e6e6e; font-size: 0.72rem; margin-top: 3px; }
+.search-hit { background: rgba(255, 213, 79, 0.22); color: #ffe27a; border-radius: 2px; padding: 0 1px; }
+
+.search-empty { padding: 2rem 1.25rem; text-align: center; color: var(--text-secondary); font-size: 0.9rem; }
+
+.search-footer { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 0.7rem 1.25rem; border-top: 1px solid var(--border-color); background: rgba(0,0,0,0.25); color: var(--text-secondary); font-size: 0.75rem; }
+.search-footer kbd { display: inline-block; min-width: 20px; text-align: center; margin-right: 3px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); font-size: 0.7rem; }
+.search-footer-note { margin-left: auto; color: #6e6e6e; }
+
+@media (max-width: 1080px) {
+    .search-trigger-label, .search-trigger kbd { display: none; }
+    .search-trigger { padding: 8px; border-radius: 50%; }
+}
+@media (max-width: 768px) {
+    .search-modal { padding: 6vh 0.75rem 1rem; }
+    .search-panel { max-height: 80vh; }
+    .search-footer-note { display: none; }
+}

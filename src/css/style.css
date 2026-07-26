@@ -2,6 +2,7 @@
 @import './partials/layout.css';
 @import './partials/hero.css';
 @import './partials/home-sections.css';
+@import './partials/dashboard.css';
 @import './partials/tables.css';
 @import './partials/modal.css';
 @import './partials/forms.css';
@@ -12,4 +13,5 @@
 @import './partials/tags-pagination.css';
 @import './partials/nav-mobile.css';
 @import './partials/responsive.css';
+@import './partials/search.css';
 @import './partials/widgets.css';

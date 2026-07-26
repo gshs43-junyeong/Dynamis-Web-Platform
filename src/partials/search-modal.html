@@ -1,0 +1,18 @@
+    <div class="search-modal" id="search-modal" role="dialog" aria-modal="true" aria-label="통합 검색">
+        <div class="search-panel">
+            <div class="search-input-row">
+                <span class="search-input-icon" aria-hidden="true">⌕</span>
+                <input type="text" id="search-input" autocomplete="off" spellcheck="false"
+                       placeholder="공지, 이벤트, FAQ, 부원 검색..." aria-label="검색어 입력">
+                <button type="button" class="search-close" onclick="closeSearch()" aria-label="검색 닫기">Esc</button>
+            </div>
+            <div class="search-results" id="search-results" role="listbox" aria-label="검색 결과"></div>
+            <p class="search-empty" id="search-empty">공지, 이벤트, FAQ, 부원, 페이지를 한 번에 찾을 수 있습니다.</p>
+            <div class="search-footer">
+                <span><kbd>↑</kbd><kbd>↓</kbd> 이동</span>
+                <span><kbd>Enter</kbd> 열기</span>
+                <span><kbd>Esc</kbd> 닫기</span>
+                <span class="search-footer-note">부원 검색은 로그인 후 이용할 수 있습니다.</span>
+            </div>
+        </div>
+    </div>
