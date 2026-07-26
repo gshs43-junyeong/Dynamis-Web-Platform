@@ -1,4 +1,7 @@
 .content-card { background-color: var(--bg-secondary); border: 1px solid var(--border-color); padding: 3rem; border-radius: 12px; margin-bottom: 3rem; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+/* 마지막 카드의 아래 여백은 main의 padding-bottom, footer의 margin-top과 겹쳐
+   푸터 앞에만 여백이 세 겹으로 쌓인다. 마지막 것만 덜어낸다. */
+.section > .content-card:last-child { margin-bottom: 0; }
 
 .scroll-reveal { opacity: 0; transform: translateY(48px); transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
 .scroll-reveal.is-visible { opacity: 1; transform: translateY(0); }

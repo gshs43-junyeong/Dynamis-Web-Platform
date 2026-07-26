@@ -61,6 +61,47 @@ function clearPendingAuthIntent() {
     pendingAuthIntent = null;
 }
 
+// "로그인 상태 유지" 체크박스 값을 Firebase Auth에 반영한다.
+//
+// 예전에는 signInWithPopup이 성공한 "다음에" setPersistence를 불렀다. Firebase는
+// 로그인 전에 설정하도록 안내하고 있고, 실제로 세션이 이미 만들어진 뒤에 저장소를
+// 바꾸는 셈이라 체크박스가 의도대로 동작하지 않을 수 있었다. 대신 페이지가 뜰 때와
+// 체크박스가 바뀔 때 미리 적용해두면, 로그인 버튼을 누르는 시점에는 이미 원하는
+// persistence가 설정되어 있으므로 클릭 핸들러에서 await를 할 필요가 없다.
+// (클릭 직후의 await는 팝업 차단을 유발한다 — signInWithProvider 주석 참고.)
+export async function applyPersistencePreference() {
+    const persistCheckbox = document.getElementById('login-persist-checkbox');
+    const shouldPersist = !!persistCheckbox?.checked;
+    const selected = shouldPersist ? browserLocalPersistence : browserSessionPersistence;
+    try {
+        await setPersistence(auth, selected);
+        console.log('[Login] Persistence set to:', shouldPersist ? 'LOCAL' : 'SESSION');
+    } catch (err) {
+        console.warn('[Login] Failed to set persistence:', err.message);
+    }
+}
+
+// auth/internal-error는 Auth 서버가 SDK가 해석하지 못하는 응답을 돌려줬을 때 나오는
+// 포괄 에러라, 원문만 보여주면 사용자도 개발자도 원인을 알 수 없다. 이 프로젝트에서
+// 가장 흔한 원인(App Check)을 짚어 준다.
+function describeAuthError(providerName, err) {
+    const code = err?.code || 'unknown';
+    if (code === 'auth/internal-error') {
+        return `${providerName} 로그인 실패 (auth/internal-error)\n\n`
+            + '대부분 App Check 문제입니다. 아래를 확인해 주세요.\n'
+            + '1) Firebase 콘솔 > App Check 에서 Authentication 적용(enforce) 상태\n'
+            + '2) 등록된 reCAPTCHA 사이트 키 종류와 코드의 APP_CHECK_PROVIDER_TYPE 일치 여부\n'
+            + '   (src/js/firebase-config.js — 현재 enterprise)\n'
+            + '3) 현재 접속 도메인이 reCAPTCHA 키의 허용 도메인에 등록되어 있는지\n'
+            + '4) localhost 개발 중이라면 콘솔에 찍힌 App Check 디버그 토큰을 등록했는지\n\n'
+            + `원문: ${err?.message || ''}`;
+    }
+    if (code === 'auth/unauthorized-domain') {
+        return `${providerName} 로그인 실패: 현재 접속 도메인이 Firebase 콘솔의 승인된 도메인 목록에 없습니다.\n\n원문: ${err?.message || ''}`;
+    }
+    return `${providerName} 로그인 실패: ${err?.message || code}`;
+}
+
 function isProviderNotAllowedError(err) {
     return err?.code === 'auth/operation-not-allowed';
 }
@@ -143,19 +184,23 @@ function validateSignupInput(id, batch, name) {
 export function initializeAuthCallbacks(callback) {
     applyUserSessionUIFunc = callback;
 
+    // 로그인 전에 persistence를 확정해 둔다(로그인 버튼 클릭 시 await 없이 팝업을
+    // 바로 열 수 있도록). 체크박스를 건드릴 때마다 다시 반영한다.
+    applyPersistencePreference();
+    document.getElementById('login-persist-checkbox')
+        ?.addEventListener('change', applyPersistencePreference);
+
     // signInWithRedirect로 나갔다가 돌아왔을 때 실패하면 지금까지는 콘솔에만 찍히고
     // 화면엔 아무 표시가 없어(특히 모바일은 콘솔을 볼 수 없으니) "그냥 안 된다"로만
     // 보였다. 실제 에러 코드를 화면에 노출해 원인을 특정할 수 있게 한다.
     getRedirectResult(auth).catch((err) => {
         console.warn('redirect result error:', err.code, err.message);
         clearPendingAuthIntent();
-        let hint = '';
-        if (err.code === 'auth/unauthorized-domain') {
-            hint = '\n(현재 접속 도메인이 Firebase 콘솔의 승인된 도메인 목록에 없습니다.)';
-        } else if (err.code === 'auth/account-exists-with-different-credential') {
-            hint = '\n(같은 이메일로 다른 로그인 방식이 이미 가입되어 있습니다.)';
+        if (err.code === 'auth/account-exists-with-different-credential') {
+            setAuthStatus(`로그인 실패 (${err.code}): 같은 이메일로 다른 로그인 방식이 이미 가입되어 있습니다.`, 'error');
+            return;
         }
-        setAuthStatus(`로그인 실패 (${err.code || 'unknown'}): ${err.message}${hint}`, 'error');
+        setAuthStatus(describeAuthError('리디렉트', err), 'error');
     });
 
     onAuthStateChanged(auth, async (user) => {
@@ -247,26 +292,16 @@ export function initializeAuthCallbacks(callback) {
 }
 
 async function signInWithProvider(provider, providerName) {
-    const persistCheckbox = document.getElementById('login-persist-checkbox');
-    const shouldPersist = persistCheckbox ? persistCheckbox.checked : false;
     pendingAuthIntent = { type: 'login', providerLabel: providerName };
     setAuthStatus(`${providerName} 로그인 진행 중입니다...`, 'info');
 
-    // 모바일 크롬에서 signInWithPopup이 계속 "차단"되던 진짜 원인을 찾았다: 이전 코드는
-    // 팝업을 열기 전에 setPersistence()를 먼저 await 했는데, 그 사이 짧은 비동기 텀에서
-    // 클릭으로 얻은 user activation(사용자 제스처)이 소진되어, 뒤이은 signInWithPopup의
-    // window.open이 "사용자가 직접 연 것이 아닌" 팝업으로 취급되어 차단당한 것이다.
-    // (데스크톱은 이 텀에 관대해 문제가 안 드러났을 뿐이다.) 그래서 팝업을 클릭 직후
-    // 가장 먼저 시도하는 비동기 작업으로 옮기고, persistence는 로그인 성공 후에 설정한다.
+    // persistence는 여기서 await하지 않는다. 로그인 전에 설정해야 한다는 건 맞지만,
+    // 클릭 직후 await를 하나라도 끼우면 그 사이 user activation(사용자 제스처)이
+    // 소진되어 signInWithPopup의 window.open이 "사용자가 직접 연 것이 아닌" 팝업으로
+    // 취급돼 모바일 크롬에서 차단당한다. 그래서 체크박스가 바뀔 때마다 미리
+    // 적용해두고(applyPersistencePreference), 여기서는 팝업만 곧바로 연다.
     try {
         await signInWithPopup(auth, provider);
-        try {
-            const selectedPersistence = shouldPersist ? browserLocalPersistence : browserSessionPersistence;
-            await setPersistence(auth, selectedPersistence);
-            console.log('[Login] Persistence set to:', selectedPersistence === browserLocalPersistence ? 'LOCAL' : 'SESSION');
-        } catch (persistErr) {
-            console.warn('[Login] Failed to set persistence after popup login:', persistErr.message);
-        }
         return;
     } catch (err) {
         console.warn(`${providerName} popup login failed, fallback to redirect:`, err.code, err.message);
@@ -277,19 +312,16 @@ async function signInWithProvider(provider, providerName) {
         }
         if (err.code !== 'auth/popup-blocked' && err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/operation-not-supported-in-this-environment') {
             clearPendingAuthIntent();
-            setAuthStatus(`${providerName} 로그인 실패: ${err.message}`, 'error');
-            alert(`${providerName} 로그인 실패: ${err.message}`);
+            const message = describeAuthError(providerName, err);
+            setAuthStatus(message, 'error');
+            alert(message);
             return;
         }
     }
 
-    // 팝업 자체가 진짜로 차단된 경우에만 여기로 온다 (드묾 — 위 수정으로 대부분 해결될 것).
-    try {
-        const selectedPersistence = shouldPersist ? browserLocalPersistence : browserSessionPersistence;
-        await setPersistence(auth, selectedPersistence);
-    } catch (err) {
-        console.warn('[Login] Failed to set persistence:', err.message);
-    }
+    // 팝업 자체가 진짜로 차단된 경우에만 여기로 온다. 이 시점엔 이미 제스처가
+    // 끝났으므로 persistence를 확실히 반영하고 넘어가도 손해가 없다.
+    await applyPersistencePreference();
 
     try {
         console.log('[Login] Using redirect for', providerName, 'login');
@@ -301,8 +333,9 @@ async function signInWithProvider(provider, providerName) {
             return;
         }
         clearPendingAuthIntent();
-        setAuthStatus(`${providerName} 로그인 실패: ${err.message}`, 'error');
-        alert(`${providerName} 로그인 실패: ${err.message}\n팝업이 차단되어 리디렉트 방식으로 시도했습니다.`);
+        const message = describeAuthError(providerName, err);
+        setAuthStatus(message, 'error');
+        alert(`${message}\n\n(팝업이 차단되어 리디렉트 방식으로 시도했습니다.)`);
     }
 }
 
@@ -508,8 +541,9 @@ window.proceedSignupWithGoogle = async function() {
         }
         if (err.code !== 'auth/popup-blocked' && err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/operation-not-supported-in-this-environment') {
             clearPendingAuthIntent();
-            setAuthStatus('Google 회원가입 실패: ' + err.message, 'error');
-            alert('Google 회원가입 실패: ' + err.message);
+            const message = describeAuthError('Google 회원가입', err);
+            setAuthStatus(message, 'error');
+            alert(message);
             return;
         }
     }
@@ -551,8 +585,9 @@ window.proceedSignupWithGitHub = async function() {
         }
         if (err.code !== 'auth/popup-blocked' && err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/operation-not-supported-in-this-environment') {
             clearPendingAuthIntent();
-            setAuthStatus('GitHub 회원가입 실패: ' + err.message, 'error');
-            alert('GitHub 회원가입 실패: ' + err.message);
+            const message = describeAuthError('GitHub 회원가입', err);
+            setAuthStatus(message, 'error');
+            alert(message);
             return;
         }
     }

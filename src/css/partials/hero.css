@@ -1,6 +1,10 @@
-/* 홈 - 배경 그리드 무늬 (서서히 흘러가는 애니메이션 추가) */
+/* 홈 - 배경 그리드 무늬 (서서히 흘러가는 애니메이션 추가)
+   높이는 150%가 아니라 딱 섹션 높이 + 위로 삐져나온 4rem 만큼만 잡는다.
+   150%로 두면 홈이 길어질수록(현재 약 5,800px) 그 절반이 그대로 문서 아래로
+   흘러넘쳐, 푸터 밑에 2,000px가 넘는 빈 스크롤 영역이 생겼다.
+   (body는 overflow-x만 hidden이라 세로 넘침이 그대로 문서 높이가 된다.) */
 #home::before {
-    content: ""; position: absolute; top: -4rem; left: -50vw; width: 200vw; height: 150%;
+    content: ""; position: absolute; top: -4rem; left: -50vw; width: 200vw; height: calc(100% + 4rem);
     background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
     background-size: 40px 40px; background-position: center; z-index: -2; pointer-events: none;
     opacity: 0.7; animation: gridDrift 40s linear infinite;
