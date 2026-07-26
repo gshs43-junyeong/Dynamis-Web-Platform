@@ -10,7 +10,6 @@ import { getFaqs, openFaqById } from './faq.js';
 import { getMembers } from './members.js';
 import { serverNow } from './clock.js';
 import { navigateTo } from './router.js';
-import { loggedInUser } from './state.js';
 
 const PREVIEW_COUNT = 3;
 const COUNT_UP_MS = 900;
@@ -74,14 +73,8 @@ function renderStats() {
     const openEvents = events.filter((ev) => (ev.deadline || 0) > now).length;
 
     const stats = [
-        {
-            id: 'members',
-            label: '부원',
-            // users 컬렉션은 로그인해야 읽을 수 있다(보안 규칙). 비로그인 상태에서
-            // 0명이라고 표시하면 거짓말이 되므로 값 자체를 감춘다.
-            value: loggedInUser ? members.length : null,
-            hint: loggedInUser ? null : '로그인 후 표시'
-        },
+        // 부원 수는 공개 프로필(memberProfiles)에서 세므로 로그인 없이도 나온다.
+        { id: 'members', label: '부원', value: members.length },
         { id: 'notices', label: '누적 공지', value: notices.length },
         { id: 'events', label: '진행 중 이벤트', value: openEvents },
         { id: 'faqs', label: '등록된 질문', value: faqs.length }
@@ -97,21 +90,16 @@ function renderStats() {
 
         const value = document.createElement('div');
         value.className = 'dash-stat-value';
-        if (stat.value === null) {
-            value.textContent = '—';
-            value.classList.add('is-hidden-value');
-        } else {
-            value.textContent = '0';
-        }
+        value.textContent = '0';
         item.appendChild(value);
 
         const label = document.createElement('div');
         label.className = 'dash-stat-label';
-        label.textContent = stat.hint ? `${stat.label} · ${stat.hint}` : stat.label;
+        label.textContent = stat.label;
         item.appendChild(label);
 
         grid.appendChild(item);
-        if (stat.value !== null) countUp(value, stat.value);
+        countUp(value, stat.value);
     });
 }
 

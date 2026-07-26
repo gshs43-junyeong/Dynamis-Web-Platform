@@ -13,7 +13,6 @@
 .dash-stat { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.35rem 1rem; text-align: center; transition: border-color 0.3s ease, transform 0.3s ease; }
 .dash-stat:hover { border-color: rgba(255,255,255,0.22); transform: translateY(-2px); }
 .dash-stat-value { font-size: 2.2rem; font-weight: 700; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.dash-stat-value.is-hidden-value { color: var(--text-secondary); font-weight: 400; }
 .dash-stat-label { margin-top: 0.4rem; font-size: 0.82rem; color: var(--text-secondary); letter-spacing: 0.3px; }
 
 /* 3열 미리보기 */

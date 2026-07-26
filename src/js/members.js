@@ -3,7 +3,9 @@ import {
     collection,
     doc,
     onSnapshot,
-    updateDoc
+    getDoc,
+    setDoc,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { formatUserIdentityLabel, getRoleLabel } from './utils.js';
 import { loggedInUser } from './state.js';
@@ -49,7 +51,8 @@ function renderMemberDetailPanel(member) {
 
     const description = (member.description || '').trim();
     const fallbackText = '이 부원에 대한 설명이 없습니다.';
-    const canEdit = !!(loggedInUser && (firebaseAuth.currentUser?.uid === member.uid || loggedInUser.id === member.id));
+    // 공개 프로필에는 로그인 아이디(id)가 없으므로 uid로만 본인 여부를 판정한다.
+    const canEdit = !!(loggedInUser && firebaseAuth.currentUser?.uid && firebaseAuth.currentUser.uid === member.uid);
 
     panel.innerHTML = '';
 
@@ -117,8 +120,19 @@ function renderMemberDetailPanel(member) {
                 return;
             }
             try {
-                const targetDocId = member.docId || member.uid || member.id;
-                await updateDoc(doc(db, 'users', targetDocId), { description: newValue });
+                const targetDocId = member.docId || member.uid;
+                // 원본(users)과 공개 사본(memberProfiles)을 한 배치로 함께 갱신한다.
+                // 따로 쓰면 한쪽만 성공했을 때 목록에 보이는 설명과 실제 값이 어긋난다.
+                const batch = writeBatch(db);
+                batch.update(doc(db, 'users', targetDocId), { description: newValue });
+                batch.set(doc(db, 'memberProfiles', targetDocId), {
+                    uid: targetDocId,
+                    name: member.name || '',
+                    batch: member.batch || '',
+                    role: member.role || 'general',
+                    description: newValue
+                });
+                await batch.commit();
                 selectedMemberData = { ...member, description: newValue };
                 renderMemberDetailPanel(selectedMemberData);
                 syncMemberSelectionHighlight();
@@ -142,30 +156,52 @@ function handleMemberSelection(member) {
 
 let membersUnsub = null;
 
-// users 컬렉션 읽기가 request.auth != null로 제한되어 있으므로(실명·기수·경고
-// 이력을 비로그인 상태에 노출하지 않기 위함), 로그인 상태일 때만 구독한다.
-// 로그아웃 상태에서는 안내 문구만 보여준다.
+// 로그인한 본인의 공개 프로필(memberProfiles)이 users 문서와 어긋나 있으면 맞춘다.
+//
+// 이 컬렉션이 생기기 전에 가입한 계정에는 공개 프로필 문서가 아예 없다. 별도
+// 마이그레이션 스크립트를 돌리는 대신, 각자 로그인할 때 본인 것만 스스로 만들도록
+// 해 자연스럽게 채워지게 한다(관리자가 /admin에 들어오면 나머지도 일괄 보정된다 —
+// admin.js의 backfillMemberProfiles 참고).
+async function ensureOwnProfileMirrored() {
+    const uid = firebaseAuth.currentUser?.uid;
+    if (!loggedInUser || !uid) return;
+
+    const desired = {
+        uid,
+        name: loggedInUser.name || '',
+        batch: loggedInUser.batch || '',
+        role: loggedInUser.role || 'general',
+        description: loggedInUser.description || ''
+    };
+    try {
+        const snap = await getDoc(doc(db, 'memberProfiles', uid));
+        const current = snap.exists() ? snap.data() : null;
+        const isUpToDate = current && ['name', 'batch', 'role', 'description']
+            .every((key) => (current[key] || '') === desired[key]);
+        if (isUpToDate) return;
+        await setDoc(doc(db, 'memberProfiles', uid), desired);
+    } catch (err) {
+        console.warn('[Members] 공개 프로필 동기화 실패:', err?.message || err);
+    }
+}
+
+// 부원 목록과 설명은 비로그인 방문자도 볼 수 있다.
+//
+// 다만 users 문서에는 경고 누적 횟수·로그인 아이디 같은 비공개 정보가 함께 들어
+// 있어 통째로 공개할 수 없으므로(규칙은 필드 단위 읽기 제한을 지원하지 않는다),
+// 공개해도 되는 네 필드만 복제해 둔 memberProfiles를 구독한다.
+// 로그인 여부와 무관하게 읽히므로 구독은 한 번만 열고 유지한다.
 export function syncMembersSection() {
-    if (!loggedInUser) {
-        if (membersUnsub) { membersUnsub(); membersUnsub = null; }
-        clearMemberButtonLikeWidgets();
-        selectedMemberData = null;
-        const gAdmin = document.getElementById('group-admin');
-        const gMember = document.getElementById('group-member');
-        const gHonored = document.getElementById('group-honored');
-        const guestMsg = "<p style='color:var(--text-secondary); font-style:italic;'>로그인 후 부원 목록을 확인할 수 있습니다.</p>";
-        if (gAdmin) gAdmin.innerHTML = guestMsg;
-        if (gMember) gMember.innerHTML = '';
-        if (gHonored) gHonored.innerHTML = '';
-        renderMemberDetailPanel(null);
-        memberCache = [];
-        emit(EVENTS.MEMBERS_CHANGED, memberCache);
+    ensureOwnProfileMirrored();
+
+    if (membersUnsub) {
+        // 로그인 상태가 바뀌면 "내 설명 수정" 입력란 노출 여부가 달라지므로 다시 그린다.
+        renderMemberDetailPanel(selectedMemberData);
+        syncMemberSelectionHighlight();
         return;
     }
 
-    if (membersUnsub) return; // 이미 구독 중이면 재구독하지 않는다.
-
-    membersUnsub = onSnapshot(collection(db, 'users'), (snapshot) => {
+    membersUnsub = onSnapshot(collection(db, 'memberProfiles'), (snapshot) => {
         const gAdmin = document.getElementById('group-admin');
         const gMember = document.getElementById('group-member');
         const gHonored = document.getElementById('group-honored');
