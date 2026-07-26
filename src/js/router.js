@@ -1,4 +1,5 @@
 import { loggedInUser } from './state.js';
+import { emit, EVENTS } from './bus.js';
 
 export const BASE_PATH = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
@@ -34,6 +35,7 @@ function showSection(id) {
     if (navId && document.getElementById(navId)) document.getElementById(navId).classList.add('active');
     if (mobileNavId && document.getElementById(mobileNavId)) document.getElementById(mobileNavId).classList.add('active');
     window.scrollTo(0, 0);
+    emit(EVENTS.ROUTE_CHANGED, id);
 }
 
 const ROUTES = {

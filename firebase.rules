@@ -23,11 +23,20 @@ service cloud.firestore {
       // 일반 부원도 addDoc 시 pinned:true를 직접 실어 보내면 자기 글을 최상단에
       // 셀프 고정할 수 있었다(에뮬레이터로 실측 확인). 생성 시 관리자가 아니면
       // pinned는 반드시 false여야 한다.
+      //
+      // isFreshTimestamp: isValidEvent에는 있었는데 이쪽엔 빠져 있었다 — timestamp를
+      // 미래값(예: 9999999999999)으로 보내면 정렬(displayNoticesGlobal의 timestamp
+      // desc)상 항상 최상단에 노출되어 고정 글보다도 위에 뜰 수 있었다.
+      // isValidNotice() 안에 넣지 않고 여기 top-level 조건으로 둔 이유: isValidNotice
+      // 내부에 중첩해서 underQuota()와 함께 평가하면 에뮬레이터에서 재현되는 이상
+      // 동작(요청이 잘못된 timestamp로도 조용히 통과됨)이 있었다. 동일 함수를
+      // top-level로 옮기니 문제없이 동작해, 원인 규명 없이 안전하게 검증된 이 형태로 둔다.
       allow create: if canPostNotice()
                     && isValidNotice(request.resource.data)
                     && isAuthenticAuthor(request.resource.data)
                     && isAllowedAttachment(request.resource.data)
                     && (isAdmin() || request.resource.data.get('pinned', false) == false)
+                    && isFreshTimestamp(request.resource.data.timestamp)
                     && underQuota('noticeCount', 5);
 
       allow update: if request.auth != null
@@ -128,8 +137,15 @@ service cloud.firestore {
     }
 
     // 3. users
+    // 읽기를 로그인 사용자로 제한한다. 예전에는 누구나(비로그인 포함) 전체 users
+    // 컬렉션을 읽을 수 있어, 실명·소속 기수·경고 이력이 인터넷 어디서든 인증 없이
+    // 노출됐다. 바로 아래 usernames 컬렉션은 애초에 request.auth != null로 막혀
+    // 있었는데, 정작 더 많은 정보가 담긴 users는 열려 있던 비대칭이었다. 이 앱은
+    // 미성년자를 포함할 수 있는 학생 커뮤니티이고 개인정보 처리방침에서도 실명 등을
+    // 적법하게 보호하겠다고 명시하므로, 회원 목록(Members 화면)은 로그인해야만
+    // 열람 가능하도록 좁힌다.
     match /users/{userId} {
-      allow read: if true;
+      allow read: if request.auth != null;
 
       allow create: if request.auth != null
                     && request.auth.uid == userId

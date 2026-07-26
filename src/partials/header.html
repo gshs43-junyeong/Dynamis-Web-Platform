@@ -14,6 +14,11 @@
                 <li id="admin-menu" style="display: none;"><a onclick="navigateTo('/admin')" id="nav-admin">Admin</a></li>
             </ul>
         </nav>
+        <button type="button" class="search-trigger" onclick="openSearch()" aria-label="통합 검색 열기">
+            <span class="search-trigger-icon" aria-hidden="true">⌕</span>
+            <span class="search-trigger-label">검색</span>
+            <kbd id="search-trigger-key">Ctrl K</kbd>
+        </button>
         <div class="hamburger-menu" id="hamburger-menu" onclick="toggleMobileMenu()">
             <span></span>
             <span></span>

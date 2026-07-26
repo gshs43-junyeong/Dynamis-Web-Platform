@@ -8,8 +8,11 @@ import {
 import { formatUserIdentityLabel, getRoleLabel } from './utils.js';
 import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';
+import { emit, EVENTS } from './bus.js';
 
 let selectedMemberData = null;
+// 마지막으로 렌더된 부원 목록. 홈 대시보드/통합 검색이 재구독 없이 재사용한다.
+let memberCache = [];
 let memberLikeUnsub = null;
 // 목록 버튼마다 붙는 하트 위젯의 구독 해제 함수들. 목록을 다시 그릴 때 모두 정리한다.
 let memberButtonLikeUnsubs = [];
@@ -137,8 +140,32 @@ function handleMemberSelection(member) {
     syncMemberSelectionHighlight();
 }
 
-export function listenMembersSection() {
-    onSnapshot(collection(db, 'users'), (snapshot) => {
+let membersUnsub = null;
+
+// users 컬렉션 읽기가 request.auth != null로 제한되어 있으므로(실명·기수·경고
+// 이력을 비로그인 상태에 노출하지 않기 위함), 로그인 상태일 때만 구독한다.
+// 로그아웃 상태에서는 안내 문구만 보여준다.
+export function syncMembersSection() {
+    if (!loggedInUser) {
+        if (membersUnsub) { membersUnsub(); membersUnsub = null; }
+        clearMemberButtonLikeWidgets();
+        selectedMemberData = null;
+        const gAdmin = document.getElementById('group-admin');
+        const gMember = document.getElementById('group-member');
+        const gHonored = document.getElementById('group-honored');
+        const guestMsg = "<p style='color:var(--text-secondary); font-style:italic;'>로그인 후 부원 목록을 확인할 수 있습니다.</p>";
+        if (gAdmin) gAdmin.innerHTML = guestMsg;
+        if (gMember) gMember.innerHTML = '';
+        if (gHonored) gHonored.innerHTML = '';
+        renderMemberDetailPanel(null);
+        memberCache = [];
+        emit(EVENTS.MEMBERS_CHANGED, memberCache);
+        return;
+    }
+
+    if (membersUnsub) return; // 이미 구독 중이면 재구독하지 않는다.
+
+    membersUnsub = onSnapshot(collection(db, 'users'), (snapshot) => {
         const gAdmin = document.getElementById('group-admin');
         const gMember = document.getElementById('group-member');
         const gHonored = document.getElementById('group-honored');
@@ -222,5 +249,13 @@ export function listenMembersSection() {
             renderMemberDetailPanel(null);
         }
         syncMemberSelectionHighlight();
+        memberCache = members;
+        emit(EVENTS.MEMBERS_CHANGED, memberCache);
     });
+}
+
+// 현재 메모리에 올라와 있는 부원 목록(읽기 전용 사본).
+// users 컬렉션은 로그인 상태에서만 읽을 수 있으므로, 비로그인 시에는 빈 배열이다.
+export function getMembers() {
+    return memberCache.slice();
 }

@@ -19,3 +19,16 @@
 .like-btn:disabled { cursor: default; opacity: 0.9; }
 .like-heart { font-size: 1.05rem; line-height: 1; }
 .like-count { font-variant-numeric: tabular-nums; }
+
+/* 7. 안 읽은 글 표시 (목록의 NEW 칩 + 네비게이션 숫자 뱃지) */
+.new-badge { display: inline-block; margin-left: 7px; padding: 1px 6px; border-radius: 4px; background: rgba(255, 92, 122, 0.16); border: 1px solid rgba(255, 92, 122, 0.4); color: #ff8fa3; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.6px; vertical-align: middle; }
+.nav-unread-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #ff5c7a; color: #fff; font-size: 0.65rem; font-weight: 700; line-height: 1; vertical-align: middle; font-variant-numeric: tabular-nums; }
+
+/* 8. 읽기 진행 바 + 맨 위로 버튼 */
+.scroll-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 150; pointer-events: none; background: transparent; }
+.scroll-progress-bar { height: 100%; width: 100%; transform: scaleX(0); transform-origin: 0 50%; background: linear-gradient(90deg, #7fd1a1, #ffffff); will-change: transform; }
+
+.scroll-top-btn { position: fixed; right: 1.5rem; bottom: 1.5rem; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border-color); background: rgba(22,22,22,0.92); color: #fff; font-size: 1.1rem; line-height: 1; cursor: pointer; z-index: 90; opacity: 0; visibility: hidden; transform: translateY(10px); transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease, border-color 0.25s ease; backdrop-filter: blur(6px); }
+.scroll-top-btn.visible { opacity: 1; visibility: visible; transform: none; }
+.scroll-top-btn:hover { border-color: rgba(255,255,255,0.35); background: rgba(36,36,36,0.95); }
+@media (max-width: 768px) { .scroll-top-btn { right: 1rem; bottom: 1rem; width: 40px; height: 40px; } }
