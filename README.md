@@ -24,36 +24,72 @@
 
 ## 🛠️ 핵심 기능 (Core Features)
 
-1. **정적 SPA 라우팅의 한계 우회:** 정적 호스팅 서비스(GitHub Pages)가 갖는 무상태 한계를 극복하고자 `404.html` 경로 우회 처리(Routing Hack) 및 브라우저 세션 상태 재수화(Rehydration) 기술을 이식하여 새로고침 시에도 화면이 파손되지 않습니다.
-2. **트래픽 스로틀링 보안망:** 악성 매크로 및 디도스(DDoS)로부터 파이어베이스 서버의 과금을 방어하기 위해 부원별 일일 공지글 5회, 댓글 10회, 첨부파일 업로드 2MB, 다운로드 5MB 제한 기술을 실시간 트랜잭션으로 강제합니다.
-3. **App Check & reCAPTCHA Enterprise 연동:** 외부 비인가 프로그램(Python Request, cURL 등)을 통한 Firestore 데이터베이스 위변조 및 탈취 행위를 Google 보안 서버 인증 토큰을 통해 원천 무력화합니다.
-4. **연쇄적 개인정보 파기 영구 삭제:** 대한민국 개인정보보호법에 준거하여 사용자가 '탈퇴' 시 본인의 계정은 물론 그동안 데이터베이스에 작성했던 공지사항, 실시간 채팅 댓글, 일일 트래픽 기록을 원자성(Atomicity) 일괄 배치(Batch)로 단 1초 만에 흔적 없이 완전 삭제 처리합니다.
+1. **정적 SPA 라우팅의 한계 우회:** 정적 호스팅 서비스(GitHub Pages/Vercel)가 갖는 무상태 한계를 극복하고자 `404.html` 경로 우회 처리(Routing Hack) 및 브라우저 세션 상태 재수화(Rehydration) 기술을 이식하여 새로고침 시에도 화면이 파손되지 않습니다.
+2. **홈 실시간 현황 대시보드:** 부원 수·누적 공지·진행 중 이벤트·등록된 질문을 카운트업 애니메이션으로 보여주고, 최근 공지·마감 임박 이벤트·최신 질문을 미리보기로 노출합니다. 각 항목은 이미 구독 중인 데이터를 재사용할 뿐이라 추가 Firestore 읽기가 발생하지 않습니다.
+3. **통합 검색 (⌘K / Ctrl+K):** 공지·이벤트·FAQ·부원·페이지를 한 화면에서 검색하는 커맨드 팔레트입니다. 검색어 하이라이트와 키보드 내비게이션(↑↓/Enter/Esc)을 지원하며, 역시 로컬 메모리 상의 데이터만 조회합니다.
+4. **서버 강제 일일 트래픽 한도:** Firestore 보안 규칙이 `getAfter()`로 "본문 쓰기와 카운터 증가가 같은 배치에서 정확히 일어났는지"를 검증하여, 클라이언트가 카운터 증가만 생략해 한도를 우회하는 경로를 원천 차단합니다. 부원별 일일 공지 5회·이벤트 5회·댓글 10회·FAQ 질문 1회·첨부파일 업로드 2MB로 제한됩니다.
+5. **다계층 첨부파일 방어:** 파일당 크기 상한과 첨부 합계 용량 상한을 클라이언트·서버 양쪽에서 검증하고, 다운로드 시 `data:` 스킴 화이트리스트로 저장형 XSS를 차단합니다. 관리자 계정도 예외 없이 적용됩니다.
+6. **이벤트(행사) 관리 및 시계 오차 감지:** 마감 기한을 지정하면 실시간 카운트다운이 표시되고, 마감 후에는 서버가 `request.time` 기준으로 열람을 최종 차단합니다. 기기와 서버 시계가 어긋나면 경고 배너로 안내합니다.
+7. **부원 소개 및 좋아요:** 이름·기수·등급·소개글은 로그인 없이도 열람할 수 있도록 공개 프로필(`memberProfiles`)로 분리되어 있으며, 경고 이력 등 민감 정보가 담긴 원본 계정 문서(`users`)는 로그인한 사용자만 읽을 수 있습니다. 공지·이벤트·FAQ·부원 소개에는 좋아요(하트) 위젯이 붙습니다.
+8. **안 읽은 글 표시:** 마지막 방문 시각을 브라우저에만 저장해 새로 올라온 글에 NEW 표시와 네비게이션 카운트 뱃지를 띄웁니다. 서버로 나가는 요청은 없습니다.
+9. **관리자 콘솔:** 등급 변경·경고 부여·강제 탈퇴를 지원하며, 실제 쓰기 권한은 Firestore 문서의 `role` 필드가 아니라 Firebase Auth 커스텀 클레임으로 검증됩니다(`role`은 화면 표시용).
+10. **App Check & reCAPTCHA Enterprise 연동:** 외부 비인가 프로그램(Python Request, cURL 등)을 통한 Firestore 데이터베이스 위변조 및 탈취 행위를 Google 보안 서버 인증 토큰을 통해 원천 무력화합니다.
+11. **연쇄적 개인정보 파기 영구 삭제:** 대한민국 개인정보보호법에 준거하여 사용자가 '탈퇴' 시 본인의 계정은 물론 그동안 작성했던 공지사항·이벤트·댓글·공개 프로필을 일괄 배치(Batch)로 흔적 없이 삭제 처리합니다.
 
 ---
 
 ## 📂 디렉토리 구조 (Directory Structure)
 
 ```
-dynamis-platform/
+Dynamis-Web-Platform/
 ├── public/
-│   ├── logo.png               # 동아리 공식 심벌 로고
-│   ├── figure1.png            # 수학 및 기계공학 학술 도해
-│   ├── figure2.png            # 기계공학 메커니즘 도해
-│   ├── 404.html               # SPA 하위 경로 새로고침 우회 리다이렉트 게이트웨이
-│   └── .nojekyll              # GitHub Pages의 Jekyll 정적 빌드 필터링 무력화 파일
+│   ├── logo.png                  # 동아리 공식 심벌 로고
+│   ├── figure1.png               # 수학 및 기계공학 학술 도해
+│   ├── figure2.png               # 기계공학 메커니즘 도해
+│   ├── 404.html                  # SPA 하위 경로 새로고침 우회 리다이렉트 게이트웨이
+│   └── .nojekyll                 # GitHub Pages의 Jekyll 정적 빌드 필터링 무력화 파일
 ├── src/
+│   ├── partials/                 # index.html이 <!-- include: ... --> 로 불러오는 섹션별 HTML 조각
+│   │   ├── header.html / mobile-nav.html / footer.html
+│   │   ├── home.html, home-dashboard.html      # 홈 소개 + 실시간 현황 대시보드
+│   │   ├── notice.html, notice-modal.html      # 공지사항
+│   │   ├── event.html, event-modal.html        # 이벤트(행사) + 마감 타이머
+│   │   ├── faq.html, faq-modal.html            # FAQ
+│   │   ├── members.html                        # 부원 소개
+│   │   ├── login.html, signup.html, signup-preview-modal.html, mypage.html
+│   │   ├── admin.html                          # 관리자 콘솔
+│   │   ├── search-modal.html                   # 통합 검색(⌘K) 팔레트
+│   │   ├── privacy.html, guidelines.html
+│   │   └── orb-init-script.html
 │   ├── css/
-│   │   └── style.css          # 다크 테마 레이아웃 및 컴포넌트 전용 통합 스타일시트
+│   │   ├── style.css             # partials/*.css를 불러 모으는 진입점
+│   │   └── partials/             # 레이아웃/컴포넌트별로 분리된 스타일시트
 │   └── js/
-│       ├── app.js             # 싱글 페이지 앱(SPA) 라우터 및 네비게이션 제어 허브
-│       ├── firebase-config.js # Firebase App Check 및 SDK v10+ 함수형 모듈 초기화
-│       ├── auth.js            # ID 필터 검증, 로그인 유지 및 연쇄 회원 탈퇴 로직
-│       └── traffic.js         # DDoS 방어 일일 트래픽 측정 및 실시간 가산 트랜잭션
-├── index.html                 # 단일 메인 인덱스 파일 (라우팅 복원 스크립트 내장)
-├── .gitignore                 # Admin의 다른 계정 접근 권한 우회
-├── package.json               # 빌드 스크립트 및 디펜던시 정의 메타 데이터 파일
-├── vite.config.js             # 깃허브 Pages 배포 경로 조정을 위한 Vite 설정 파일
-└── vercel.json                # 모든 경로 요청을 index.html로 연결
+│       ├── app.js                # 진입점 — 모듈 초기화 및 인라인 핸들러용 전역(window) 바인딩
+│       ├── firebase-config.js    # Firebase SDK 초기화 및 App Check(reCAPTCHA Enterprise) 연동
+│       ├── router.js             # SPA 라우팅 및 로그인 조건부 리다이렉트
+│       ├── state.js              # 로그인 세션 상태(live binding)
+│       ├── session.js            # 로그인 상태 변화에 따른 화면 전반 UI 갱신
+│       ├── auth.js               # Google/GitHub 로그인, 회원가입, 연쇄 탈퇴
+│       ├── notice.js / event.js / faq.js / members.js / admin.js  # 각 탭 기능
+│       ├── traffic.js            # 일일 트래픽 카운터 (서버 규칙과 짝을 이루는 배치 쓰기)
+│       ├── likes.js              # 좋아요(하트) 위젯 (공지/이벤트/FAQ/부원 공용)
+│       ├── clock.js              # 기기-서버 시계 오차 측정 및 경고 배너
+│       ├── dashboard.js          # 홈 실시간 현황 대시보드
+│       ├── search.js             # 통합 검색(⌘K / Ctrl+K) 커맨드 팔레트
+│       ├── unread.js             # 마지막 방문 이후 새 글 NEW 표시 (로컬 저장, 서버 요청 없음)
+│       ├── bus.js                # 모듈 간 이벤트 버스 (추가 Firestore 읽기 없이 데이터 재사용)
+│       ├── scrollui.js           # 읽기 진행 바 + 맨 위로 버튼
+│       ├── reveal.js             # 스크롤 시 카드 등장 애니메이션
+│       ├── puzzle.js             # 푸터 히든 이스터에그 진입점
+│       └── utils.js              # 공용 포맷팅/이스케이프/검증 유틸
+├── index.html                    # <!-- include --> 마커만 남은 단일 진입 HTML
+├── firebase.json                 # Firestore 규칙 경로 및 로컬 에뮬레이터 설정
+├── firebase.rules                # Firestore 보안 규칙 — 쓰기 권한·일일 한도·사칭 방지를 서버에서 강제
+├── .gitignore
+├── package.json                  # 빌드 스크립트 및 디펜던시 정의 메타 데이터 파일
+├── vite.config.js                # <!-- include --> 치환 플러그인 및 빌드 설정
+└── vercel.json                   # Vercel 배포 시 SPA 라우팅 재작성 및 보안 헤더(CSP 등) 설정
 ```
 
 ---
@@ -83,7 +119,7 @@ npm run dev
 ```bash
 npm run build
 ```
-- 빌드가 성공적으로 완료되면 루트 디렉토리에 **`dist/`** 폴더가 생성됩니다. 이 폴더 안에 들어가는 `index.html`, `404.html`, `.nojekyll`, 그리고 에셋 파일들 전체가 GitHub Pages 호스팅 서버로 전달됩니다.
+- 빌드가 성공적으로 완료되면 루트 디렉토리에 **`dist/`** 폴더가 생성됩니다. 이 폴더 안에 들어가는 `index.html`, `404.html`, `.nojekyll`, 그리고 에셋 파일들 전체가 GitHub Pages 또는 Vercel(`vercel.json` 설정 포함) 호스팅 서버로 전달됩니다.
 
 ---
 
@@ -105,4 +141,3 @@ npm run build
 ## 📄 라이선스 (License)
 
 This project is licensed under the Apache License 2.0 - See the LICENSE file for details.
-```
