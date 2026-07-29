@@ -36,7 +36,7 @@ button.go{ background:var(--fg); color:#020402; border:none; border-radius:4px; 
 <script>
 (function(){
   "use strict";
-  var CFG = {"sig":"DYN-ROOT","intro":[["[ NODE :: TELOS ]  —  목적","banner"],["대문 안에도 파편은 숨어있다. 여긴 다른 성이다.","dim"]],"pixelKey":null,"keyPrompt":"> 직전 노드(KINESIS)의 파편 단어를 입력하라:","blob":"06gqI4lwoDhpsn5lNR62qw+GTBxQ0TOb2X2+sUUpSBEjpQ8CWTiixEZ3ZxsGU40cvSyIQsZ299myCejyNW0Xxs6AK2TeBfTHOkLCpEKN/Snr6HIdw5P6r8dxanQz769GICN3wOKtBgVZlTZOaixuNQ1U4MuZNneg109AT7WHFBofkjzOQ0LmPiz0LmsbSosh0LJACJCNR8lW8zNcqpjDZCPy9LFpflp2TIChGfIF0hDcaURt8DTuZbDhJgWwGD5Ru+q9iG65coYtOC/Tmif3DpBTM3/65gn1jFLQ3xecHSOiwBvWvay+Jzpd"};
+  var CFG = {"sig":"DYN-ROOT","intro":[["[ NODE :: TELOS ]  —  목적","banner"],["대문 안에도 파편은 숨어있다. 여긴 다른 성이다.","dim"]],"pixelKey":null,"keyPrompt":"> 직전 노드(KINESIS)의 파편 단어를 입력하라:","blob":"06gqI4lwoDhpsn5lNR62qw+GTBxQ0TOb2X2+sUUpSBEjpQ8CWTiixEZ3ZxsGU40cvSyIQsZ299myCejyNW0XCoWQi2P5HTmzFyGLj/JBhSmMpVhJjLKiKKrEHgo7nT0NRjzzAlzJeAIRLpCOzNQntJ+3IAU/MUiQFPzwRaWDA110+znWCQegPiD3T1pCdIs7nosfPps="};
   function norm(s){ return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
   function fnv1a(str){ var h=0x811c9dc5; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,0x01000193);} return h>>>0; }
   function keystream(key,len){ var h=fnv1a(key)||0xA5A5A5A5; var b=new Uint8Array(len); var i=0;
@@ -102,6 +102,16 @@ button.go{ background:var(--fg); color:#020402; border:none; border-radius:4px; 
         gap(); el('▓ 잠금 해제.','ok');
         el('SHARD // '+data.shard,'bright');
         gap(); data.next.forEach(function(p){ el(p[0],p[1]); });
+        // 화면에는 아무것도 더 보여주지 않는다. 힌트가 있다면, 살아있는
+        // DOM(Elements 패널)에만 존재하는 숨은 노드로만 심는다.
+        if(data.hiddenClue){
+          var hc=document.createElement('span');
+          hc.id='sys-relay-9c2e';
+          hc.setAttribute('data-next-hop', atob(data.hiddenClue));
+          hc.setAttribute('aria-hidden','true');
+          hc.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;';
+          document.getElementById('screen').appendChild(hc);
+        }
       } else {
         el('✖ 복호화 실패. 열쇠가 틀렸다.','red');
         inp.value='';
