@@ -184,8 +184,6 @@ button.go{ background:var(--fg); color:#020402; border:none; border-radius:4px; 
         gap(); el('▓ 잠금 해제.','ok');
         el('SHARD // '+data.shard,'bright');
         gap(); data.next.forEach(function(p){ el(p[0],p[1]); });
-        // 화면에는 아무것도 더 보여주지 않는다. 힌트가 있다면, 살아있는
-        // DOM(Elements 패널)에만 존재하는 숨은 노드로만 심는다.
         if(data.hiddenClue){
           var hc=document.createElement('span');
           hc.id='sys-relay-9c2e';
