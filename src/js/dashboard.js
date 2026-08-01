@@ -10,6 +10,7 @@ import { getFaqs, openFaqById } from './faq.js';
 import { getMembers } from './members.js';
 import { serverNow } from './clock.js';
 import { navigateTo } from './router.js';
+import { uiIcon } from './utils.js';
 
 const PREVIEW_COUNT = 3;
 const COUNT_UP_MS = 900;
@@ -111,7 +112,7 @@ function emptyRow(message) {
 }
 
 // 목록 한 줄. 모든 텍스트는 textContent로만 넣어 저장형 XSS 여지를 남기지 않는다.
-function createDashRow({ badgeText, badgeClass, title, meta, onOpen }) {
+function createDashRow({ badgeText, badgeClass, title, meta, onOpen, pinned = false }) {
     const row = document.createElement('div');
     row.className = 'dash-row';
     row.setAttribute('role', 'button');
@@ -120,6 +121,7 @@ function createDashRow({ badgeText, badgeClass, title, meta, onOpen }) {
     const main = document.createElement('div');
     main.className = 'dash-row-main';
 
+    if (pinned) main.appendChild(uiIcon('pin', { className: 'icon-lead' }));
     if (badgeText) {
         const badge = document.createElement('span');
         badge.className = `dash-row-badge ${badgeClass || ''}`.trim();
@@ -179,7 +181,8 @@ function renderRecentNotices() {
         const { row } = createDashRow({
             badgeText: n.tag || null,
             badgeClass: `notice-tag-${TAG_SLUG_MAP[n.tag] || 'etc'}`,
-            title: `${n.pinned ? '📌 ' : ''}${n.title || ''}`,
+            pinned: !!n.pinned,
+            title: n.title || '',
             meta: n.date || '',
             onOpen: () => {
                 navigateTo('/notice');

@@ -11,7 +11,7 @@ import {
     orderBy,
     writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { emit, EVENTS } from './bus.js';
@@ -232,9 +232,13 @@ function renderNoticePage(pageNum) {
             tagBadge.textContent = n.tag;
             titleTd.appendChild(tagBadge);
         }
+        if (n.pinned) titleTd.appendChild(uiIcon('pin', { className: 'icon-lead' }));
         const titleTextSpan = document.createElement('span');
-        titleTextSpan.textContent = `${n.pinned ? '📌 [고정] ' : ''}${n.title || ''}${n.files && n.files.length ? ' 📎' : ''}`;
+        titleTextSpan.textContent = `${n.pinned ? '[고정] ' : ''}${n.title || ''}`;
         titleTd.appendChild(titleTextSpan);
+        if (n.files && n.files.length) {
+            titleTd.appendChild(uiIcon('paperclip', { muted: true, className: 'icon-trail' }));
+        }
         if (isUnread('notice', n.timestamp)) titleTd.appendChild(createNewBadge());
         titleTd.addEventListener('click', () => viewNotice(startIdx + index));
         tr.appendChild(titleTd);
@@ -335,8 +339,14 @@ function openNoticeDetail(n) {
             modalTag.style.display = 'none';
         }
     }
-    if (modalAuthor) modalAuthor.innerText = `✍️ ${formatAuthorLabel(n)}`;
-    if (modalDate) modalDate.innerText = `📅 ${n.date}`;
+    if (modalAuthor) {
+        modalAuthor.innerHTML = '';
+        modalAuthor.appendChild(iconLabel('author', formatAuthorLabel(n)));
+    }
+    if (modalDate) {
+        modalDate.innerHTML = '';
+        modalDate.appendChild(iconLabel('calendar', n.date || '', { muted: true }));
+    }
     if (modalText) modalText.innerHTML = linkifyText(n.content);
 
     if (modalDeleteBtn) modalDeleteBtn.style.display = (loggedInUser && loggedInUser.role === 'admin') ? 'block' : 'none';
@@ -353,7 +363,10 @@ function openNoticeDetail(n) {
             const link = document.createElement('a');
             link.className = 'file-item-link';
             link.href = '#';
-            link.innerText = `📄 ${fObj.fileName} 다운로드`;
+            link.appendChild(uiIcon('file'));
+            const fileLabel = document.createElement('span');
+            fileLabel.textContent = `${fObj.fileName} 다운로드`;
+            link.appendChild(fileLabel);
             link.onclick = (e) => {
                 e.preventDefault();
                 executeFileDownloadSecure(e, fObj.fileSize, fObj.fileData, fObj.fileName);

@@ -1,5 +1,5 @@
 /* 3. 모달창 다중 첨부파일 다운로드 링크 (선택 사항) */
-.file-item-link { display: block; padding: 0.5rem; background: rgba(255,255,255,0.05); margin-bottom: 0.5rem; border-radius: 4px; color: #fff; text-decoration: none; font-size: 0.9rem; transition: 0.2s; }
+.file-item-link { display: flex; align-items: center; gap: 0.45rem; padding: 0.5rem; background: rgba(255,255,255,0.05); margin-bottom: 0.5rem; border-radius: 4px; color: #fff; text-decoration: none; font-size: 0.9rem; transition: 0.2s; }
 .file-item-link:hover { background: rgba(255,255,255,0.1); }
 
 /* 4. 기기 시계 오차 경고 배너 */
@@ -17,7 +17,7 @@
 .like-btn:hover:not(:disabled) { background: rgba(255, 92, 122, 0.15); border-color: rgba(255, 92, 122, 0.5); }
 .like-btn.liked { background: rgba(255, 92, 122, 0.12); border-color: rgba(255, 92, 122, 0.45); }
 .like-btn:disabled { cursor: default; opacity: 0.9; }
-.like-heart { font-size: 1.05rem; line-height: 1; }
+.like-heart { width: 1.05rem; height: 1.05rem; display: block; flex-shrink: 0; }
 .like-count { font-variant-numeric: tabular-nums; }
 
 /* 7. 안 읽은 글 표시 (목록의 NEW 칩 + 네비게이션 숫자 뱃지) */
@@ -32,3 +32,13 @@
 .scroll-top-btn.visible { opacity: 1; visibility: visible; transform: none; }
 .scroll-top-btn:hover { border-color: rgba(255,255,255,0.35); background: rgba(36,36,36,0.95); }
 @media (max-width: 768px) { .scroll-top-btn { right: 1rem; bottom: 1rem; width: 40px; height: 40px; } }
+
+/* 9. UI 아이콘 (이모지 대체 PNG — utils.js의 uiIcon/iconLabel 참고)
+   크기를 em으로 잡아 주변 글자 크기를 그대로 따라가게 하고, 베이스라인보다 살짝
+   내려 텍스트와 시각적으로 나란히 놓이도록 맞춘다. */
+.ui-icon { width: 1.05em; height: 1.05em; vertical-align: -0.16em; flex-shrink: 0; }
+.ui-icon-muted { opacity: 0.62; }
+.icon-label { display: inline-flex; align-items: center; gap: 0.34em; }
+/* 텍스트 앞/뒤에 단독으로 붙는 아이콘의 간격 (목록의 고정·첨부 표시 등). */
+.ui-icon.icon-lead { margin-right: 0.34em; }
+.ui-icon.icon-trail { margin-left: 0.34em; }

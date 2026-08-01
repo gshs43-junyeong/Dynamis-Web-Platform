@@ -1,5 +1,40 @@
 export const ITEMS_PER_PAGE = 15;
 
+// UI 아이콘.
+//
+// 하트/작성자/작성시간 같은 표시는 원래 이모지(🤍 ✍️ 📅 …)를 그대로 글자로 찍었다.
+// 이모지는 기기가 가진 글꼴로 그려지기 때문에 안드로이드·윈도우·애플이 서로 다른
+// 그림을 보여주고, 굵기·색·크기가 제각각이라 화면 톤이 흐트러진다. 일부 환경에서는
+// 아예 네모로 깨진다. 그래서 사이트가 직접 소유한 PNG로 바꿨다.
+//   - 원본(SVG): tools/icons/src/*.svg
+//   - 굽는 법:   python3 tools/icons/build_icons.py  →  public/icons/*.png
+//
+// 장식용이라 스크린리더에는 읽히지 않게 하고(aria-hidden), 의미는 항상 옆의 텍스트가
+// 전달하도록 둔다. 크기는 CSS에서 em으로 잡아 주변 글자 크기를 따라간다.
+const ICON_BASE = `${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/icons`;
+
+export function uiIcon(name, { muted = false, className = '' } = {}) {
+    const img = document.createElement('img');
+    img.src = `${ICON_BASE}/${name}.png`;
+    img.alt = '';
+    img.setAttribute('aria-hidden', 'true');
+    img.width = 16;
+    img.height = 16;
+    img.className = ['ui-icon', muted ? 'ui-icon-muted' : '', className].filter(Boolean).join(' ');
+    return img;
+}
+
+// 아이콘 + 텍스트를 한 덩어리로 묶어 반환한다 (아이콘이 줄바꿈으로 텍스트와 떨어지지 않게).
+export function iconLabel(name, text, { muted = false } = {}) {
+    const wrap = document.createElement('span');
+    wrap.className = 'icon-label';
+    wrap.appendChild(uiIcon(name, { muted }));
+    const span = document.createElement('span');
+    span.textContent = text;
+    wrap.appendChild(span);
+    return wrap;
+}
+
 export function escapeHTML(str) {
     if (!str) return "";
     return str.toString().replace(/[&<>'"]/g, function (tag) {

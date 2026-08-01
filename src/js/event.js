@@ -12,7 +12,7 @@ import {
     orderBy,
     writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { serverNow, isClockOutOfSync } from './clock.js';
@@ -323,12 +323,19 @@ async function openEventDetail(ev) {
     const fileListContainer = document.getElementById('event-modal-file-list');
 
     if (modalTitle) modalTitle.innerText = ev.title || '';
-    if (modalAuthor) modalAuthor.innerText = `✍️ ${formatAuthorLabel(ev)}`;
-    if (modalDate) modalDate.innerText = `📅 ${ev.date || ''}`;
+    if (modalAuthor) {
+        modalAuthor.innerHTML = '';
+        modalAuthor.appendChild(iconLabel('author', formatAuthorLabel(ev)));
+    }
+    if (modalDate) {
+        modalDate.innerHTML = '';
+        modalDate.appendChild(iconLabel('calendar', ev.date || '', { muted: true }));
+    }
     if (modalDeadline) {
         const deadlineDate = new Date(ev.deadline || 0);
         const deadlineStr = deadlineDate.toLocaleString('ko-KR');
-        modalDeadline.innerText = expired ? `⏰ 마감됨 (${deadlineStr})` : `⏰ 마감 ${deadlineStr}`;
+        modalDeadline.innerHTML = '';
+        modalDeadline.appendChild(iconLabel('clock', expired ? `마감됨 (${deadlineStr})` : `마감 ${deadlineStr}`));
         modalDeadline.classList.toggle('event-timer-expired', expired);
     }
 
@@ -353,7 +360,10 @@ async function openEventDetail(ev) {
                     const link = document.createElement('a');
                     link.className = 'file-item-link';
                     link.href = '#';
-                    link.innerText = `📄 ${fObj.fileName} 다운로드`;
+                    link.appendChild(uiIcon('file'));
+            const fileLabel = document.createElement('span');
+            fileLabel.textContent = `${fObj.fileName} 다운로드`;
+            link.appendChild(fileLabel);
                     link.onclick = (e) => {
                         e.preventDefault();
                         executeFileDownloadSecure(fObj.fileSize, fObj.fileData, fObj.fileName);
