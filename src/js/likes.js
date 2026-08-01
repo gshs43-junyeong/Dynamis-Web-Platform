@@ -1,6 +1,11 @@
 import { db, auth as firebaseAuth } from './firebase-config.js';
 import { collection, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { loggedInUser } from './state.js';
+import { uiIcon } from './utils.js';
+
+// 눌림 상태에 따라 src만 갈아끼우므로, 두 경로를 미리 만들어 둔다.
+const HEART_OUTLINE_SRC = uiIcon('heart-outline').src;
+const HEART_FILLED_SRC = uiIcon('heart-filled').src;
 
 // 재사용 하트(좋아요) 위젯.
 // - 한 계정당 한 번만 누를 수 있고, 한 번 누르면 취소 불가 (규칙에서 update/delete 금지).
@@ -17,9 +22,8 @@ export function renderLikeWidget(mountEl, parentSegments) {
     btn.type = 'button';
     btn.className = 'like-btn';
 
-    const heart = document.createElement('span');
-    heart.className = 'like-heart';
-    heart.textContent = '🤍';
+    // 기기 이모지(🤍/❤️)는 플랫폼마다 모양과 색이 달라 사이트가 소유한 PNG로 대체했다.
+    const heart = uiIcon('heart-outline', { className: 'like-heart' });
 
     const count = document.createElement('span');
     count.className = 'like-count';
@@ -36,7 +40,7 @@ export function renderLikeWidget(mountEl, parentSegments) {
         count.textContent = String(snap.size);
         const uid = firebaseAuth.currentUser?.uid;
         liked = !!(uid && snap.docs.some((d) => d.id === uid));
-        heart.textContent = liked ? '❤️' : '🤍';
+        heart.src = liked ? HEART_FILLED_SRC : HEART_OUTLINE_SRC;
         btn.classList.toggle('liked', liked);
         btn.disabled = !loggedInUser || liked;
         btn.title = !loggedInUser

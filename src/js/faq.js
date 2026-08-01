@@ -11,7 +11,7 @@ import {
     deleteDoc,
     writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ITEMS_PER_PAGE, formatAuthorBatchName, getByteLength } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorBatchName, getByteLength, iconLabel } from './utils.js';
 import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { emit, EVENTS } from './bus.js';
@@ -191,8 +191,14 @@ function openFaqDetail(faq) {
     const text = document.getElementById('faq-modal-text');
 
     if (title) title.innerText = faq.title || faq.question || '';
-    if (author) author.innerText = `✍️ ${formatAuthorBatchName(faq)}`;
-    if (date) date.innerText = `📅 ${faq.date || ''}`;
+    if (author) {
+        author.innerHTML = '';
+        author.appendChild(iconLabel('author', formatAuthorBatchName(faq)));
+    }
+    if (date) {
+        date.innerHTML = '';
+        date.appendChild(iconLabel('calendar', faq.date || '', { muted: true }));
+    }
     if (text) text.innerText = faq.content || faq.question || '';
 
     const answerWriteContainer = document.getElementById('faq-answer-write-container');
