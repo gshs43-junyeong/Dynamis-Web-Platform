@@ -32,3 +32,8 @@ nav a:hover, nav a.active { color: var(--text-primary); }
 .nav-icon { width: 1.05em; height: 1.05em; flex-shrink: 0; opacity: 0.75; transition: opacity 0.3s; }
 nav a:hover .nav-icon, nav a.active .nav-icon,
 .mobile-nav a:hover .nav-icon, .mobile-nav a.active .nav-icon { opacity: 1; }
+
+/* 각 탭(Notice/Event/FAQ/Members/Login)의 상단 제목 — 내비게이션과 같은 아이콘을
+   재사용한다. nav-icon과 달리 옅게 흐리지 않고 제목 글자만큼 또렷하게 보여준다. */
+.page-title { display: flex; align-items: center; gap: 0.5rem; }
+.page-title-icon { width: 0.8em; height: 0.8em; flex-shrink: 0; }

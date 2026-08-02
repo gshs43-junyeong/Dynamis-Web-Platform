@@ -3,3 +3,10 @@
 .modal-content { background: var(--bg-secondary); padding: 2.5rem; border-radius: 12px; max-width: 750px; width: 100%; max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-color); position: relative; }
 .close-modal { position: absolute; top: 20px; right: 20px; font-size: 1.8rem; cursor: pointer; color: var(--text-secondary); transition: 0.2s; }
 .close-modal:hover { color: white; }
+
+/* 모달 상단의 태그/작성자/날짜 한 줄.
+   태그 배지는 padding이 있는 인라인 블록이고, 작성자/날짜는 아이콘+텍스트를 담은
+   .icon-label(inline-flex)이라 각각 높이가 달라, 그냥 나열하면(inline 흐름의 baseline
+   정렬) 서로 다른 기준선에 걸쳐 위아래로 어긋나 보인다. flex + align-items:center로
+   묶어 실제 세로 중앙을 기준으로 맞춘다. */
+.modal-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; }
