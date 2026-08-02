@@ -24,8 +24,17 @@ export function applyUserSessionUI(user) {
         userRoleDisplay.innerText = normalizedUser ? '' : '로그인 필요';
         userRoleDisplay.style.display = normalizedUser ? 'none' : 'block';
     }
-    if (navLogin) navLogin.innerText = headerLabel;
-    if (mobileNavLogin) mobileNavLogin.innerText = normalizedUser ? displayName : 'Login';
+    // nav-login/mobile-nav-login은 이제 아이콘 + 텍스트 두 자식을 갖는다.
+    // innerText로 통째로 덮으면 아이콘까지 지워지므로, 텍스트 담당 span만 갱신한다.
+    // (아이콘 추가 이전 마크업으로 남아 있는 경우를 대비해 span이 없으면 그대로 폴백한다.)
+    const navLoginLabel = navLogin?.querySelector('.nav-label');
+    if (navLoginLabel) navLoginLabel.textContent = headerLabel;
+    else if (navLogin) navLogin.innerText = headerLabel;
+
+    const mobileNavLoginLabel = mobileNavLogin?.querySelector('.nav-label');
+    const mobileLoginText = normalizedUser ? displayName : 'Login';
+    if (mobileNavLoginLabel) mobileNavLoginLabel.textContent = mobileLoginText;
+    else if (mobileNavLogin) mobileNavLogin.innerText = mobileLoginText;
 
     const noticeWriteBox = document.getElementById('notice-write-box');
     const fileUploadContainer = document.getElementById('file-upload-container');

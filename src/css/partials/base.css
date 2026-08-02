@@ -23,5 +23,12 @@ header {
 .logo-text { font-family: 'Italianno', cursive !important; font-size: 2.4rem; font-weight: 400; letter-spacing: 0; color: var(--text-primary); line-height: 1; }
 
 nav ul { display: flex; list-style: none; gap: 2rem; align-items: center; }
-nav a { color: var(--text-secondary); text-decoration: none; font-weight: 500; cursor: pointer; transition: 0.3s; }
+nav a { display: inline-flex; align-items: center; gap: 0.4em; color: var(--text-secondary); text-decoration: none; font-weight: 500; cursor: pointer; transition: 0.3s; }
 nav a:hover, nav a.active { color: var(--text-primary); }
+
+/* 상단/모바일 메뉴 아이콘 (nav a, .mobile-nav a 공용).
+   currentColor를 못 쓰는 <img> 특성상 밝기로 hover/active 상태를 대신 표현한다:
+   기본은 살짝 흐리게, 링크가 활성/호버 상태일 때만 완전히 밝아진다. */
+.nav-icon { width: 1.05em; height: 1.05em; flex-shrink: 0; opacity: 0.75; transition: opacity 0.3s; }
+nav a:hover .nav-icon, nav a.active .nav-icon,
+.mobile-nav a:hover .nav-icon, .mobile-nav a.active .nav-icon { opacity: 1; }
