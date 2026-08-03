@@ -10,7 +10,7 @@
  (https://img.shields.io/badge/Language-HTML5%20%2F%20CSS3%20%2F%20Vanilla%20JS-F05340?style=flat-square)](https://github.com)
  ![Vite](https://img.shields.io/badge/Bundler-Vite-646CFF?style=flat-square&logo=vite)
  ![Firebase](https://img.shields.io/badge/Database-Firebase%20Firestore-FFCA28?style=flat-square&logo=firebase)
- ![App Check](https://img.shields.io/badge/Security-App%20Check%20reCAPTCHA%20Enterprise-4285F4?style=flat-square&logo=google)
+ ![App Check](https://img.shields.io/badge/Security-App%20Check%20reCAPTCHA%20v3-4285F4?style=flat-square&logo=google)
  ![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square)
 </div>
 
@@ -33,7 +33,7 @@
 7. **부원 소개 및 좋아요:** 이름·기수·등급·소개글은 로그인 없이도 열람할 수 있도록 공개 프로필(`memberProfiles`)로 분리되어 있으며, 경고 이력 등 민감 정보가 담긴 원본 계정 문서(`users`)는 로그인한 사용자만 읽을 수 있습니다. 공지·이벤트·FAQ·부원 소개에는 좋아요(하트) 위젯이 붙습니다.
 8. **안 읽은 글 표시:** 마지막 방문 시각을 브라우저에만 저장해 새로 올라온 글에 NEW 표시와 네비게이션 카운트 뱃지를 띄웁니다. 서버로 나가는 요청은 없습니다.
 9. **관리자 콘솔:** 등급 변경·경고 부여·강제 탈퇴를 지원하며, 실제 쓰기 권한은 Firestore 문서의 `role` 필드가 아니라 Firebase Auth 커스텀 클레임으로 검증됩니다(`role`은 화면 표시용).
-10. **App Check & reCAPTCHA Enterprise 연동:** 외부 비인가 프로그램(Python Request, cURL 등)을 통한 Firestore 데이터베이스 위변조 및 탈취 행위를 Google 보안 서버 인증 토큰을 통해 원천 무력화합니다.
+10. **App Check & Google reCAPTCHA v3 연동:** 외부 비인가 프로그램(Python Request, cURL 등)을 통한 Firestore 데이터베이스 위변조 및 탈취 행위를 Google 보안 서버 인증 토큰을 통해 원천 무력화합니다.
 11. **연쇄적 개인정보 파기 영구 삭제:** 대한민국 개인정보보호법에 준거하여 사용자가 '탈퇴' 시 본인의 계정은 물론 그동안 작성했던 공지사항·이벤트·댓글·공개 프로필을 일괄 배치(Batch)로 흔적 없이 삭제 처리합니다.
 
 ---
@@ -66,7 +66,7 @@ Dynamis-Web-Platform/
 │   │   └── partials/             # 레이아웃/컴포넌트별로 분리된 스타일시트
 │   └── js/
 │       ├── app.js                # 진입점 — 모듈 초기화 및 인라인 핸들러용 전역(window) 바인딩
-│       ├── firebase-config.js    # Firebase SDK 초기화 및 App Check(reCAPTCHA Enterprise) 연동
+│       ├── firebase-config.js    # Firebase SDK 초기화 및 App Check(Google reCAPTCHA v3) 연동
 │       ├── router.js             # SPA 라우팅 및 로그인 조건부 리다이렉트
 │       ├── state.js              # 로그인 세션 상태(live binding)
 │       ├── session.js            # 로그인 상태 변화에 따른 화면 전반 UI 갱신

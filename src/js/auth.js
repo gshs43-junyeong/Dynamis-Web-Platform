@@ -90,8 +90,8 @@ function describeAuthError(providerName, err) {
         return `${providerName} 로그인 실패 (auth/internal-error)\n\n`
             + '대부분 App Check 문제입니다. 아래를 확인해 주세요.\n'
             + '1) Firebase 콘솔 > App Check 에서 Authentication 적용(enforce) 상태\n'
-            + '2) 등록된 reCAPTCHA 사이트 키 종류와 코드의 APP_CHECK_PROVIDER_TYPE 일치 여부\n'
-            + '   (src/js/firebase-config.js — 현재 enterprise)\n'
+            + '2) Firebase 콘솔에 등록된 reCAPTCHA 사이트 키가 src/js/firebase-config.js의\n'
+            + '   APP_CHECK_SITE_KEY와 같은 Google reCAPTCHA v3 키인지\n'
             + '3) 현재 접속 도메인이 reCAPTCHA 키의 허용 도메인에 등록되어 있는지\n'
             + '4) localhost 개발 중이라면 콘솔에 찍힌 App Check 디버그 토큰을 등록했는지\n\n'
             + `원문: ${err?.message || ''}`;

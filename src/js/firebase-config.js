@@ -2,8 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import {
     initializeAppCheck,
-    ReCaptchaV3Provider,
-    ReCaptchaEnterpriseProvider
+    ReCaptchaV3Provider
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check.js";
 import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -19,7 +18,7 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// App Check
+// App Check — Google reCAPTCHA v3
 //
 // [로그인 시 auth/internal-error 가 나던 원인]
 // Firebase Authentication에 App Check 적용(enforce)이 켜져 있으면 로그인 요청에
@@ -28,19 +27,16 @@ export const app = initializeApp(firebaseConfig);
 // 'auth/internal-error'로 던진다. 즉 이 에러 코드는 "로그인 로직이 틀렸다"는
 // 뜻이 아니라 대부분 App Check 문제다.
 //
-// 여기서 고친 것 두 가지:
+// 초기화 순서도 중요하다: getAuth(app)보다 먼저 App Check를 초기화해야 한다.
+// 순서가 뒤바뀌면 App Check가 준비되기 전에 나가는 인증 요청에는 토큰이 안
+// 붙는다. Firebase 문서대로 initializeApp 직후, 다른 서비스보다 먼저 둔다.
 //
-//  1) 초기화 순서. 예전에는 getAuth(app)를 먼저 부르고 그다음에 App Check를
-//     초기화했다. 그러면 App Check가 준비되기 전에 나가는 인증 요청에는 토큰이
-//     붙지 않는다. Firebase 문서대로 initializeApp 직후, 다른 서비스보다 먼저
-//     초기화하도록 옮겼다.
-//
-//  2) 프로바이더 종류. README와 개인정보 처리방침에는 이 프로젝트가 reCAPTCHA
-//     "Enterprise"를 쓴다고 적혀 있는데, 코드는 ReCaptchaV3Provider를 쓰고 있었다.
-//     Enterprise 키를 v3 프로바이더에 넘기면 토큰 발급 자체가 실패한다.
-//     콘솔에 등록된 키가 실제로는 reCAPTCHA v3라면 아래 상수만 'v3'로 되돌리면 된다.
-const APP_CHECK_SITE_KEY = "6LfYjjEtAAAAAKG2hFqqY0hazDsV8QoA8xmG_iYL";
-const APP_CHECK_PROVIDER_TYPE = 'enterprise'; // 'enterprise' | 'v3'
+// [사이트 키/비밀 키]
+// Google reCAPTCHA v3 관리 콘솔(google.com/recaptcha/admin)에서 발급받은 키 쌍이다.
+// 아래 상수는 사이트 키(공개, 클라이언트에 노출되어도 되는 값)만 쓴다. 비밀 키는
+// Firebase App Check가 자체적으로 검증하므로 이 코드베이스 어디에도 필요 없다
+// — 클라이언트 코드에 비밀 키를 넣으면 그 자체로 유출이니 절대 넣지 말 것.
+const APP_CHECK_SITE_KEY = "6Ld82HItAAAAAN6hhc7aiFHviIVfYU04iPPoRtcP";
 
 // localhost에서는 reCAPTCHA가 실제 토큰을 내주지 않아 개발 중에는 로그인이 항상
 // 막힌다. 디버그 토큰을 켜두면 브라우저 콘솔에 출력되는 토큰을
@@ -57,18 +53,16 @@ if (isLocalhost) {
 export let appCheckInitialized = false;
 try {
     initializeAppCheck(app, {
-        provider: APP_CHECK_PROVIDER_TYPE === 'enterprise'
-            ? new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY)
-            : new ReCaptchaV3Provider(APP_CHECK_SITE_KEY),
+        provider: new ReCaptchaV3Provider(APP_CHECK_SITE_KEY),
         isTokenAutoRefreshEnabled: true
     });
     appCheckInitialized = true;
 } catch (err) {
     console.error(
         '[App Check] 초기화 실패 — App Check 적용이 켜져 있다면 로그인이 auth/internal-error로 실패합니다.\n' +
-        `현재 설정: provider=${APP_CHECK_PROVIDER_TYPE}, hostname=${window.location.hostname}\n` +
-        '확인할 것: (1) 사이트 키 종류가 위 provider 설정과 일치하는지 ' +
-        '(2) 현재 도메인이 reCAPTCHA 키에 등록되어 있는지',
+        `hostname=${window.location.hostname}\n` +
+        '확인할 것: (1) 이 사이트 키가 reCAPTCHA v3 키가 맞는지 ' +
+        '(2) 현재 도메인이 reCAPTCHA 키의 허용 도메인 목록에 등록되어 있는지',
         err
     );
 }
