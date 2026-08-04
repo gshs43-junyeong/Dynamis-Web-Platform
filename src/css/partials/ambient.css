@@ -7,7 +7,17 @@
    않고 이 하나로만 통일하고, 원본 배경 자체가 아니라 ::before 레이어라 각 파셜의
    HTML은 건드리지 않는다.
 
-   개인정보 처리방침 / 커뮤니티 가이드라인은 법적 문서 성격이라 대상에서 뺐다. */
+   개인정보 처리방침 / 커뮤니티 가이드라인은 법적 문서 성격이라 대상에서 뺐다.
+
+   [양 끝이 잘려 보이던 문제]
+   처음엔 background-size를 키우고 background-position을 0%→100%로 애니메이션했는데,
+   이 방식은 "그라데이션을 담는 상자" 자체가 섹션 폭(최대 1100px) 기준이라, 뷰포트가
+   그보다 넓으면 그 상자의 가장자리가 화면 안에 그대로 드러나 버렸다 — 그라데이션이
+   투명으로 자연스럽게 사라지기 전에 상자 자체가 뚝 끊겨서 눈에 보이는 "벽"이 생긴
+   것. 지금은 상자를 뷰포트 폭의 3배 이상(220vw)으로 잡고 화면 밖으로 훨씬 더
+   내보낸 채(left: -60vw) transform: translateX로 아주 조금씩만 좌우로 움직인다.
+   상자의 실제 가장자리가 어떤 뷰포트에서도 화면 안에 들어올 일이 없으므로, 보이는
+   부분은 항상 그라데이션이 양쪽으로 투명하게 사라지는 중간 구간뿐이다. */
 #notice::before,
 #event::before,
 #faq::before,
@@ -18,22 +28,27 @@
 #admin::before {
     content: "";
     position: absolute;
-    inset: -10% -20%;
+    top: -20%;
+    left: -60vw;
+    width: 220vw;
+    height: 140%;
     z-index: -1;
     pointer-events: none;
     background: linear-gradient(120deg,
-        transparent 35%,
-        rgba(255, 255, 255, 0.05) 47%,
-        rgba(170, 190, 255, 0.07) 50%,
-        rgba(255, 255, 255, 0.05) 53%,
-        transparent 65%);
-    background-size: 220% 220%;
+        transparent 0%,
+        transparent 40%,
+        rgba(255, 255, 255, 0.06) 48%,
+        rgba(170, 190, 255, 0.08) 50%,
+        rgba(255, 255, 255, 0.06) 52%,
+        transparent 60%,
+        transparent 100%);
     animation: ambientSweep 28s ease-in-out infinite;
+    will-change: transform;
 }
 
 @keyframes ambientSweep {
-    0%, 100% { background-position: 0% 15%; }
-    50% { background-position: 100% 85%; }
+    0%, 100% { transform: translateX(-15vw) translateY(-2%); }
+    50% { transform: translateX(15vw) translateY(2%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
