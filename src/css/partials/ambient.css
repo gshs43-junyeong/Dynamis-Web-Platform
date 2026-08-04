@@ -1,0 +1,50 @@
+/* 홈 이외 화면(공지/이벤트/FAQ/부원/로그인/회원가입/마이페이지/관리자)에 쓰는
+   보조 배경 애니메이션.
+
+   홈은 격자 드리프트(#home::before) + 떠다니는 원형 발광체 3개(.bg-blob)로 이루어져
+   있다. 그 조합을 다른 화면에도 그대로 쓰면 홈만의 인상이 옅어지므로, 대신 부드러운
+   대각선 빛줄기가 아주 느리게 흘러가는 단일 효과로 통일했다. 화면마다 다른 걸 섞지
+   않고 이 하나로만 통일하고, 원본 배경 자체가 아니라 ::before 레이어라 각 파셜의
+   HTML은 건드리지 않는다.
+
+   개인정보 처리방침 / 커뮤니티 가이드라인은 법적 문서 성격이라 대상에서 뺐다. */
+#notice::before,
+#event::before,
+#faq::before,
+#members::before,
+#login::before,
+#signup::before,
+#mypage::before,
+#admin::before {
+    content: "";
+    position: absolute;
+    inset: -10% -20%;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(120deg,
+        transparent 35%,
+        rgba(255, 255, 255, 0.05) 47%,
+        rgba(170, 190, 255, 0.07) 50%,
+        rgba(255, 255, 255, 0.05) 53%,
+        transparent 65%);
+    background-size: 220% 220%;
+    animation: ambientSweep 28s ease-in-out infinite;
+}
+
+@keyframes ambientSweep {
+    0%, 100% { background-position: 0% 15%; }
+    50% { background-position: 100% 85%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #notice::before,
+    #event::before,
+    #faq::before,
+    #members::before,
+    #login::before,
+    #signup::before,
+    #mypage::before,
+    #admin::before {
+        animation: none;
+    }
+}
