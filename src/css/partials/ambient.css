@@ -3,28 +3,24 @@
 
    홈은 격자 드리프트(#home::before) + 떠다니는 원형 발광체 3개(.bg-blob)로 이루어져
    있다. 그 조합을 다른 화면에도 그대로 쓰면 홈만의 인상이 옅어지므로, 대신 부드러운
-   대각선 빛줄기가 아주 느리게 흘러가는 단일 효과로 통일했다. 화면마다 다른 걸 섞지
-   않고 이 하나로만 통일하고, 원본 배경 자체가 아니라 ::before 레이어라 각 파셜의
-   HTML은 건드리지 않는다.
+   빛깔이 섹션 전체를 은은하게 감싸며 아주 느리게 움직이는 단일 효과로 통일했다.
+   화면마다 다른 걸 섞지 않고 이 하나로만 통일하고, 원본 배경 자체가 아니라 ::before
+   레이어라 각 파셜의 HTML은 건드리지 않는다.
 
    개인정보 처리방침 / 커뮤니티 가이드라인은 법적 문서 성격이라 대상에서 뺐다.
 
-   [양 끝이 잘려 보이던 문제]
-   처음엔 background-size를 키우고 background-position을 0%→100%로 애니메이션했는데,
-   이 방식은 "그라데이션을 담는 상자" 자체가 섹션 폭(최대 1100px) 기준이라, 뷰포트가
-   그보다 넓으면 그 상자의 가장자리가 화면 안에 그대로 드러나 버렸다 — 그라데이션이
-   투명으로 자연스럽게 사라지기 전에 상자 자체가 뚝 끊겨서 눈에 보이는 "벽"이 생긴
-   것. 지금은 상자를 뷰포트 폭의 3배 이상(220vw)으로 잡고 화면 밖으로 훨씬 더
-   내보낸 채(left: -60vw) transform: translateX로 아주 조금씩만 좌우로 움직인다.
-   상자의 실제 가장자리가 어떤 뷰포트에서도 화면 안에 들어올 일이 없으므로, 보이는
-   부분은 항상 그라데이션이 양쪽으로 투명하게 사라지는 중간 구간뿐이다.
+   [사방이 잘려 보이던 문제 — 최종 해결]
+   처음엔 "그라데이션 상자"를 섹션보다 크게 만들고 그 상자를 이리저리 움직이거나
+   패닝하는 방식이었다. 상자가 뷰포트보다 좁으면 좌우 가장자리가, 섹션보다 길면
+   위아래 가장자리가 화면 안에 그대로 드러나 "벽"처럼 보였다 — 상자를 아무리 키워도
+   상자는 결국 유한하고, 움직이는 이상 그 가장자리가 보이는 순간이 항상 존재했다.
 
-   [아래쪽이 푸터까지 침범하던 문제]
-   상자 높이가 섹션 높이의 140%(top: -20%)라서, 섹션 내용이 짧은 화면(로그인 등)에서는
-   상자 아래쪽이 섹션 박스를 벗어나 main의 하단 패딩을 지나 푸터 구분선(테두리)까지
-   번져 보였다. 홈 화면의 .bg-blob은 일부러 섹션 밖으로 새어나가는 효과라 그대로 두고,
-   이 8개 섹션만 overflow: hidden으로 잘라서 애니메이션이 섹션 박스(= 푸터 구분선
-   바로 위)를 넘지 않게 막는다. */
+   그래서 상자를 섹션과 정확히 같은 크기(inset: 0)로 고정해 버렸다. 상자 가장자리가
+   섹션 가장자리와 완전히 겹치므로 "밖으로 삐져나온 상자 끝"이라는 게 애초에 없다.
+   그 안을 채우는 그라데이션도 어디에도 완전히 투명한 구간을 두지 않아(항상 은은한
+   색만 유지), 상자 전체가 항상 빈틈없이 채워져 있다. 애니메이션은 상자를 움직이는
+   게 아니라 그 안의 색 배치(background-position)만 아주 느리게 흘려보내는 것이라,
+   어느 순간을 봐도 섹션 전체가 균일하게 채워진 채 색조만 서서히 바뀐다. */
 #notice,
 #event,
 #faq,
@@ -46,27 +42,21 @@
 #admin::before {
     content: "";
     position: absolute;
-    top: -20%;
-    left: -60vw;
-    width: 220vw;
-    height: 140%;
+    inset: 0;
     z-index: -1;
     pointer-events: none;
-    background: linear-gradient(120deg,
-        transparent 0%,
-        transparent 40%,
-        rgba(255, 255, 255, 0.06) 48%,
-        rgba(170, 190, 255, 0.08) 50%,
-        rgba(255, 255, 255, 0.06) 52%,
-        transparent 60%,
-        transparent 100%);
-    animation: ambientSweep 28s ease-in-out infinite;
-    will-change: transform;
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.035) 0%,
+        rgba(170, 190, 255, 0.07) 35%,
+        rgba(255, 255, 255, 0.03) 65%,
+        rgba(170, 190, 255, 0.06) 100%);
+    background-size: 260% 260%;
+    animation: ambientWash 32s ease-in-out infinite;
 }
 
-@keyframes ambientSweep {
-    0%, 100% { transform: translateX(-15vw) translateY(-2%); }
-    50% { transform: translateX(15vw) translateY(2%); }
+@keyframes ambientWash {
+    0%, 100% { background-position: 0% 30%; }
+    50% { background-position: 100% 70%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
