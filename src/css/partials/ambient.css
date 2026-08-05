@@ -2,29 +2,32 @@
    보조 배경 애니메이션.
 
    홈은 격자 드리프트(#home::before) + 떠다니는 원형 발광체 3개(.bg-blob)로 이루어져
-   있다. 그 조합을 다른 화면에도 그대로 쓰면 홈만의 인상이 옅어지므로, 대신 부드러운
-   빛깔이 화면 전체를 은은하게 감싸며 아주 느리게 움직이는 단일 효과로 통일했다.
-   화면마다 다른 걸 섞지 않고 이 하나로만 통일하고, 원본 배경 자체가 아니라 ::before
-   레이어라 각 파셜의 HTML은 건드리지 않는다.
+   있다. 그 조합을 다른 화면에도 그대로 쓰면 홈만의 인상이 옅어지므로, 대신 대각선
+   빛줄기가 아주 느리게 좌우로 흘러가는 단일 효과로 통일했다. 화면마다 다른 걸 섞지
+   않고 이 하나로만 통일하고, 원본 배경 자체가 아니라 ::before 레이어라 각 파셜의
+   HTML은 건드리지 않는다.
 
    개인정보 처리방침 / 커뮤니티 가이드라인은 법적 문서 성격이라 대상에서 뺐다.
 
-   [헤더 밑줄과 푸터 윗줄 사이를 다 못 채우던 문제]
-   처음엔 이 효과를 .section에 걸었는데, .section의 박스 높이는 그 안의 실제 내용
-   (제목 + 카드)만큼만 커진다. 그래서 이벤트처럼 내용이 짧은 화면에서는 .section
-   박스 자체가 짧아서, 헤더 밑줄부터 카드 위까지, 카드 아래부터 푸터 윗줄까지 남는
-   여백(main의 상하 패딩)은 .section 박스 밖이라 애니메이션이 전혀 닿지 않았다 —
-   카드만 옅게 물들고 그 위아래는 계속 새까맣게 비어 보인 이유.
+   [세로: 헤더 밑줄 ~ 푸터 윗줄을 정확히 채움]
+   이 효과는 main에 건다. main은 헤더 바로 다음, 푸터 바로 앞에 오는 유일한 요소라
+   main의 박스(상하 패딩 포함)가 곧 "헤더 밑줄과 푸터 윗줄 사이" 그 자체다. 그래서
+   .section별로 걸지 않고 :has()로 "지금 활성화된 화면이 대상 8개 중 하나일 때의
+   main"을 직접 골라 여기에만 건다 — 화면 내용이 짧아도 main 박스 자체는 항상 그
+   전체 구간이라 위아래 빈틈이 안 생긴다. 푸터는 border-top 앞에 margin-top: 4rem
+   만큼 더 떨어져 있어서, main 박스 끝에서 멈추면 푸터 윗줄 바로 앞에 얇게 여백이
+   남는다. 이 4rem을 bottom: -4rem으로 그대로 상쇄해서 아래쪽 끝이 푸터 윗줄에
+   정확히 맞닿는다.
 
-   지금은 :has()로 "지금 활성화된 화면이 대상 8개 중 하나일 때의 main"을 직접 골라
-   그 main 자체에 애니메이션을 건다. main은 헤더 바로 다음, 푸터 바로 앞에 오는
-   유일한 요소라 main의 박스(상하 패딩 포함)가 곧 "헤더 밑줄과 푸터 윗줄 사이"
-   그 자체다. 다만 푸터는 border-top 앞에 margin-top: 4rem 만큼 더 떨어져 있어서
-   main 박스 끝에서 멈추면 푸터 윗줄 바로 앞에 아주 얇게 여백이 남는다. 이 4rem을
-   bottom: -4rem으로 그대로 상쇄해서 애니메이션 박스의 아래쪽 끝이 푸터 윗줄에
-   정확히 맞닿게 만들었다. main은 이미 항상 position: relative라 새로운 스태킹
-   컨텍스트가 필요할 때만(대상 화면일 때만) z-index를 얹어 이 ::before(z-index: -1)를
-   그 안에 가둔다 — 헤더(z-index: 100)나 다른 요소와 절대 뒤섞이지 않는다. */
+   [가로: 뷰포트보다 훨씬 넓게 잡아 양 끝이 절대 화면 안에 안 들어오게]
+   상자 폭을 main 폭(최대 1100px)에 맞추면(left:0; right:0), 화면이 그보다 넓을 때
+   상자의 실제 가장자리가 화면 안에 그대로 드러나 "벽"처럼 보인다. vw 단위는 상자가
+   속한 main의 폭이 아니라 항상 뷰포트 폭 기준이므로, width: 220vw / left: -60vw로
+   상자를 뷰포트 폭의 2배 이상으로 잡고 훨씬 더 밖으로 밀어내면, 좌우로 살짝
+   움직여도(translateX) 상자의 진짜 가장자리는 어떤 뷰포트에서도 화면 밖에 머문다.
+   body에 overflow-x: hidden이 이미 걸려 있어 이렇게 넓게 밀어낸 상자가 가로
+   스크롤을 만들지도 않는다. 세로는 translateX만 움직이고 건드리지 않아서 위에서
+   맞춰둔 헤더/푸터 경계가 흔들리지 않는다. */
 main:has(> #notice.active)::before,
 main:has(> #event.active)::before,
 main:has(> #faq.active)::before,
@@ -36,18 +39,21 @@ main:has(> #admin.active)::before {
     content: "";
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
+    left: -60vw;
+    width: 220vw;
     bottom: -4rem;
     z-index: -1;
     pointer-events: none;
-    background: linear-gradient(135deg,
-        rgba(255, 255, 255, 0.035) 0%,
-        rgba(170, 190, 255, 0.07) 35%,
-        rgba(255, 255, 255, 0.03) 65%,
-        rgba(170, 190, 255, 0.06) 100%);
-    background-size: 260% 260%;
-    animation: ambientWash 32s ease-in-out infinite;
+    background: linear-gradient(120deg,
+        transparent 0%,
+        transparent 40%,
+        rgba(255, 255, 255, 0.09) 48%,
+        rgba(170, 190, 255, 0.13) 50%,
+        rgba(255, 255, 255, 0.09) 52%,
+        transparent 60%,
+        transparent 100%);
+    animation: ambientSweep 26s ease-in-out infinite;
+    will-change: transform;
 }
 
 main:has(> #notice.active),
@@ -61,9 +67,9 @@ main:has(> #admin.active) {
     z-index: 1;
 }
 
-@keyframes ambientWash {
-    0%, 100% { background-position: 0% 30%; }
-    50% { background-position: 100% 70%; }
+@keyframes ambientSweep {
+    0%, 100% { transform: translateX(-15vw); }
+    50% { transform: translateX(15vw); }
 }
 
 @media (prefers-reduced-motion: reduce) {
