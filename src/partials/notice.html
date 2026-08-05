@@ -9,6 +9,7 @@
                     <option value="학술 자료">학술 자료</option>
                     <option value="이벤트 안내">이벤트 안내</option>
                     <option value="설문 조사">설문 조사</option>
+                    <option value="활동 기록">활동 기록</option>
                     <option value="기타">기타</option>
                 </select>
                 <textarea id="post-content" placeholder="내용을 입력하세요... (최대 2000바이트 제한)"></textarea>
@@ -26,16 +27,17 @@
                 <button type="button" class="page-btn notice-tag-filter-btn" data-tag="학술 자료" onclick="changeNoticeTagFilter('학술 자료')">학술 자료</button>
                 <button type="button" class="page-btn notice-tag-filter-btn" data-tag="이벤트 안내" onclick="changeNoticeTagFilter('이벤트 안내')">이벤트 안내</button>
                 <button type="button" class="page-btn notice-tag-filter-btn" data-tag="설문 조사" onclick="changeNoticeTagFilter('설문 조사')">설문 조사</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="활동 기록" onclick="changeNoticeTagFilter('활동 기록')">활동 기록</button>
                 <button type="button" class="page-btn notice-tag-filter-btn" data-tag="기타" onclick="changeNoticeTagFilter('기타')">기타</button>
             </div>
 
             <table class="notice-table">
                 <thead>
                     <tr>
-                        <th id="th-pin-header" style="width: 8%; text-align: center; display: none;">고정</th>
-                        <th style="width: 47%;">제목</th>
-                        <th style="width: 25%;">작성자 (등급)</th>
-                        <th style="width: 20%;">날짜</th>
+                        <th id="th-pin-header" style="width: 8%; text-align: center; display: none;"><img src="/icons/pin.png" alt="" aria-hidden="true" class="th-icon">고정</th>
+                        <th style="width: 47%;"><img src="/icons/folder.png" alt="" aria-hidden="true" class="th-icon">제목</th>
+                        <th style="width: 25%;"><img src="/icons/author.png" alt="" aria-hidden="true" class="th-icon">작성자 (등급)</th>
+                        <th style="width: 20%;"><img src="/icons/calendar.png" alt="" aria-hidden="true" class="th-icon">날짜</th>
                     </tr>
                 </thead>
                 <tbody id="notice-list"></tbody>

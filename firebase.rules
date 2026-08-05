@@ -360,7 +360,7 @@ service cloud.firestore {
            && data.authorName is string
            && data.date is string
            && data.timestamp is int
-           && (!('tag' in data) || data.tag in ['학술 자료', '이벤트 안내', '설문 조사', '기타'])
+           && (!('tag' in data) || data.tag in ['학술 자료', '이벤트 안내', '설문 조사', '활동 기록', '기타'])
            && (!('files' in data) || data.files is list)
            && (!('pinned' in data) || data.pinned is bool);
   }

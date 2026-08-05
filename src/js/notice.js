@@ -30,6 +30,7 @@ const TAG_SLUG_MAP = {
     '학술 자료': 'academic',
     '이벤트 안내': 'event',
     '설문 조사': 'survey',
+    '활동 기록': 'activity',
     '기타': 'etc'
 };
 function tagSlug(tag) {

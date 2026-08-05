@@ -1,6 +1,8 @@
 /* 테이블 스타일 */
 .notice-table { width: 100%; border-collapse: collapse; background: var(--bg-secondary); border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); margin-top: 1rem; }
 .notice-table th { padding: 1.2rem; background: var(--bg-tertiary); color: var(--text-secondary); text-align: left; font-weight: 600; }
+.th-icon { width: 0.9em; height: 0.9em; margin-right: 0.4em; vertical-align: -0.1em; opacity: 0.7; }
+#th-pin-header .th-icon { margin-right: 0.3em; }
 .notice-table td { padding: 1.2rem; border-bottom: 1px solid var(--border-color); }
 .notice-table .clickable-td { cursor: pointer; }
 .notice-table tr:hover .clickable-td { background: rgba(255,255,255,0.04); color: #fff; }

@@ -117,7 +117,7 @@ export function isSafeAttachmentData(dataStr) {
 export const MAX_ATTACHMENT_FILE_BYTES = 500 * 1024;
 export const MAX_ATTACHMENT_TOTAL_ENCODED_BYTES = 900000;
 
-export const NOTICE_TAGS = ['학술 자료', '이벤트 안내', '설문 조사', '기타'];
+export const NOTICE_TAGS = ['학술 자료', '이벤트 안내', '설문 조사', '활동 기록', '기타'];
 
 // URL은 http(s):// 또는 www.로 시작하는 형태만 인식한다 (javascript: 등 다른 스킴은
 // 애초에 매치되지 않으므로 XSS 벡터가 되지 않음). 문장 부호가 URL 끝에 붙어 쓰인 경우
