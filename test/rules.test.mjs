@@ -387,6 +387,56 @@ await check('L-14a', '클라이언트 한도(2000B)를 넘는 공지 본문', 'b
     return b.commit();
 });
 
+console.log('\n=== M-3 : 공지 카드/본문 분리 (notices/{id}/content/main) ===');
+await check('N-1', "[정상] 새 형태 카드(content/files 없음) 생성", 'allow', async () => {
+    const db = ctx('alice');
+    const b = writeBatch(db);
+    b.set(doc(db, 'notices/split1'), {
+        title: 't', tag: '기타', authorId: 'alice', authorName: '앨리스맨',
+        authorBatch: '42기', authorRole: 'member', date: '2026.8.6',
+        timestamp: now(), pinned: false, hasFiles: false,
+    });
+    b.set(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 1 });
+    return b.commit();
+}, async (db) => {});
+await check('N-2', '[정상] 본인 소유 카드 뒤이어 content/main 작성', 'allow',
+    () => setDoc(doc(ctx('alice'), 'notices/n1/content/main'), { content: '본문', files: [] }));
+await check('N-3', '타인 소유 카드에 content/main 작성 시도', 'block', () =>
+    setDoc(doc(ctx('bob'), 'notices/n1/content/main'), { content: '해킹', files: [] }));
+await check('N-4', '[정상] 관리자는 남의 카드에도 content/main 작성 가능', 'allow', () =>
+    setDoc(doc(ctx('admin1'), 'notices/n1/content/main'), { content: '관리자 수정', files: [] }));
+await check('N-5', "content/main 문서 ID를 'main' 외 임의로 생성 차단", 'block', () =>
+    setDoc(doc(ctx('alice'), 'notices/n1/content/spam'), { content: 'x', files: [] }));
+await check('N-6', 'content/main 본문이 클라이언트 한도(2000B) 초과', 'block', () =>
+    setDoc(doc(ctx('alice'), 'notices/n1/content/main'), { content: 'A'.repeat(3000), files: [] }));
+await check('N-7', 'content/main에 700KB 초과 첨부', 'block', () =>
+    setDoc(doc(ctx('alice'), 'notices/n1/content/main'), {
+        content: '본문', files: [{ fileName: 'big.pdf', fileSize: 1, fileData: 'data:application/pdf;base64,' + 'A'.repeat(750000) }],
+    }));
+await check('N-8', '[정상] 비로그인도 content/main 읽기는 가능', 'allow',
+    () => getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'notices/n1/content/main')),
+    async (db) => setDoc(doc(db, 'notices/n1/content/main'), { content: '본문', files: [] }));
+await check('N-9', '[정상] 작성자 본인이 content/main 삭제', 'allow',
+    () => deleteDoc(doc(ctx('alice'), 'notices/n1/content/main')),
+    async (db) => setDoc(doc(db, 'notices/n1/content/main'), { content: '본문', files: [] }));
+await check('N-10', '타인이 content/main 삭제 시도', 'block',
+    () => deleteDoc(doc(ctx('bob'), 'notices/n1/content/main')),
+    async (db) => setDoc(doc(db, 'notices/n1/content/main'), { content: '본문', files: [] }));
+
+console.log('\n=== M-3 : 옛 형태(카드에 content 그대로 있는) 공지 하위 호환 ===');
+await check('N-11', '[정상] 옛 형태 카드(고정 토글처럼 content 그대로 둔 채 부분 수정)', 'allow',
+    () => updateDoc(doc(ctx('admin1'), 'notices/legacy1'), { pinned: true }),
+    async (db) => setDoc(doc(db, 'notices/legacy1'), {
+        title: '옛 공지', content: '옛 본문', files: [], authorId: 'alice', authorName: '앨리스맨',
+        authorBatch: '42기', authorRole: 'member', date: '2026.8.1', timestamp: now(), pinned: false,
+    }));
+await check('N-12', '[정상] 옛 형태 카드는 본인이 삭제 가능', 'allow',
+    () => deleteDoc(doc(ctx('alice'), 'notices/legacy1')),
+    async (db) => setDoc(doc(db, 'notices/legacy1'), {
+        title: '옛 공지', content: '옛 본문', files: [], authorId: 'alice', authorName: '앨리스맨',
+        authorBatch: '42기', authorRole: 'member', date: '2026.8.1', timestamp: now(), pinned: false,
+    }));
+
 await testEnv.cleanup();
 
 const failed = results.filter((r) => !r.ok);

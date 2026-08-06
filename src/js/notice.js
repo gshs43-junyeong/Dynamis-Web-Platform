@@ -3,6 +3,8 @@ import { readTrafficState, withinLimit, stageQuota, checkAndRecordDownload } fro
 import {
     collection,
     doc,
+    getDoc,
+    setDoc,
     onSnapshot,
     query,
     addDoc,
@@ -123,32 +125,40 @@ export async function addNotice() {
     }
 
     const date = new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, '');
-    const noticePayload = {
+    // 목록 카드(항상 읽기 가능, 가볍다) — 본문·첨부는 별도 문서에 넣어 목록을
+    // 보기만 하는 방문자가 그 바이트를 매번 내려받지 않게 한다. hasFiles는 목록의
+    // 첨부 아이콘 표시용 불리언 하나만 남겨 둔 것이라 비용에 영향이 없다.
+    const noticeCard = {
         title,
         tag,
-        content,
         authorName: loggedInUser.name,
         authorBatch: loggedInUser.batch,
         authorRole: loggedInUser.role,
         authorId: uid,
         date,
         pinned: false,
-        files: uploadedFilesArray,
+        hasFiles: uploadedFilesArray.length > 0,
         timestamp: Date.now()
     };
 
     try {
-        // 본문과 카운터를 하나의 배치로 원자적으로 쓴다. 규칙이 getAfter()로
-        // "카운터가 같은 배치에서 +1 되었는지"를 확인하므로, 카운터를 빼고
-        // 본문만 쓰는 우회는 서버가 거부한다.
+        // 카드와 카운터는 한 배치로 원자적으로 쓴다(규칙이 getAfter로 대조).
+        // 본문은 카드가 커밋된 뒤에 써야 한다 — 본문 규칙이 카드 문서를 get()으로
+        // 읽어 작성자를 확인하므로 같은 배치에 넣으면 아직 없는 것으로 보인다.
+        const noticeRef = doc(collection(db, 'notices'));
         const batch = writeBatch(db);
-        batch.set(doc(collection(db, 'notices')), noticePayload);
+        batch.set(noticeRef, noticeCard);
         if (!isAdmin) {
             const deltas = { noticeCount: 1 };
             if (totalNewSize > 0) deltas.uploadBytes = totalNewSize;
             stageQuota(batch, uid, trafficState, deltas);
         }
         await batch.commit();
+
+        await setDoc(doc(db, 'notices', noticeRef.id, 'content', 'main'), {
+            content,
+            files: uploadedFilesArray
+        });
         if (titleInput) titleInput.value = '';
         if (contentInput) contentInput.value = '';
         if (fileInput) fileInput.value = '';
@@ -237,7 +247,9 @@ function renderNoticePage(pageNum) {
         const titleTextSpan = document.createElement('span');
         titleTextSpan.textContent = `${n.pinned ? '[고정] ' : ''}${n.title || ''}`;
         titleTd.appendChild(titleTextSpan);
-        if (n.files && n.files.length) {
+        // hasFiles는 새 형태(카드+본문 분리) 공지의 첨부 표시용, n.files는 아직
+        // 이관되지 않은 옛 형태(카드에 본문·첨부가 그대로 있는) 공지를 위한 대비다.
+        if (n.hasFiles || (n.files && n.files.length)) {
             titleTd.appendChild(uiIcon('paperclip', { muted: true, className: 'icon-trail' }));
         }
         if (isUnread('notice', n.timestamp)) titleTd.appendChild(createNewBadge());
@@ -317,7 +329,7 @@ export function openNoticeById(docId) {
     openNoticeDetail(notices.find((n) => n.docId === docId));
 }
 
-function openNoticeDetail(n) {
+async function openNoticeDetail(n) {
     if (!n) return;
     currentNoticeDocId = n.docId;
 
@@ -348,19 +360,36 @@ function openNoticeDetail(n) {
         modalDate.innerHTML = '';
         modalDate.appendChild(iconLabel('calendar', n.date || '', { muted: true }));
     }
-    if (modalText) modalText.innerHTML = linkifyText(n.content);
-
     if (modalDeleteBtn) modalDeleteBtn.style.display = (loggedInUser && loggedInUser.role === 'admin') ? 'block' : 'none';
 
     if (noticeLikeUnsub) { noticeLikeUnsub(); noticeLikeUnsub = null; }
     noticeLikeUnsub = renderLikeWidget(document.getElementById('notice-like-mount'), ['notices', n.docId]);
 
     if (fileListContainer) fileListContainer.innerHTML = '';
-    const filesToRender = n.files || [];
+    if (fileBox) fileBox.style.display = 'none';
 
-    if (filesToRender.length > 0) {
+    // 옛 형태(카드에 본문·첨부가 그대로 있는) 공지는 바로 보여주고, 새 형태는
+    // notices/{id}/content/main에서 따로 읽어온다 — 목록을 볼 때는 이 바이트를
+    // 아예 내려받지 않다가, 글을 열 때만 딱 그 글의 본문만 받는다.
+    let content = n.content;
+    let files = n.files || [];
+    if (content === undefined) {
+        if (modalText) modalText.innerText = '';
+        try {
+            const contentSnap = await getDoc(doc(db, 'notices', n.docId, 'content', 'main'));
+            const data = contentSnap.exists() ? contentSnap.data() : {};
+            content = data.content || '';
+            files = data.files || [];
+        } catch (err) {
+            if (modalText) modalText.innerText = '⛔ 본문을 불러오지 못했습니다.';
+            content = null;
+        }
+    }
+    if (content !== null && modalText) modalText.innerHTML = linkifyText(content || '');
+
+    if (files.length > 0) {
         if (fileBox) fileBox.style.display = 'block';
-        filesToRender.forEach((fObj) => {
+        files.forEach((fObj) => {
             const link = document.createElement('a');
             link.className = 'file-item-link';
             link.href = '#';
@@ -374,8 +403,6 @@ function openNoticeDetail(n) {
             };
             fileListContainer.appendChild(link);
         });
-    } else {
-        if (fileBox) fileBox.style.display = 'none';
     }
 
     const commentWriteContainer = document.getElementById('comment-write-container');
@@ -509,6 +536,9 @@ export async function deleteCurrentNotice() {
     if (!confirm('정말 이 공지사항을 삭제 처리 하시겠습니까? 복구가 불가합니다.')) return;
     if (!currentNoticeDocId) return;
     try {
+        // 본문 문서 먼저 삭제한 뒤 카드 문서 삭제. 옛 형태 공지는 content/main이
+        // 애초에 없으므로 실패를 조용히 넘긴다.
+        await deleteDoc(doc(db, 'notices', currentNoticeDocId, 'content', 'main')).catch(() => {});
         await deleteDoc(doc(db, 'notices', currentNoticeDocId));
         alert('성공적으로 공지가 영구 제거되었습니다.');
         closeNotice();
