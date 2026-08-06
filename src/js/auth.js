@@ -259,6 +259,12 @@ export function initializeAuthCallbacks(callback) {
                     batch: resolvedProfile.batch,
                     name: resolvedProfile.name,
                     role: 'general',
+                    // 경고 누적은 0으로 명시해 둔다. 예전에는 이 필드를 아예 만들지
+                    // 않아서, 규칙의 isValidUserUpdate가 warnings를 직접 참조하다
+                    // "undefined" 평가 오류로 거부되는 바람에 경고를 한 번도 받지 않은
+                    // 사용자가 소개글을 저장할 수 없었다. 규칙 쪽도 .get()으로 고쳤지만,
+                    // 데이터 형태 자체를 일관되게 두는 편이 낫다.
+                    warnings: 0,
                     createdAt: Date.now()
                 });
                 await setDoc(doc(db, 'usernames', resolvedProfile.id), {

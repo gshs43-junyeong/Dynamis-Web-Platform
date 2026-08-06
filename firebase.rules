@@ -44,10 +44,7 @@ service cloud.firestore {
                       (resource.data.authorId == request.auth.uid
                        && isValidNotice(request.resource.data)
                        && isAllowedAttachment(request.resource.data)
-                       && request.resource.data.authorId == resource.data.authorId
-                       && request.resource.data.authorName == resource.data.authorName
-                       && request.resource.data.authorBatch == resource.data.authorBatch
-                       && request.resource.data.authorRole == resource.data.authorRole
+                       && authorAndTimeUnchanged()
                        // pinned 변경도 관리자 전용: 본인 수정 경로에서는 값을 그대로 유지해야 한다
                        // (마찬가지로 실측 확인된 셀프 고정 우회 — update 경로도 동일하게 막는다).
                        && request.resource.data.get('pinned', false) == resource.data.get('pinned', false))
@@ -59,12 +56,22 @@ service cloud.firestore {
 
       match /comments/{commentId} {
         allow read: if true;
+        // isFreshTimestamp를 isValidComment 안이 아니라 여기 top-level에 두는 이유는
+        // 공지 create 규칙의 주석과 같다(underQuota와 중첩 평가 시의 이상 동작 회피).
         allow create: if request.auth != null
                       && isValidComment(request.resource.data)
                       && isAuthenticAuthor(request.resource.data)
+                      && isFreshTimestamp(request.resource.data.timestamp)
                       && underQuota('commentCount', 10);
-        allow update, delete: if request.auth != null
-                              && (resource.data.authorId == request.auth.uid || isAdmin());
+        // 수정은 본인만, 그것도 본문(content)만. 작성자 표기와 timestamp는 잠근다.
+        // 관리자에게 주는 모더레이션 수단은 "삭제"이지 "남의 말 고쳐 쓰기"가 아니므로
+        // update에서 isAdmin() 분기를 뺐다(현재 클라이언트에 댓글 수정 UI도 없다).
+        allow update: if request.auth != null
+                      && resource.data.authorId == request.auth.uid
+                      && isValidComment(request.resource.data)
+                      && authorAndTimeUnchanged();
+        allow delete: if request.auth != null
+                      && (resource.data.authorId == request.auth.uid || isAdmin());
       }
 
       // 한 계정당 하트 1회, 취소 불가 (docId == 누른 사람 uid)
@@ -92,10 +99,7 @@ service cloud.firestore {
                     && (
                       (resource.data.authorId == request.auth.uid
                        && isValidEvent(request.resource.data)
-                       && request.resource.data.authorId == resource.data.authorId
-                       && request.resource.data.authorName == resource.data.authorName
-                       && request.resource.data.authorBatch == resource.data.authorBatch
-                       && request.resource.data.authorRole == resource.data.authorRole)
+                       && authorAndTimeUnchanged())
                       || isAdmin()
                     );
 
@@ -119,12 +123,22 @@ service cloud.firestore {
 
       match /comments/{commentId} {
         allow read: if true;
+        // isFreshTimestamp를 isValidComment 안이 아니라 여기 top-level에 두는 이유는
+        // 공지 create 규칙의 주석과 같다(underQuota와 중첩 평가 시의 이상 동작 회피).
         allow create: if request.auth != null
                       && isValidComment(request.resource.data)
                       && isAuthenticAuthor(request.resource.data)
+                      && isFreshTimestamp(request.resource.data.timestamp)
                       && underQuota('commentCount', 10);
-        allow update, delete: if request.auth != null
-                              && (resource.data.authorId == request.auth.uid || isAdmin());
+        // 수정은 본인만, 그것도 본문(content)만. 작성자 표기와 timestamp는 잠근다.
+        // 관리자에게 주는 모더레이션 수단은 "삭제"이지 "남의 말 고쳐 쓰기"가 아니므로
+        // update에서 isAdmin() 분기를 뺐다(현재 클라이언트에 댓글 수정 UI도 없다).
+        allow update: if request.auth != null
+                      && resource.data.authorId == request.auth.uid
+                      && isValidComment(request.resource.data)
+                      && authorAndTimeUnchanged();
+        allow delete: if request.auth != null
+                      && (resource.data.authorId == request.auth.uid || isAdmin());
       }
 
       match /likes/{likeId} {
@@ -199,10 +213,20 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && isValidFaq(request.resource.data)
                     && isAuthenticAuthor(request.resource.data)
+                    && isFreshTimestamp(request.resource.data.timestamp)
                     && underQuota('faqQuestionCount', 1);
 
-      allow update, delete: if request.auth != null
-                              && (resource.data.authorId == request.auth.uid || isModerator());
+      // 편집은 작성자 본인만, 삭제(모더레이션)는 부원·관리자도 가능.
+      // 예전에는 update와 delete를 한 줄로 묶어 둬서, 부원 등급이면 누구나 남의 질문
+      // 제목·본문·작성자 표기를 임의로 고쳐 쓸 수 있었다(실측 확인). 삭제 권한을
+      // 주려던 의도가 편집 권한까지 함께 준 경우다.
+      allow update: if request.auth != null
+                    && resource.data.authorId == request.auth.uid
+                    && isValidFaq(request.resource.data)
+                    && authorAndTimeUnchanged();
+
+      allow delete: if request.auth != null
+                    && (resource.data.authorId == request.auth.uid || isModerator());
 
       match /answers/{answerId} {
         allow read: if true;
@@ -210,10 +234,17 @@ service cloud.firestore {
         // 답변은 부원/관리자만.
         allow create: if isModerator()
                       && isValidAnswer(request.resource.data)
-                      && isAuthenticAuthor(request.resource.data);
+                      && isAuthenticAuthor(request.resource.data)
+                      && isFreshTimestamp(request.resource.data.timestamp);
 
-        allow update, delete: if request.auth != null
-                              && (resource.data.authorId == request.auth.uid || isModerator());
+        // 질문과 같은 이유로 편집은 본인만, 삭제는 모더레이터도 가능.
+        allow update: if request.auth != null
+                      && resource.data.authorId == request.auth.uid
+                      && isValidAnswer(request.resource.data)
+                      && authorAndTimeUnchanged();
+
+        allow delete: if request.auth != null
+                      && (resource.data.authorId == request.auth.uid || isModerator());
       }
 
       match /likes/{likeId} {
@@ -226,14 +257,45 @@ service cloud.firestore {
     }
 
     // 4. traffic (사용자당 1문서. 날짜는 y/m/d 정수 필드로 들고 있다 — 아래 주석 참고)
+    //
+    // getAfter()로 본문 쓰기와 카운터 +1을 한 배치에 묶어 두었지만, 정작 카운터가 든
+    // 이 문서 자체에 자유 쓰기·삭제가 열려 있어서 한도 전체가 두 번의 쓰기로
+    // 무력화됐다(실측 확인). isValidTraffic()은 값의 "범위"만 볼 뿐 "이전 값보다
+    // 작아지면 안 된다"는 조건이 없었기 때문에:
+    //   (a) deleteDoc(traffic/{uid}) 후 다시 쓰기 → expectedCount()가 1을 돌려주므로 통과
+    //   (b) 카운터를 0으로 덮어쓰기 → isTodayKst는 만족하면서 카운트만 리셋
+    //   (c) 날짜를 어제로 되돌리기 → expectedCount()가 "오늘 기록 없음"으로 보고 1부터 시작
+    // 공지 5건/일, 이벤트 5건/일, 댓글 10건/일, FAQ 1건/일이 전부 무의미해졌다.
+    //
+    // 그래서 "오늘자 문서에서 카운터가 줄어드는 방향"의 쓰기를 규칙에서 직접 막는다.
+    // 날짜가 바뀐 경우의 리셋은 정상 동작이므로 그때만 감소를 허용한다.
     match /traffic/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
 
-      allow create, update: if request.auth != null
+      allow create: if request.auth != null
                    && request.auth.uid == uid
-                   && isValidTraffic(request.resource.data);
+                   && isValidTraffic(request.resource.data)
+                   && isTodayKst(request.resource.data);
 
-      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null
+                   && request.auth.uid == uid
+                   && isValidTraffic(request.resource.data)
+                   // 쓰려는 문서는 반드시 "오늘" 날짜여야 한다((c) 차단)
+                   && isTodayKst(request.resource.data)
+                   && (
+                        // 기존 문서가 지난 날짜면 통째 리셋이 정상이다
+                        !isTodayKst(resource.data)
+                        // 같은 날이면 어떤 카운터도 줄어들 수 없다((b) 차단)
+                        || countersNotDecreasing()
+                      );
+
+      // 오늘자 카운터의 삭제만 막는다((a) 차단). 지난 날짜 문서는 어차피 리셋
+      // 대상이라 지워도 이득이 없으므로, 탈퇴 시 개인정보 파기(purgeUserOwnedData)는
+      // 그대로 동작한다 — 다만 "오늘 글을 쓴 당일에 탈퇴"하는 경우에만 문서가 남는다.
+      // 그 잔여 문서에는 uid 키와 날짜·건수만 있고 실명 등 개인정보는 없다.
+      allow delete: if request.auth != null
+                   && request.auth.uid == uid
+                   && !isTodayKst(resource.data);
     }
 
     // 5. usernames
@@ -254,8 +316,16 @@ service cloud.firestore {
     }
 
     // 6. serverTimeCheck: 클라이언트 시계 오차 측정용 (본인만 읽고 씀)
+    // 스키마 검증이 전혀 없어 1MiB짜리 문서를 무제한 횟수로 써 넣을 수 있었다.
+    // clock.js가 실제로 쓰는 것은 { t: serverTimestamp() } 하나뿐이므로 그 형태로
+    // 못 박는다. serverTimestamp()는 규칙에서 request.time과 같은 값으로 평가되므로,
+    // 임의의 시각이나 다른 필드를 실어 보내면 거부된다.
     match /serverTimeCheck/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.data.keys().hasOnly(['t'])
+                   && request.resource.data.t == request.time;
     }
   }
 
@@ -294,6 +364,25 @@ service cloud.firestore {
   // (가입만 하고 아직 승인되지 않은 'general' 등급은 글을 쓸 수 없다)
   function canPostNotice() {
     return selfRole() in ['admin', 'member', 'honored'];
+  }
+
+  // 수정(update) 시 작성자 표기와 작성 시각은 절대 바뀌면 안 된다.
+  //
+  // create에는 isAuthenticAuthor()로 사칭을 막아 두었는데 update 경로에는 아무 검증도
+  // 없었다. 소유권 검사가 보는 것은 resource.data(수정 "전" 문서)뿐이라, 정상 댓글을
+  // 하나 단 뒤 곧바로 authorName/authorRole만 갈아끼우면 "42기 홍길동 (관리자)"로
+  // 표시되는 댓글을 누구나 만들 수 있었다(에뮬레이터로 실측 확인). authorId까지 타인
+  // uid로 바꾸면 그 사람에게 삭제 권한이 넘어가 책임 전가까지 성립했다.
+  //
+  // timestamp도 같이 잠근다. 정렬(orderBy timestamp)에 쓰이므로 수정 시 미래값으로
+  // 바꾸면 목록 최상단을 영구 점유할 수 있다 — create에서 isFreshTimestamp로 막아 둔
+  // 것을 update가 그대로 되돌리는 셈이었다.
+  function authorAndTimeUnchanged() {
+    return request.resource.data.authorId == resource.data.authorId
+           && request.resource.data.authorName == resource.data.authorName
+           && request.resource.data.authorBatch == resource.data.authorBatch
+           && request.resource.data.authorRole == resource.data.authorRole
+           && request.resource.data.timestamp == resource.data.timestamp;
   }
 
   // 작성자 표기가 실제 계정 정보와 일치하는지 대조한다.
@@ -365,8 +454,15 @@ service cloud.firestore {
            && (!('pinned' in data) || data.pinned is bool);
   }
 
+  // hasOnly로 스키마를 못 박는 이유: 정의하지 않은 필드가 애초에 들어오지 못하게
+  // 하는 것이 근본 대책이다. 이게 없으면 댓글에 files 배열을 끼워 넣어 첨부 정책
+  // (파일당 700KB·최대 10개·명예부원 금지)을 통째로 우회할 수 있었다 — 댓글에는
+  // isAllowedAttachment가 create에도 걸려 있지 않기 때문이다.
+  // 필드 목록은 실제 클라이언트가 쓰는 것과 동일하다(notice.js/event.js의 댓글 생성).
   function isValidComment(data) {
     return data is map
+           && data.keys().hasOnly(['content', 'authorId', 'authorName', 'authorBatch', 'authorRole', 'date', 'timestamp'])
+           && data.keys().hasAll(['content', 'authorId', 'authorName', 'authorBatch', 'authorRole', 'date', 'timestamp'])
            && data.content is string
            && data.content.size() > 0
            && data.content.size() <= 1000
@@ -378,6 +474,8 @@ service cloud.firestore {
 
   function isValidFaq(data) {
     return data is map
+           && data.keys().hasOnly(['title', 'content', 'authorId', 'authorName', 'authorBatch', 'authorRole', 'date', 'timestamp'])
+           && data.keys().hasAll(['title', 'content', 'authorId', 'authorName', 'authorBatch', 'authorRole', 'date', 'timestamp'])
            && data.title is string
            && data.title.size() > 0
            && data.title.size() <= 50
@@ -391,6 +489,8 @@ service cloud.firestore {
 
   function isValidAnswer(data) {
     return data is map
+           && data.keys().hasOnly(['content', 'authorId', 'authorName', 'authorBatch', 'authorRole', 'date', 'timestamp'])
+           && data.keys().hasAll(['content', 'authorId', 'authorName', 'authorBatch', 'authorRole', 'date', 'timestamp'])
            && data.content is string
            && data.content.size() > 0
            && data.content.size() <= 1000
@@ -412,7 +512,14 @@ service cloud.firestore {
            && data.timestamp is int
            && data.deadline is int
            && isFreshTimestamp(data.timestamp)
-           && (!('files' in data) || data.files is list);
+           // 이벤트 "카드"는 첨부를 갖지 않는 구조다. 첨부는 항상 본문 문서
+           // (events/{id}/content/main)에 들어가고 그쪽에는 isAllowedAttachment가
+           // 걸려 있다. 그런데 카드의 update 경로에는 isAllowedAttachment가 빠져
+           // 있어서, 작성자가 카드를 수정하면서 700KB 상한·개수 제한·명예부원 첨부
+           // 금지를 모두 우회한 files 배열을 심을 수 있었다(실측 확인). 클라이언트는
+           // 카드의 files를 읽지 않지만 데이터는 남아 목록 구독 시 전 방문자에게
+           // 전송된다. 카드에서는 files를 아예 금지하는 편이 정확하다.
+           && !('files' in data);
   }
 
   function isValidEventContent(data) {
@@ -462,7 +569,14 @@ service cloud.firestore {
            && newData.name.size() <= 10
            && (isAdminActor || newData.name == oldData.name)
            && (isAdminActor || newData.role == oldData.role)
-           && (isAdminActor || newData.warnings == oldData.warnings)
+           // .get()으로 읽는 이유: 가입 시 setDoc은 warnings 필드를 만들지 않으므로
+           // 경고를 한 번도 받지 않은 계정에는 이 필드가 아예 없다. 예전처럼
+           // newData.warnings로 직접 접근하면 "Property warnings is undefined on
+           // object" 평가 오류가 나면서 규칙이 거부로 떨어져, 그런 계정은 본인
+           // 소개글(description)을 저장할 수 없었다(실측 확인). 바로 아래
+           // hasUnseenWarning은 이미 .get()으로 안전하게 처리돼 있었는데 여기만 빠져
+           // 있었다. 필드가 없으면 0으로 보고 비교한다.
+           && (isAdminActor || newData.get('warnings', 0) == oldData.get('warnings', 0))
            && (isAdminActor
                || !newData.get('hasUnseenWarning', false)
                || oldData.get('hasUnseenWarning', false))
@@ -562,6 +676,21 @@ service cloud.firestore {
   // 관리자는 기존 동작대로 한도에서 제외된다.
   function underQuota(field, limit) {
     return isAdmin() || quotaSpent(field, limit);
+  }
+
+  // 오늘자 문서를 덮어쓸 때 어떤 카운터도 감소하지 않아야 한다.
+  // 필드가 없던 경우(0)에서 늘어나는 것은 정상이므로 .get(f, 0)으로 비교한다.
+  function counterNotDecreasing(f) {
+    return request.resource.data.get(f, 0) >= resource.data.get(f, 0);
+  }
+
+  function countersNotDecreasing() {
+    return counterNotDecreasing('noticeCount')
+           && counterNotDecreasing('eventCount')
+           && counterNotDecreasing('commentCount')
+           && counterNotDecreasing('faqQuestionCount')
+           && counterNotDecreasing('uploadBytes')
+           && counterNotDecreasing('downloadBytes');
   }
 
   // 클라이언트가 보낸 timestamp가 서버시각과 20분(1,200,000ms) 이내인지.
