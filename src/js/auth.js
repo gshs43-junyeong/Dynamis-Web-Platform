@@ -22,6 +22,7 @@ import {
     browserLocalPersistence,
     browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { debugLog } from './utils.js';
 
 const SIGNUP_STORAGE_KEY = 'dynamis_pending_signup';
 let applyUserSessionUIFunc = null;
@@ -75,7 +76,7 @@ export async function applyPersistencePreference() {
     const selected = shouldPersist ? browserLocalPersistence : browserSessionPersistence;
     try {
         await setPersistence(auth, selected);
-        console.log('[Login] Persistence set to:', shouldPersist ? 'LOCAL' : 'SESSION');
+        debugLog('[Login] Persistence set to:', shouldPersist ? 'LOCAL' : 'SESSION');
     } catch (err) {
         console.warn('[Login] Failed to set persistence:', err.message);
     }
@@ -206,18 +207,18 @@ export function initializeAuthCallbacks(callback) {
     onAuthStateChanged(auth, async (user) => {
         if (!applyUserSessionUIFunc) return;
         if (!user || user.isAnonymous) {
-            console.log('[Auth State] User logged out or anonymous');
+            debugLog('[Auth State] User logged out or anonymous');
             clearPendingAuthIntent();
             applyUserSessionUIFunc(null);
             return;
         }
 
         try {
-            console.log('[Auth State] User logged in:', user.uid, user.email);
+            debugLog('[Auth State] User logged in');
             const userDocRef = doc(db, 'users', user.uid);
             const userDoc = await getDoc(userDocRef);
             if (userDoc.exists()) {
-                console.log('[Auth State] Existing user found in Firestore:', userDoc.data().name);
+                debugLog('[Auth State] Existing user found in Firestore');
                 clearPendingSignupData();
                 if (pendingAuthIntent?.type === 'signup') {
                     setAuthStatus(`${pendingAuthIntent.providerLabel} 회원가입 성공: 계정이 연결되었습니다.`, 'success');
@@ -238,10 +239,10 @@ export function initializeAuthCallbacks(callback) {
                 return;
             }
 
-            console.log('[Auth State] New user detected, checking pending signup data...');
+            debugLog('[Auth State] New user detected, checking pending signup data...');
             const pendingData = getPendingSignupData();
             if (pendingData) {
-                console.log('[Auth State] Pending signup data found:', pendingData);
+                debugLog('[Auth State] Pending signup data found');
                 const resolvedProfile = await resolveUniqueSignupProfile(pendingData.id, pendingData.batch, pendingData.name);
                 if (!resolvedProfile.ok) {
                     console.error('[Auth State] Profile validation failed:', resolvedProfile.message);
@@ -252,7 +253,7 @@ export function initializeAuthCallbacks(callback) {
                     return;
                 }
 
-                console.log('[Auth State] Creating new user profile in Firestore...');
+                debugLog('[Auth State] Creating new user profile in Firestore...');
                 await setDoc(userDocRef, {
                     uid: user.uid,
                     id: resolvedProfile.id,
@@ -272,25 +273,23 @@ export function initializeAuthCallbacks(callback) {
                     batch: resolvedProfile.batch,
                     name: resolvedProfile.name
                 });
-                // 부원 목록은 비로그인 방문자에게도 보여야 하므로, 공개해도 되는
-                // 필드만 담은 공개 프로필을 함께 만든다 (firebase.rules 참고).
-                await setDoc(doc(db, 'memberProfiles', user.uid), {
-                    uid: user.uid,
-                    batch: resolvedProfile.batch,
-                    name: resolvedProfile.name,
-                    role: 'general',
-                    description: ''
-                });
+                // 공개 프로필(memberProfiles)은 여기서 만들지 않는다.
+                //
+                // 가입 직후 등급은 항상 'general'이고, 부원 목록은 admin/member/honored만
+                // 렌더링하므로 미승인 계정은 화면 어디에도 나타나지 않는다. 그런데
+                // 예전에는 가입 시점에 공개 프로필을 함께 만들어서, 이 컬렉션을 통째로
+                // 읽으면 화면에 없는 사람들의 실명·기수까지 그대로 노출됐다.
+                // 관리자가 부원으로 승격시킬 때 admin.js가 공개 프로필을 만든다.
                 clearPendingSignupData();
                 const createdUserDoc = await getDoc(userDocRef);
-                console.log('[Auth State] New user profile created successfully:', createdUserDoc.data().name);
+                debugLog('[Auth State] New user profile created successfully');
                 setAuthStatus(`${pendingAuthIntent?.providerLabel || 'GitHub/Google'} 회원가입 성공: 계정이 생성되었습니다.`, 'success');
                 clearPendingAuthIntent();
                 applyUserSessionUIFunc(createdUserDoc.data());
                 return;
             }
 
-            console.log('[Auth State] No pending signup data - unregistered account, rejecting login');
+            debugLog('[Auth State] No pending signup data - unregistered account, rejecting login');
             clearPendingSignupData();
             clearPendingAuthIntent();
             await signOut(auth);
@@ -339,7 +338,7 @@ async function signInWithProvider(provider, providerName) {
     await applyPersistencePreference();
 
     try {
-        console.log('[Login] Using redirect for', providerName, 'login');
+        debugLog('[Login] Using redirect for', providerName, 'login');
         await signInWithRedirect(auth, provider);
     } catch (err) {
         if (isProviderNotAllowedError(err)) {
@@ -398,7 +397,7 @@ export async function handleSignupWithGoogle() {
         return;
     }
 
-    console.log('[Signup Flow] Google signup - showing preview:', { id, batch, name });
+    debugLog('[Signup Flow] Google signup - showing preview:', { id, batch, name });
     await window.showSignupPreview(id, batch, name, 'google');
 }
 
@@ -431,7 +430,7 @@ export async function handleSignupWithGitHub() {
         return;
     }
 
-    console.log('[Signup Flow] GitHub signup - showing preview:', { id, batch, name });
+    debugLog('[Signup Flow] GitHub signup - showing preview:', { id, batch, name });
     await window.showSignupPreview(id, batch, name, 'github');
 }
 
@@ -465,7 +464,7 @@ window.showSignupPreview = async function(id, batch, name, provider) {
     }
     
     // 중복 검사 수행
-    console.log('[Signup Preview] Checking for duplicates...');
+    debugLog('[Signup Preview] Checking for duplicates...');
     const usernamesRef = collection(db, 'usernames');
     let duplicateWarnings = [];
     let hasDuplicate = false;
@@ -538,7 +537,7 @@ window.proceedSignupWithGoogle = async function() {
     if (!signupPreviewData) return;
     const { id, batch, name } = signupPreviewData;
     
-    console.log('[Signup Flow] Proceeding with Google OAuth after preview confirmation:', { id, batch, name });
+    debugLog('[Signup Flow] Proceeding with Google OAuth after preview confirmation:', { id, batch, name });
     window.closeSignupPreview();
     storePendingSignupData({ id, batch, name });
     pendingAuthIntent = { type: 'signup', providerLabel: 'Google' };
@@ -564,7 +563,7 @@ window.proceedSignupWithGoogle = async function() {
     }
 
     try {
-        console.log('[Signup Flow] Using redirect for Google signup');
+        debugLog('[Signup Flow] Using redirect for Google signup');
         await signInWithRedirect(auth, googleProvider);
     } catch (err) {
         if (isProviderNotAllowedError(err)) {
@@ -582,7 +581,7 @@ window.proceedSignupWithGitHub = async function() {
     if (!signupPreviewData) return;
     const { id, batch, name } = signupPreviewData;
     
-    console.log('[Signup Flow] Proceeding with GitHub OAuth after preview confirmation:', { id, batch, name });
+    debugLog('[Signup Flow] Proceeding with GitHub OAuth after preview confirmation:', { id, batch, name });
     window.closeSignupPreview();
     storePendingSignupData({ id, batch, name });
     pendingAuthIntent = { type: 'signup', providerLabel: 'GitHub' };
@@ -608,7 +607,7 @@ window.proceedSignupWithGitHub = async function() {
     }
 
     try {
-        console.log('[Signup Flow] Using redirect for GitHub signup');
+        debugLog('[Signup Flow] Using redirect for GitHub signup');
         await signInWithRedirect(auth, githubProvider);
     } catch (err) {
         if (isProviderNotAllowedError(err)) {

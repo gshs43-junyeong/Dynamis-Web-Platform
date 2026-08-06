@@ -35,6 +35,18 @@ export function iconLabel(name, text, { muted = false } = {}) {
     return wrap;
 }
 
+// 개발 중에만 출력되는 로그.
+//
+// 개발하며 남긴 진행 로그가 배포본 콘솔에 그대로 찍히면, 공유 PC나 화면 공유
+// 상황에서 로그인 상태 같은 정보가 옆 사람에게 그대로 보인다. Vite가 빌드 시
+// import.meta.env.PROD를 true로 치환하므로 배포본에서는 아무것도 출력되지 않는다.
+//
+// 실제 장애 진단에 필요한 console.warn/error는 그대로 둔다 — 사용자에게는 alert로
+// 일반화된 메시지가 나가고 상세는 콘솔에만 남는 구조를 유지하기 위함이다.
+export function debugLog(...args) {
+    if (!import.meta.env.PROD) console.log(...args);
+}
+
 export function escapeHTML(str) {
     if (!str) return "";
     return str.toString().replace(/[&<>'"]/g, function (tag) {

@@ -5,6 +5,7 @@ import {
     onSnapshot,
     getDoc,
     setDoc,
+    deleteDoc,
     writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { formatUserIdentityLabel, getRoleLabel } from './utils.js';
@@ -166,14 +167,25 @@ async function ensureOwnProfileMirrored() {
     const uid = firebaseAuth.currentUser?.uid;
     if (!loggedInUser || !uid) return;
 
-    const desired = {
-        uid,
-        name: loggedInUser.name || '',
-        batch: loggedInUser.batch || '',
-        role: loggedInUser.role || 'general',
-        description: loggedInUser.description || ''
-    };
+    const role = loggedInUser.role || 'general';
     try {
+        // 미승인(general) 계정은 공개 프로필을 갖지 않는다. 부원 목록에 나타나지도
+        // 않는데 실명·기수만 공개로 노출되던 문제 때문이다(firebase.rules 참고).
+        // 예전 버전이 가입 시점에 만들어 둔 문서가 남아 있을 수 있으므로, 남아 있으면
+        // 본인 로그인 시 스스로 지운다.
+        if (role === 'general') {
+            const snap = await getDoc(doc(db, 'memberProfiles', uid));
+            if (snap.exists()) await deleteDoc(doc(db, 'memberProfiles', uid));
+            return;
+        }
+
+        const desired = {
+            uid,
+            name: loggedInUser.name || '',
+            batch: loggedInUser.batch || '',
+            role,
+            description: loggedInUser.description || ''
+        };
         const snap = await getDoc(doc(db, 'memberProfiles', uid));
         const current = snap.exists() ? snap.data() : null;
         const isUpToDate = current && ['name', 'batch', 'role', 'description']

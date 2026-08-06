@@ -18,7 +18,8 @@ import {
     assertFails,
 } from '@firebase/rules-unit-testing';
 import {
-    doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, increment,
+    doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, query, where,
+    collection, writeBatch, increment,
     serverTimestamp,
 } from 'firebase/firestore';
 
@@ -285,6 +286,106 @@ await check('S-4', '[정상] 신규 가입자가 곧바로 소개글 저장 (L-5
         uid: 'newbie', id: 'newbie1', batch: '44기', name: '신입회원',
         role: 'general', warnings: 0, createdAt: now(),
     }));
+
+console.log('\n=== M-1 : 미승인(general) 계정의 공개 프로필 노출 ===');
+await check('M-1a', '가입 직후(general) 계정이 공개 프로필을 만드는 것 차단', 'block', () =>
+    setDoc(doc(ctx('carol'), 'memberProfiles/carol'), {
+        uid: 'carol', name: '캐롤캐롤', batch: '43기', role: 'general', description: '',
+    }));
+await check('M-1b', '[정상] 승인된 부원은 공개 프로필 생성 가능', 'allow', () =>
+    setDoc(doc(ctx('alice'), 'memberProfiles/alice'), {
+        uid: 'alice', name: '앨리스맨', batch: '42기', role: 'member', description: '',
+    }));
+await check('M-1c', '[정상] 강등 시 관리자가 공개 프로필 삭제 가능', 'allow',
+    () => deleteDoc(doc(ctx('admin1'), 'memberProfiles/alice')),
+    async (db) => setDoc(doc(db, 'memberProfiles/alice'), {
+        uid: 'alice', name: '앨리스맨', batch: '42기', role: 'member', description: '',
+    }));
+await check('M-1d', '공개 프로필 등급을 실제보다 높게 위조 차단', 'block', () =>
+    setDoc(doc(ctx('alice'), 'memberProfiles/alice'), {
+        uid: 'alice', name: '앨리스맨', batch: '42기', role: 'admin', description: '',
+    }));
+
+console.log('\n=== M-2 : users 읽기 범위 축소 ===');
+await check('M-2a', '로그인만 한 사용자가 남의 계정 문서 열람', 'block', () =>
+    getDoc(doc(ctx('carol'), 'users/alice')));
+await check('M-2b', '[정상] 본인 계정 문서는 열람 가능', 'allow', () =>
+    getDoc(doc(ctx('alice'), 'users/alice')));
+await check('M-2c', '[정상] 관리자는 남의 계정 문서 열람 가능', 'allow', () =>
+    getDoc(doc(ctx('admin1'), 'users/alice')));
+
+console.log('\n=== M-6 : usernames 아이디 선점 ===');
+await check('M-6a', '남의 아이디를 임의로 선점', 'block', () =>
+    setDoc(doc(ctx('alice'), 'usernames/hong_gildong'), {
+        uid: 'alice', batch: '42기', name: '홍길동인',
+    }));
+await check('M-6b', '본인 uid가 아닌 값으로 usernames 생성', 'block', () =>
+    setDoc(doc(ctx('alice'), 'usernames/alice1'), {
+        uid: 'bob', batch: '42기', name: '앨리스맨',
+    }));
+await check('M-6c', '[정상] 본인 users.id와 일치하는 문서는 생성 가능', 'allow', () =>
+    setDoc(doc(ctx('alice'), 'usernames/alice1'), {
+        uid: 'alice', batch: '42기', name: '앨리스맨',
+    }));
+await check('M-6d', '[정상] 가입 중복 검사용 질의(list)는 계속 허용', 'allow', () =>
+    getDocs(query(collection(ctx('alice'), 'usernames'), where('batch', '==', '42기'), where('name', '==', '앨리스맨'))));
+
+console.log('\n=== L-13 : 이벤트 본문 문서 / 마감 시각 ===');
+await check('L-13a', "content 하위 문서를 'main' 외 임의 ID로 무제한 생성", 'block', () =>
+    setDoc(doc(ctx('alice'), 'events/e1/content/spam1'), { content: 'x' }));
+await check('L-13b', '[정상] main 본문 작성은 계속 가능', 'allow', () =>
+    setDoc(doc(ctx('alice'), 'events/e1/content/main'), { content: '행사 본문' }));
+await check('L-13c', '작성자가 마감 시각을 사후 연장', 'block', () =>
+    updateDoc(doc(ctx('alice'), 'events/e1'), { deadline: now() + 999999999 }));
+
+console.log('\n=== L-6 : 이름 문자 검증 서버 이식 ===');
+await check('L-6a', '제로폭 문자를 섞은 이름으로 가입', 'block', () =>
+    setDoc(doc(ctx('newbie'), 'users/newbie'), {
+        uid: 'newbie', id: 'newbie1', batch: '44기', name: '신입\u200b회원',
+        role: 'general', warnings: 0, createdAt: now(),
+    }));
+await check('L-6b', '[정상] 한글 정상 이름은 통과', 'allow', () =>
+    setDoc(doc(ctx('newbie'), 'users/newbie'), {
+        uid: 'newbie', id: 'newbie1', batch: '44기', name: '신입회원',
+        role: 'general', warnings: 0, createdAt: now(),
+    }));
+
+console.log('\n=== L-1 : 첨부 파일명 / MIME ===');
+const noticeWith = (files) => async () => {
+    const db = ctx('alice');
+    const b = writeBatch(db);
+    b.set(doc(db, 'notices/att'), {
+        title: 't', content: 'c', authorId: 'alice', authorName: '앨리스맨',
+        authorBatch: '42기', authorRole: 'member', date: '2026.8.6',
+        timestamp: now(), pinned: false, files,
+    });
+    b.set(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 1 });
+    return b.commit();
+};
+await check('L-1a', 'data:text/html 첨부(로컬 실행 위험)', 'block',
+    noticeWith([{ fileName: 'report.html', fileSize: 10, fileData: 'data:text/html;base64,PHNjcmlwdD4=' }]));
+await check('L-1b', 'image/svg+xml 첨부', 'block',
+    noticeWith([{ fileName: 'a.svg', fileSize: 10, fileData: 'data:image/svg+xml;base64,PHN2Zz4=' }]));
+await check('L-1c', 'RTL override(U+202E)를 넣은 파일명', 'block',
+    noticeWith([{ fileName: '\u202Ecod.exe', fileSize: 10, fileData: 'data:application/pdf;base64,AAA=' }]));
+await check('L-1d', '경로 구분자가 든 파일명', 'block',
+    noticeWith([{ fileName: '../../etc/passwd', fileSize: 10, fileData: 'data:application/pdf;base64,AAA=' }]));
+await check('L-1e', '[정상] 한글 이름의 PDF 첨부는 계속 허용', 'allow',
+    noticeWith([{ fileName: '재료역학 정리.pdf', fileSize: 10, fileData: 'data:application/pdf;base64,AAA=' }]));
+await check('L-1f', '[정상] 한글 이름의 hwp/zip 첨부도 계속 허용(허용목록 방식 아님)', 'allow',
+    noticeWith([{ fileName: '세미나 자료.hwp', fileSize: 10, fileData: 'data:application/x-hwp;base64,AAA=' }]));
+
+console.log('\n=== L-14 : 서버 한도를 클라이언트 바이트 한도에 맞춤 ===');
+await check('L-14a', '클라이언트 한도(2000B)를 넘는 공지 본문', 'block', async () => {
+    const db = ctx('alice');
+    const b = writeBatch(db);
+    b.set(doc(db, 'notices/big'), {
+        title: 't', content: 'A'.repeat(9000), authorId: 'alice', authorName: '앨리스맨',
+        authorBatch: '42기', authorRole: 'member', date: '2026.8.6', timestamp: now(), pinned: false,
+    });
+    b.set(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 1 });
+    return b.commit();
+});
 
 await testEnv.cleanup();
 

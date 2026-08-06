@@ -62,28 +62,35 @@ async function backfillMemberProfiles(userDocs) {
         .map((docSnap) => ({ ...docSnap.data(), uid: docSnap.data().uid || docSnap.id }))
         .filter((u) => {
             const current = profileByUid.get(u.uid);
+            // 미승인(general) 계정은 공개 프로필이 "없는" 것이 정상이다.
+            // 예전에 가입 시점에 만들어져 남아 있는 것이 있으면 지워야 하므로,
+            // 있을 때만 처리 대상으로 잡는다.
+            if ((u.role || 'general') === 'general') return !!current;
             if (!current) return true;
             return (current.name || '') !== (u.name || '')
                 || (current.batch || '') !== (u.batch || '')
-                || (current.role || '') !== (u.role || 'general')
+                || (current.role || '') !== u.role
                 || (current.description || '') !== (u.description || '');
         });
     if (!stale.length) return;
 
     for (const u of stale) {
         try {
+            if ((u.role || 'general') === 'general') {
+                await deleteDoc(doc(db, 'memberProfiles', u.uid));
+                continue;
+            }
             await setDoc(doc(db, 'memberProfiles', u.uid), {
                 uid: u.uid,
                 name: u.name || '',
                 batch: u.batch || '',
-                role: u.role || 'general',
+                role: u.role,
                 description: u.description || ''
             });
         } catch (err) {
             console.warn(`[Admin] 공개 프로필 보정 실패 (${u.uid}):`, err?.message || err);
         }
     }
-    console.log(`[Admin] 공개 프로필 ${stale.length}건 보정 완료.`);
 }
 
 export function renderAdminUserConsole() {
@@ -194,48 +201,70 @@ export async function commitRoleChange(userId, targetRole) {
         return selectElement ? selectElement.value : null;
     })();
     if (!roleToApply) return;
-    console.log('[Admin Debug] commitRoleChange 대상 userId:', userId);
-    console.log('[Admin Debug] 관리자 본인 firebaseAuth.currentUser?.uid:', firebaseAuth.currentUser?.uid);
-    console.log('[Admin Debug] 관리자 본인 loggedInUser.role:', loggedInUser?.role);
     try {
         await updateDoc(doc(db, 'users', userId), { role: roleToApply });
-        // 공개 프로필의 등급도 맞춰준다. 규칙이 users 문서의 값과 대조하므로
-        // 한 배치로 묶으면 get()이 커밋 전 값(=예전 등급)을 봐서 거부된다 — 순차로 쓴다.
+    } catch (err) {
+        alert('등급 변경에 실패했습니다: ' + err.message);
+        return;
+    }
+
+    // 공개 프로필의 등급도 맞춰준다. 규칙이 users 문서의 값과 대조하므로
+    // 한 배치로 묶으면 get()이 커밋 전 값(=예전 등급)을 봐서 거부된다 — 순차로 쓴다.
+    //
+    // 이 단계 실패를 조용히 넘기면 안 된다. 특히 강등 시 실패하면 부원 목록에는
+    // 예전 등급(예: 관리자)이 그대로 남아, 실제 권한은 없는데 남들에게는 여전히
+    // 관리자로 보이는 상태가 된다. 등급 변경 자체는 이미 성공했으므로 그 사실과
+    // 함께 알리고 재시도를 유도한다.
+    try {
         await syncMemberProfileRole(userId, roleToApply);
         alert('해당 회원의 등급 권한이 성공적으로 업데이트되었습니다.');
+    } catch (err) {
+        alert('등급은 변경되었지만, 부원 목록에 표시되는 공개 프로필 반영에 실패했습니다.\n'
+            + '목록에 예전 등급이 남아 있을 수 있으니 잠시 후 등급 변경을 한 번 더 실행해 주세요.\n'
+            + '(사유: ' + (err?.message || err) + ')');
+    }
+
+    try {
         if (loggedInUser && firebaseAuth.currentUser?.uid === userId) {
             const userSnapshot = await getDoc(doc(db, 'users', userId));
             if (userSnapshot.exists()) applyUserSessionUI(userSnapshot.data());
         }
-    } catch (err) {
-        console.error('[Admin Debug] commitRoleChange 에러 상세:', err.code, err.message);
-        alert('등급 변경에 실패했습니다: ' + err.message);
+    } catch {
+        /* 본인 세션 UI 갱신 실패는 화면 새로고침으로 회복되므로 무시한다 */
     }
 }
 
+// 공개 프로필(memberProfiles)을 등급에 맞춰 만들거나 지운다.
+//
+// 미승인(general)은 공개 프로필을 갖지 않는다 — 부원 목록에 나타나지도 않는데
+// 데이터만 공개로 남아 실명·기수가 노출되던 문제를 막기 위함이다(firebase.rules).
+// 따라서 강등 시에는 값을 갱신하는 게 아니라 문서를 삭제해야 한다. 규칙도
+// role != 'general'을 요구하므로, 갱신을 시도하면 어차피 거부된다.
+//
+// 실패를 삼키지 않고 던지는 이유: 예전에는 try/catch로 조용히 넘겼는데, 강등 후
+// 이 동기화가 실패하면 공개 프로필에 예전 등급(예: 관리자)이 그대로 남는다.
+// 규칙은 쓰기 시점에만 대조하므로 기존 문서가 저절로 교정되지도 않는다.
 async function syncMemberProfileRole(userId, role) {
-    try {
-        const userSnap = await getDoc(doc(db, 'users', userId));
-        if (!userSnap.exists()) return;
-        const u = userSnap.data();
-        await setDoc(doc(db, 'memberProfiles', userId), {
-            uid: userId,
-            name: u.name || '',
-            batch: u.batch || '',
-            role,
-            description: u.description || ''
-        });
-    } catch (err) {
-        console.warn('[Admin] 공개 프로필 등급 반영 실패:', err?.message || err);
+    const profileRef = doc(db, 'memberProfiles', userId);
+    if (role === 'general') {
+        await deleteDoc(profileRef);
+        return;
     }
+    const userSnap = await getDoc(doc(db, 'users', userId));
+    if (!userSnap.exists()) return;
+    const u = userSnap.data();
+    await setDoc(profileRef, {
+        uid: userId,
+        name: u.name || '',
+        batch: u.batch || '',
+        role,
+        description: u.description || ''
+    });
 }
 
 export async function warnUser(userId) {
     if (!ensureAdminAction()) return;
     if (!confirm('이 유저에게 경고 1회를 누적하겠습니까?')) return;
-    console.log('[Admin Debug] warnUser 대상 userId:', userId);
-    console.log('[Admin Debug] 관리자 본인 firebaseAuth.currentUser?.uid:', firebaseAuth.currentUser?.uid);
-    console.log('[Admin Debug] 관리자 본인 loggedInUser.role:', loggedInUser?.role);
     try {
         await firebaseAuth.currentUser?.getIdToken(true);
         await updateDoc(doc(db, 'users', userId), { warnings: increment(1), hasUnseenWarning: true });
