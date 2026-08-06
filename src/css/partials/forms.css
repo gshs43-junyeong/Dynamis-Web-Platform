@@ -35,3 +35,6 @@
 
 .btn { width: 100%; padding: 1rem; background: white; color: black; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; transition: 0.2s; text-align: center; display: inline-block; text-decoration: none; }
 .btn:hover { opacity: 0.8; }
+
+.btn-oauth { display: inline-flex; align-items: center; justify-content: center; gap: 0.6em; }
+.btn-oauth-icon { width: 1.15em; height: 1.15em; flex-shrink: 0; }
