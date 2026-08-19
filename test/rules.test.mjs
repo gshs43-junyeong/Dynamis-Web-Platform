@@ -178,7 +178,10 @@ await check('L-5a', '[정상] warnings 필드가 없는 계정이 본인 소개�
     updateDoc(doc(ctx('bob'), 'users/bob'), { description: '안녕하세요 밥입니다' }));
 await check('L-5b', '[정상] warnings 필드가 있는 계정이 본인 소개글 저장', 'allow', () =>
     updateDoc(doc(ctx('alice'), 'users/alice'), { description: '앨리스 소개' }));
-await check('L-5c', '본인이 warnings를 임의로 낮추는 것은 여전히 차단', 'block',
+// M-5로 경고가 sanctions/{uid}로 옮겨간 뒤로는 users.warnings는 그냥 아무 의미
+// 없는 필드다 — isValidUserUpdate가 더 이상 이 필드를 보지 않으므로 값을 뭘로
+// 보내든 통과한다(진짜 보호 대상인 sanctions는 W-3/W-6/W-7이 검증한다).
+await check('L-5c', '[정상] users.warnings는 이제 아무 의미 없는 필드(sanctions가 진짜 보호 대상)', 'allow',
     () => updateDoc(doc(ctx('alice'), 'users/alice'), { warnings: 0, description: 'x' }),
     async (db) => setDoc(doc(db, 'users/alice'), { uid: 'alice', id: 'alice1', batch: '42기', name: '앨리스맨', role: 'member', warnings: 3 }));
 await check('L-5d', '[정상] 관리자는 경고를 부여할 수 있다', 'allow', () =>
@@ -275,7 +278,9 @@ await check('S-2', '가입 시 role을 admin으로 실어 보내는 자가 승�
         uid: 'newbie', id: 'newbie1', batch: '44기', name: '신입회원',
         role: 'admin', warnings: 0, createdAt: now(),
     }));
-await check('S-3', '가입 시 warnings를 음수/임의값으로 실어 보내기 차단', 'block', () =>
+// M-5로 warnings가 sanctions/{uid}로 옮겨간 뒤로는 isValidUser가 이 필드를 아예
+// 안 본다 — 가입 시 뭘 보내든 의미 없는 여분 필드일 뿐이라 통과가 정상이다.
+await check('S-3', '[정상] 가입 시 users.warnings에 값을 실어 보내도 무의미(sanctions만 진짜 보호 대상)', 'allow', () =>
     setDoc(doc(ctx('newbie'), 'users/newbie'), {
         uid: 'newbie', id: 'newbie1', batch: '44기', name: '신입회원',
         role: 'general', warnings: -5, createdAt: now(),
@@ -436,6 +441,55 @@ await check('N-12', '[정상] 옛 형태 카드는 본인이 삭제 가능', 'al
         title: '옛 공지', content: '옛 본문', files: [], authorId: 'alice', authorName: '앨리스맨',
         authorBatch: '42기', authorRole: 'member', date: '2026.8.1', timestamp: now(), pinned: false,
     }));
+
+console.log('\n=== M-5 : 제재 이력 분리 (sanctions/{uid}) ===');
+await check('W-1', '[정상] 관리자가 처음 경고 부여 (문서 생성)', 'allow', () =>
+    setDoc(doc(ctx('admin1'), 'sanctions/alice'), { count: 1, hasUnseenWarning: true }, { merge: true }));
+await check('W-2', '[정상] 관리자가 두 번째 경고 부여 (카운터 증가)', 'allow',
+    () => setDoc(doc(ctx('admin1'), 'sanctions/alice'), { count: increment(1), hasUnseenWarning: true }, { merge: true }),
+    async (db) => setDoc(doc(db, 'sanctions/alice'), { count: 1, hasUnseenWarning: true }));
+await check('W-3', '본인이 스스로에게 경고를 부여/조정 시도', 'block', () =>
+    setDoc(doc(ctx('alice'), 'sanctions/alice'), { count: 1, hasUnseenWarning: true }, { merge: true }));
+await check('W-4', '부원이 남에게 경고 부여 시도', 'block', () =>
+    setDoc(doc(ctx('bob'), 'sanctions/alice'), { count: 1, hasUnseenWarning: true }, { merge: true }));
+await check('W-5', '[정상] 본인이 "확인함" 표시만 하는 것은 허용', 'allow',
+    () => updateDoc(doc(ctx('alice'), 'sanctions/alice'), { hasUnseenWarning: false }),
+    async (db) => setDoc(doc(db, 'sanctions/alice'), { count: 2, hasUnseenWarning: true }));
+await check('W-6', '본인이 "확인함" 표시하면서 count를 몰래 낮추는 것 차단', 'block',
+    () => updateDoc(doc(ctx('alice'), 'sanctions/alice'), { count: 0, hasUnseenWarning: false }),
+    async (db) => setDoc(doc(db, 'sanctions/alice'), { count: 2, hasUnseenWarning: true }));
+await check('W-7', '본인이 count를 늘리는 것도 차단(자기 자신 가중 방지)', 'block',
+    () => updateDoc(doc(ctx('alice'), 'sanctions/alice'), { count: 99 }),
+    async (db) => setDoc(doc(db, 'sanctions/alice'), { count: 2, hasUnseenWarning: true }));
+await check('W-8', '삭제는 관리자도 불가 (탈퇴·재가입으로 지워지면 안 됨)', 'block',
+    () => deleteDoc(doc(ctx('admin1'), 'sanctions/alice')),
+    async (db) => setDoc(doc(db, 'sanctions/alice'), { count: 2, hasUnseenWarning: true }));
+await check('W-9', '타인의 경고 이력 열람 차단', 'block',
+    () => getDoc(doc(ctx('bob'), 'sanctions/alice')),
+    async (db) => setDoc(doc(db, 'sanctions/alice'), { count: 2, hasUnseenWarning: true }));
+await check('W-10', '[정상] 본인 경고 이력은 열람 가능', 'allow',
+    () => getDoc(doc(ctx('alice'), 'sanctions/alice')),
+    async (db) => setDoc(doc(db, 'sanctions/alice'), { count: 2, hasUnseenWarning: true }));
+await check('W-11', '정의되지 않은 필드 주입 차단(hasOnly)', 'block', () =>
+    setDoc(doc(ctx('admin1'), 'sanctions/alice'), { count: 1, hasUnseenWarning: true, note: '메모' }, { merge: true }));
+await check('W-12', '[정상] 경고 이력이 users 문서 재생성과 무관하게 살아남는지 (탈퇴 후 재가입 시나리오)', 'allow', async () => {
+    // 1) 관리자가 경고 부여
+    await setDoc(doc(ctx('admin1'), 'sanctions/alice'), { count: 3, hasUnseenWarning: true }, { merge: true });
+    // 2) alice가 계정을 삭제(탈퇴) — users 문서만 지워짐
+    await deleteDoc(doc(ctx('alice'), 'users/alice'));
+    // 3) 같은 uid로 재가입 — sanctions/alice는 규칙상 손댈 수 없으니 그대로다.
+    const db = ctx('alice');
+    await setDoc(doc(db, 'users/alice'), {
+        uid: 'alice', id: 'alice1', batch: '42기', name: '앨리스맨', role: 'general',
+    });
+    const snap = await getDoc(doc(db, 'sanctions/alice'));
+    if (!snap.exists() || snap.data().count !== 3) throw new Error('경고 이력이 사라짐: ' + JSON.stringify(snap.data()));
+    return true;
+});
+
+console.log('\n=== users 문서에서 warnings 필드가 빠진 뒤에도 정상 동작 ===');
+await check('W-13', '[정상] warnings 필드 없이 소개글 저장', 'allow', () =>
+    updateDoc(doc(ctx('bob'), 'users/bob'), { description: '경고 없는 계정' }));
 
 await testEnv.cleanup();
 

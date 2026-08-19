@@ -18,7 +18,13 @@ import { getMembers } from './members.js';
 let latestUsersSnapshotDocs = null;
 let adminUsersUnsub = null;
 
-// 관리자 콘솔용 users 전체 구독은 관리자로 로그인했을 때만 연다.
+// uid → { count, hasUnseenWarning } — sanctions 컬렉션 실시간 캐시.
+// 경고 횟수가 users 문서가 아니라 별도 컬렉션에 있어서(M-5), 목록에 표시하려면
+// 이 구독이 따로 필요하다.
+let latestSanctionsByUid = new Map();
+let adminSanctionsUnsub = null;
+
+// 관리자 콘솔용 users/sanctions 전체 구독은 관리자로 로그인했을 때만 연다.
 // 예전에는 앱 시작 시 무조건 구독해서, 비로그인 방문자까지 전체 회원 문서를
 // 실시간으로 받아 메모리에 들고 있었다(경고 누적 횟수 등 운영 정보 포함).
 export function syncAdminUserConsole() {
@@ -26,7 +32,9 @@ export function syncAdminUserConsole() {
 
     if (!isAdmin) {
         if (adminUsersUnsub) { adminUsersUnsub(); adminUsersUnsub = null; }
+        if (adminSanctionsUnsub) { adminSanctionsUnsub(); adminSanctionsUnsub = null; }
         latestUsersSnapshotDocs = null;
+        latestSanctionsByUid = new Map();
         renderAdminUserConsole();
         return;
     }
@@ -42,6 +50,13 @@ export function syncAdminUserConsole() {
         backfillMemberProfiles(snapshot.docs);
     }, (err) => {
         console.warn('[Admin] 회원 목록 구독 실패:', err?.message || err);
+    });
+
+    adminSanctionsUnsub = onSnapshot(collection(db, 'sanctions'), (snapshot) => {
+        latestSanctionsByUid = new Map(snapshot.docs.map((d) => [d.id, d.data()]));
+        renderAdminUserConsole();
+    }, (err) => {
+        console.warn('[Admin] 경고 이력 구독 실패:', err?.message || err);
     });
 }
 
@@ -127,7 +142,8 @@ export function renderAdminUserConsole() {
             warnSpan.style.color = '#ffaa00';
             warnSpan.style.fontSize = '0.8rem';
             warnSpan.style.fontWeight = 'bold';
-            warnSpan.textContent = `⚠️ 경고 ${String(u.warnings || 0)}회`;
+            const sanctionCount = latestSanctionsByUid.get(u.uid)?.count || 0;
+            warnSpan.textContent = `⚠️ 경고 ${String(sanctionCount)}회`;
             infoTd.appendChild(warnSpan);
 
             const roleTd = document.createElement('td');
@@ -266,11 +282,12 @@ export async function warnUser(userId) {
     if (!ensureAdminAction()) return;
     if (!confirm('이 유저에게 경고 1회를 누적하겠습니까?')) return;
     try {
-        await firebaseAuth.currentUser?.getIdToken(true);
-        await updateDoc(doc(db, 'users', userId), { warnings: increment(1), hasUnseenWarning: true });
+        // sanctions/{userId}는 users와 분리된 문서라 처음 경고를 받는 사용자는
+        // 문서 자체가 없다. merge로 쓰면 없으면 생성, 있으면 count만 원자적으로
+        // +1 된다 (increment()는 동시 경고 처리에도 안전).
+        await setDoc(doc(db, 'sanctions', userId), { count: increment(1), hasUnseenWarning: true }, { merge: true });
         alert('경고가 부여되었습니다.');
     } catch (err) {
-        console.error('[Admin Debug] warnUser 에러 상세:', err.code, err.message);
         alert('경고 부여에 실패했습니다: ' + err.message);
     }
 }

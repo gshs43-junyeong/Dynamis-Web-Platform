@@ -237,12 +237,40 @@ service cloud.firestore {
       }
     }
 
+    // 4. sanctions: 경고 이력. users와 분리된 별도 문서에 둔다.
+    //
+    // 예전에는 경고 횟수(warnings)가 users/{uid} 문서 안에 있었다. 이 문서는 본인이
+    // 언제든 삭제할 수 있고(탈퇴), Firebase Auth 계정 자체는 지워지지 않으니 그
+    // uid로 재가입하면 users/{uid}가 새로 만들어지면서 경고가 0으로 리셋됐다 —
+    // 제재를 받은 사람이 스스로 제재 기록을 지우고 재가입만 하면 그만인 구조였다
+    // (실측 확인).
+    //
+    // sanctions/{uid}는 관리자만 만들고 고칠 수 있고, 삭제는 아예 막혀 있다
+    // (allow delete: if false). users 문서가 사라졌다 다시 생겨도 이 문서는
+    // 그대로 남아 있으므로, 계정을 지웠다 재가입해도 경고 이력이 없어지지 않는다.
+    // 본인은 딱 하나, "확인함" 표시(hasUnseenWarning을 false로)만 할 수 있고
+    // count는 절대 건드릴 수 없다 — 두 번째 allow update가 그 경로다(Firestore
+    // 규칙은 같은 메서드에 대한 여러 allow 블록을 OR로 평가한다).
+    match /sanctions/{userId} {
+      allow read: if request.auth != null
+                  && (request.auth.uid == userId || isAdmin());
+
+      allow create, update: if isAdmin() && isValidSanction(request.resource.data);
+
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    && isValidSanction(request.resource.data)
+                    && request.resource.data.count == resource.data.count
+                    && request.resource.data.get('hasUnseenWarning', false) == false;
+
+      allow delete: if false;
+    }
+
     // 5-b. memberProfiles: 부원 소개용 "공개" 프로필 (비로그인도 열람 가능)
     //
-    // users/{uid}는 로그인해야 읽을 수 있다. 같은 문서 안에 경고 누적 횟수
-    // (warnings, hasUnseenWarning)와 로그인 아이디(id) 같은 비공개 정보가 함께
-    // 들어 있는데, Firestore 규칙은 "문서에서 일부 필드만 읽게" 하는 걸 지원하지
-    // 않아 공개로 열면 그것들까지 통째로 노출되기 때문이다.
+    // users/{uid}는 로그인해야 읽을 수 있다. 같은 문서 안에 로그인 아이디(id) 같은
+    // 비공개 정보가 함께 들어 있는데, Firestore 규칙은 "문서에서 일부 필드만
+    // 읽게" 하는 걸 지원하지 않아 공개로 열면 그것들까지 통째로 노출되기 때문이다.
     //
     // 부원 소개(이름/기수/등급/설명)는 방문자에게도 보여주고 싶으므로, 공개해도
     // 되는 네 필드만 이 컬렉션에 따로 복제해 두고 여기만 공개로 연다.
@@ -668,16 +696,17 @@ service cloud.firestore {
            && data.name is string
            && isValidDisplayName(data.name)
            && data.role == 'general'
-           && (!('warnings' in data) || data.warnings == 0)
            && (!('email' in data))
            && (!('pwHash' in data))
            && (!('pw' in data));
   }
 
-  // 본인 수정으로 바꿀 수 있는 것은 description과 (경고 확인 처리용)
-  // hasUnseenWarning: false 뿐이다.
+  // 본인 수정으로 바꿀 수 있는 것은 description뿐이다.
   //  - name을 잠그지 않으면 가입 후 이름만 바꿔 다른 부원을 사칭할 수 있다.
-  //  - warnings/role은 관리자만 조정할 수 있다.
+  //  - role은 관리자만 조정할 수 있다.
+  //  - 경고 이력(횟수·확인 여부)은 이 문서가 아니라 sanctions/{uid}에 있다. 본인이
+  //    삭제·재생성할 수 있는 users 문서에 두면, 탈퇴 후 재가입으로 초기화된다
+  //    (M-5, 아래 sanctions 규칙 참고).
   function isValidUserUpdate(oldData, newData, isAdminActor) {
     return newData is map
            && newData.uid == oldData.uid
@@ -688,21 +717,18 @@ service cloud.firestore {
            && isValidDisplayName(newData.name)
            && (isAdminActor || newData.name == oldData.name)
            && (isAdminActor || newData.role == oldData.role)
-           // .get()으로 읽는 이유: 가입 시 setDoc은 warnings 필드를 만들지 않으므로
-           // 경고를 한 번도 받지 않은 계정에는 이 필드가 아예 없다. 예전처럼
-           // newData.warnings로 직접 접근하면 "Property warnings is undefined on
-           // object" 평가 오류가 나면서 규칙이 거부로 떨어져, 그런 계정은 본인
-           // 소개글(description)을 저장할 수 없었다(실측 확인). 바로 아래
-           // hasUnseenWarning은 이미 .get()으로 안전하게 처리돼 있었는데 여기만 빠져
-           // 있었다. 필드가 없으면 0으로 보고 비교한다.
-           && (isAdminActor || newData.get('warnings', 0) == oldData.get('warnings', 0))
-           && (isAdminActor
-               || !newData.get('hasUnseenWarning', false)
-               || oldData.get('hasUnseenWarning', false))
            && (!('description' in newData)
                || (newData.description is string && newData.description.size() <= 2000))
            && (!('pwHash' in newData))
            && (!('pw' in newData));
+  }
+
+  function isValidSanction(data) {
+    return data is map
+           && data.keys().hasOnly(['count', 'hasUnseenWarning'])
+           && data.count is int
+           && data.count >= 0
+           && (!('hasUnseenWarning' in data) || data.hasUnseenWarning is bool);
   }
 
   function isValidTraffic(data) {

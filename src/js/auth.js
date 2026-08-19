@@ -228,13 +228,21 @@ export function initializeAuthCallbacks(callback) {
                 clearPendingAuthIntent();
                 applyUserSessionUIFunc(userDoc.data());
 
-                if (userDoc.data().hasUnseenWarning) {
-                    alert(`⚠️ 관리자로부터 경고를 받았습니다. (누적 경고: ${userDoc.data().warnings || 1}회)\n커뮤니티 이용 규칙을 다시 확인해 주세요.`);
-                    try {
-                        await updateDoc(userDocRef, { hasUnseenWarning: false });
-                    } catch (warnClearErr) {
-                        console.warn('[Auth State] 경고 확인 플래그 해제 실패:', warnClearErr.message);
+                // 경고 이력은 users 문서가 아니라 sanctions/{uid}에 있다(M-5) —
+                // 본인이 지웠다 재가입할 수 있는 문서에 두면 경고가 리셋되므로
+                // 따로 뗀 것. 처음 경고를 받은 적 없는 계정은 문서 자체가 없다.
+                try {
+                    const sanctionSnap = await getDoc(doc(db, 'sanctions', user.uid));
+                    if (sanctionSnap.exists() && sanctionSnap.data().hasUnseenWarning) {
+                        alert(`⚠️ 관리자로부터 경고를 받았습니다. (누적 경고: ${sanctionSnap.data().count || 1}회)\n커뮤니티 이용 규칙을 다시 확인해 주세요.`);
+                        try {
+                            await updateDoc(doc(db, 'sanctions', user.uid), { hasUnseenWarning: false });
+                        } catch (warnClearErr) {
+                            console.warn('[Auth State] 경고 확인 플래그 해제 실패:', warnClearErr.message);
+                        }
                     }
+                } catch (sanctionErr) {
+                    console.warn('[Auth State] 경고 이력 조회 실패:', sanctionErr.message);
                 }
                 return;
             }
@@ -260,12 +268,6 @@ export function initializeAuthCallbacks(callback) {
                     batch: resolvedProfile.batch,
                     name: resolvedProfile.name,
                     role: 'general',
-                    // 경고 누적은 0으로 명시해 둔다. 예전에는 이 필드를 아예 만들지
-                    // 않아서, 규칙의 isValidUserUpdate가 warnings를 직접 참조하다
-                    // "undefined" 평가 오류로 거부되는 바람에 경고를 한 번도 받지 않은
-                    // 사용자가 소개글을 저장할 수 없었다. 규칙 쪽도 .get()으로 고쳤지만,
-                    // 데이터 형태 자체를 일관되게 두는 편이 낫다.
-                    warnings: 0,
                     createdAt: Date.now()
                 });
                 await setDoc(doc(db, 'usernames', resolvedProfile.id), {
