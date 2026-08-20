@@ -4,6 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamis - 경남과학고등학교</title>
+    <script>
+    (function () {
+        // 이 사이트는 아직 개발 중이라 관리자 키 없이는 접근을 막는다. 클라이언트
+        // 코드에 그대로 노출되는 값이므로 진짜 보안 경계는 아니고, 일반 방문자가
+        // 미완성 페이지를 보지 않도록 막는 안내용이다 — 진짜 접근 통제는 배포 자체를
+        // 비공개로 유지하는 쪽에서 해야 한다.
+        var DEV_ACCESS_KEY = '3w2uk046cId85nTWo5iROnA1';
+        var STORAGE_FLAG = 'dynamis_dev_access_granted';
+        var LIVE_SITE_URL = 'https://gshs.dynamis.kro.kr';
+
+        var params = new URLSearchParams(location.search);
+        var suppliedKey = params.get('devkey');
+
+        if (suppliedKey && suppliedKey === DEV_ACCESS_KEY) {
+            try { localStorage.setItem(STORAGE_FLAG, '1'); } catch (e) {}
+            params.delete('devkey');
+            var cleanQuery = params.toString();
+            history.replaceState({}, '', location.pathname + (cleanQuery ? '?' + cleanQuery : '') + location.hash);
+        }
+
+        var hasAccess = false;
+        try { hasAccess = localStorage.getItem(STORAGE_FLAG) === '1'; } catch (e) {}
+
+        if (!hasAccess) {
+            alert('🚧 이 사이트는 현재 개발 중입니다.\n잠시 후 실제 운영 중인 사이트로 이동합니다.');
+            location.replace(LIVE_SITE_URL);
+            throw new Error('dev-site-access-blocked');
+        }
+    })();
+    </script>
     <link rel="icon" href="logo.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
