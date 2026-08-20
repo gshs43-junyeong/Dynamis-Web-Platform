@@ -6,18 +6,84 @@
     <title>Dynamis - 경남과학고등학교</title>
     <script>
     (function () {
-        // 이 사이트는 아직 개발 중이라 관리자 키 없이는 접근을 막는다. 클라이언트
-        // 코드에 그대로 노출되는 값이므로 진짜 보안 경계는 아니고, 일반 방문자가
-        // 미완성 페이지를 보지 않도록 막는 안내용이다 — 진짜 접근 통제는 배포 자체를
-        // 비공개로 유지하는 쪽에서 해야 한다.
-        var DEV_ACCESS_KEY = '3w2uk046cId85nTWo5iROnA1';
+        // 이 사이트는 아직 개발 중이라 관리자 키 없이는 접근을 막는다. 키 원문 대신
+        // SHA-256 해시만 소스에 남겨서, 소스를 봐도 원본 키가 바로 드러나지 않고
+        // 무차별 대입으로만 알아낼 수 있게 했다. 다만 이 검증 로직 자체가 브라우저에
+        // 그대로 내려가는 이상 완전한 암호화는 원리적으로 불가능하고(검증하려면
+        // 로직도 같이 실행돼야 하므로), 자바스크립트를 끄거나 페이지 소스를 그대로
+        // 보면 마크업 자체는 이미 응답에 포함돼 있어 완전히 숨기지는 못한다 — 진짜
+        // 접근 통제가 필요하면 배포 자체를 서버/엣지 단(예: Vercel 비밀번호 보호,
+        // Basic Auth)에서 막아야 한다. 이건 어디까지나 일반 방문자가 미완성
+        // 페이지를 우연히 보지 않도록 막는 안내용 장치다.
+        var DEV_ACCESS_KEY_HASH = '5e4094cd1aa5cac8ec131bf94c1b7d215e99ca6419dbbc03cb3efa7f5a4ecac5';
         var STORAGE_FLAG = 'dynamis_dev_access_granted';
         var LIVE_SITE_URL = 'https://gshs.dynamis.kro.kr';
+
+        // 동기적으로 alert -> redirect 흐름을 유지해야 해서(비동기 Web Crypto 대신)
+        // 순수 JS로 짠 동기 SHA-256 구현. 표준 FIPS 180-4 알고리즘 그대로다.
+        function sha256Hex(message) {
+            function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+            var maxWord = Math.pow(2, 32);
+            var result = '';
+            var words = [];
+            var asciiBitLength = message.length * 8;
+            var hash = [];
+            var k = [];
+            var primeCounter = 0;
+            var isComposite = {};
+            for (var candidate = 2; primeCounter < 64; candidate++) {
+                if (!isComposite[candidate]) {
+                    for (var i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+                    hash[primeCounter] = (Math.pow(candidate, 0.5) * maxWord) | 0;
+                    k[primeCounter++] = (Math.pow(candidate, 1 / 3) * maxWord) | 0;
+                }
+            }
+            message += '\x80';
+            while (message.length % 64 - 56) message += '\x00';
+            for (var i = 0; i < message.length; i++) {
+                var j = message.charCodeAt(i);
+                if (j >> 8) return '';
+                words[i >> 2] |= j << ((3 - i) % 4) * 8;
+            }
+            words[words.length] = ((asciiBitLength / maxWord) | 0);
+            words[words.length] = (asciiBitLength);
+            for (var j2 = 0; j2 < words.length;) {
+                var w = words.slice(j2, j2 += 16);
+                var oldHash = hash.slice(0);
+                hash = hash.slice(0, 8);
+                for (var i2 = 0; i2 < 64; i2++) {
+                    var w15 = w[i2 - 15], w2 = w[i2 - 2];
+                    var a = hash[0], e = hash[4];
+                    var temp1 = hash[7]
+                        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+                        + ((e & hash[5]) ^ ((~e) & hash[6]))
+                        + k[i2]
+                        + (w[i2] = (i2 < 16) ? w[i2] : (
+                            w[i2 - 16]
+                            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+                            + w[i2 - 7]
+                            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+                        ) | 0);
+                    var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+                        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+                    hash = [(temp1 + temp2) | 0].concat(hash);
+                    hash[4] = (hash[4] + temp1) | 0;
+                }
+                for (var i3 = 0; i3 < 8; i3++) hash[i3] = (hash[i3] + oldHash[i3]) | 0;
+            }
+            for (var i4 = 0; i4 < 8; i4++) {
+                for (var jj = 3; jj + 1; jj--) {
+                    var b = (hash[i4] >> (jj * 8)) & 255;
+                    result += ((b < 16) ? 0 : '') + b.toString(16);
+                }
+            }
+            return result;
+        }
 
         var params = new URLSearchParams(location.search);
         var suppliedKey = params.get('devkey');
 
-        if (suppliedKey && suppliedKey === DEV_ACCESS_KEY) {
+        if (suppliedKey && sha256Hex(suppliedKey) === DEV_ACCESS_KEY_HASH) {
             try { localStorage.setItem(STORAGE_FLAG, '1'); } catch (e) {}
             params.delete('devkey');
             var cleanQuery = params.toString();
