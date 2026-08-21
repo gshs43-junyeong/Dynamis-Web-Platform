@@ -117,17 +117,12 @@ export function isSafeAttachmentData(dataStr) {
     return typeof dataStr === 'string' && /^data:[a-z0-9.+-]+\/[a-z0-9.+-]*[;,]/i.test(dataStr);
 }
 
-// 첨부파일 용량 상한. firebase.rules의 isAllowedAttachment()와 반드시 같은 값을
-// 유지해야 한다 — 여기서 막으면 큰 파일을 FileReader로 읽어 브라우저 메모리에
-// 올리기 전에 끝나고(관리자 계정도 예외 없음), 실수로 통과해도 서버가 최종
-// 방어선으로 다시 막는다.
-//
-// MAX_ATTACHMENT_FILE_BYTES: 원본 파일 크기 상한(base64 인코딩 시 약 4/3로
-// 늘어나므로, 서버의 파일당 700,000자 상한보다 넉넉히 낮게 잡아 인코딩 후에도
-// 항상 서버 한도 안에 들어오게 한다).
-// MAX_ATTACHMENT_TOTAL_ENCODED_BYTES: 인코딩 후 첨부 합계 상한(서버와 동일한 값).
-export const MAX_ATTACHMENT_FILE_BYTES = 500 * 1024;
-export const MAX_ATTACHMENT_TOTAL_ENCODED_BYTES = 900000;
+// 첨부파일 용량 상한. storage.rules의 withinSizeLimit()과 반드시 같은 값을
+// 유지해야 한다 — 여기서 막으면 큰 파일을 업로드 시도하기 전에 끝나고(관리자
+// 계정도 예외 없음), 실수로 통과해도 서버(Storage 규칙)가 최종 방어선으로
+// 다시 막는다. Storage로 이관(M-3)한 뒤로는 base64 인코딩을 거치지 않으므로
+// 예전처럼 인코딩 팽창분을 감안해 낮게 잡을 필요 없이 서버 상한과 그대로 맞춘다.
+export const MAX_ATTACHMENT_FILE_BYTES = 700000;
 
 export const NOTICE_TAGS = ['학술 자료', '이벤트 안내', '설문 조사', '활동 기록', '기타'];
 

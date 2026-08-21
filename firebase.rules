@@ -40,7 +40,7 @@ service cloud.firestore {
       allow create: if canPostNotice()
                     && isValidNotice(request.resource.data)
                     && isAuthenticAuthor(request.resource.data)
-                    && isAllowedAttachment(request.resource.data)
+                    && isAllowedAttachment(request.resource.data, 'attachments/notices/' + noticeId + '/')
                     && (isAdmin() || request.resource.data.get('pinned', false) == false)
                     && isFreshTimestamp(request.resource.data.timestamp)
                     && underQuota('noticeCount', 5);
@@ -49,7 +49,7 @@ service cloud.firestore {
                     && (
                       (resource.data.authorId == request.auth.uid
                        && isValidNotice(request.resource.data)
-                       && isAllowedAttachment(request.resource.data)
+                       && isAllowedAttachment(request.resource.data, 'attachments/notices/' + noticeId + '/')
                        && authorAndTimeUnchanged()
                        // pinned 변경도 관리자 전용: 본인 수정 경로에서는 값을 그대로 유지해야 한다
                        // (마찬가지로 실측 확인된 셀프 고정 우회 — update 경로도 동일하게 막는다).
@@ -82,7 +82,7 @@ service cloud.firestore {
         allow create, update: if request.auth != null
                     && contentId == 'main'
                     && isValidNoticeContent(request.resource.data)
-                    && isAllowedAttachment(request.resource.data)
+                    && isAllowedAttachment(request.resource.data, 'attachments/notices/' + noticeId + '/')
                     && (noticeAuthorId(database, noticeId) == request.auth.uid || isAdmin());
         allow delete: if request.auth != null
                     && (noticeAuthorId(database, noticeId) == request.auth.uid || isAdmin());
@@ -158,7 +158,7 @@ service cloud.firestore {
         allow create, update: if request.auth != null
                     && contentId == 'main'
                     && isValidEventContent(request.resource.data)
-                    && isAllowedAttachment(request.resource.data)
+                    && isAllowedAttachment(request.resource.data, 'attachments/events/' + eventId + '/')
                     && (eventAuthorId(database, eventId) == request.auth.uid || isAdmin());
         allow delete: if request.auth != null
                     && (eventAuthorId(database, eventId) == request.auth.uid || isAdmin());
@@ -502,68 +502,79 @@ service cloud.firestore {
   }
 
   // 첨부파일 정책: 명예부원은 첨부 불가(클라이언트 UI뿐 아니라 서버에서도 차단),
-  // 파일 개수를 제한하고, 파일당 바이트 크기도 서버에서 직접 검증한다.
+  // 파일 개수를 제한하고, 실제 바이트 크기·MIME 검증은 storage.rules로 옮겼다(M-3).
   //
-  // 예전에는 업로드 용량 체크가 클라이언트(traffic.js의 일일 2MB 예산)에만 있었고,
-  // 그마저 관리자 계정은 건너뛰었다. 규칙은 files가 list인지, 개수가 10개 이하인지만
-  // 봤을 뿐 각 파일의 fileData(base64) 실제 길이는 전혀 검증하지 않았다. 즉 UI를
-  // 거치지 않고 Firestore SDK를 직접 호출하면(또는 관리자 계정이면) 바이트 제한이
-  // 사실상 없었다.
+  // [기존 문제] 첨부(base64)가 Firestore 문서 안에 그대로 들어 있어서, 공지 목록만
+  // 보려는 방문자도 화면에 안 보여줄 첨부 바이트를 전부 내려받았다 — 공지 100건에
+  // 700KB 첨부가 붙어 있으면 홈 화면 진입 한 번에 수십 MB가 나가는 구조였고, 이게
+  // 그대로 Firestore 대역폭 비용(그리고 무료 티어 소진 시 유료 청구)으로 이어졌다.
+  // DDoS/트래픽 공격 관점에서도 "문서 하나 읽기"에 수백 KB가 딸려 나오는 구조는
+  // 공격 비용 대비 효과가 너무 크다.
   //
-  // Firestore 문서 자체가 1MiB로 하드캡되어 있어 "수백 GB짜리 업로드"는 애초에
-  // 불가능하지만(에뮬레이터로 실측: 2MB 첨부부터 INVALID_ARGUMENT로 거부됨), 900KB에
-  // 가까운 파일을 반복해서 채워 넣는 방식으로 무료 티어의 저장 용량(총 1GiB)을
-  // 서서히 소진시킬 수 있었다. 파일당 700KB로 제한해 이 경로를 막는다.
+  // [지금] 실제 파일 바이트는 Firebase Storage에 올라가고(storage.rules가 700KB/파일
+  // 상한·명예부원 금지·업로드자=작성자 또는 관리자 여부를 독립적으로 검증한다),
+  // Firestore에는 fileName/fileSize/storagePath 메타데이터만 남는다. 목록 구독은
+  // 이제 첨부 바이트를 아예 만나지 않고, 글을 열었을 때도 메타데이터만 받다가
+  // 실제 다운로드 클릭 시에만 Storage에서 바이트가 나간다.
   //
-  // 파일별 상한과 별개로 "첨부 합계"까지 규칙에서 직접 더해 검증하는 버전도
-  // 시도했으나, getAfter() 기반 일일 한도 검사(underQuota)와 같은 배치에 있을 때
-  // 에뮬레이터에서 재현 가능한 이상 동작(각 함수는 단독으로는 정상 동작하는데
-  // 함께 쓰면 통과되어 버림)이 나와 제외했다. 파일 개수(≤10) × 파일당 상한만으로도
-  // 결국 Firestore의 문서당 1MiB 하드캡에 걸리므로, 합계를 직접 검사하지 않아도
-  // "수백 GB" 같은 극단적 크기는 여전히 막힌다.
-  function isAllowedAttachment(data) {
+  // storagePath는 이 문서가 속한 notice/event의 attachments/{collection}/{id}/
+  // 접두사 아래여야 한다 — 그래야 "이 경로에 실제로 업로드된 파일"이라는 게
+  // storage.rules의 검증(크기·MIME·업로드자)을 실제로 통과했다는 보장이 선다.
+  // 접두사 밖의 임의 문자열을 메타데이터에 적어 넣어 storage.rules 검증을
+  // 우회한 것처럼 위장하는 경로를 막는다.
+  //
+  // 이관 스크립트를 돌릴 방법이 없어(운영 Firestore 직접 쓰기 권한 없음) 이미
+  // 작성된 옛 공지는 content/files에 예전 형태(base64 fileData)가 그대로 남아
+  // 있다 — 그 문서들은 이제 다시 update되지 않으므로(고정 토글은 카드만 건드리고,
+  // 삭제는 문서 전체 삭제다) 이 규칙이 새 형태만 받아들여도 안전하다.
+  function isAllowedAttachment(data, pathPrefix) {
     return !('files' in data)
            || (data.files is list
                && data.files.size() <= 10
                && (data.files.size() == 0 || selfRole() != 'honored')
-               && filesWithinPerFileLimit(data.files, 700000));
+               && filesWithinPerFileLimit(data.files, 700000, pathPrefix));
   }
 
-  // 파일 1개에 대한 검증(크기 + 이름 + MIME).
+  // 파일 1개에 대한 메타데이터 검증(이름 + 크기 + 경로). 실제 바이트 검증은
+  // storage.rules 쪽 책임이라 여기서는 스키마와 "이 notice/event에 실제로
+  // 업로드된 경로가 맞는지"만 본다.
   //
-  // [이름] 서버에서 전혀 검증하지 않아 확장자 위장이나 U+202E(RTL override) 삽입이
-  // 가능했다. RTL override는 파일명 표시 순서를 뒤집어 "보고서exe.txt"를
+  // [이름] 서버에서 전혀 검증하지 않으면 확장자 위장이나 U+202E(RTL override)
+  // 삽입이 가능하다. RTL override는 파일명 표시 순서를 뒤집어 "보고서exe.txt"를
   // "보고서txt.exe"처럼 보이게 만드는 고전적인 수법이다. 경로 구분자도 막는다.
   //
-  // [MIME] data: 스킴 형식만 보고 MIME은 무제한이라, data:text/html 을
-  // "보고서.html"로 내려받게 만들 수 있었다. 사용자가 그 파일을 열면 로컬
-  // 컨텍스트에서 스크립트가 실행된다. 다만 이 사이트는 학술 자료(hwp/pptx/zip 등)를
-  // 주고받는 용도이므로 허용 목록 방식은 정상 사용을 깨뜨린다. 그래서 브라우저가
-  // 능동 콘텐츠로 렌더링하는 타입만 골라 차단한다.
-  function fileEntryOk(f, maxBytes) {
-    return f.fileData is string
-           && f.fileData.size() <= maxBytes
-           && !f.fileData.matches('(?i)^data:\\s*(text/html|image/svg\\+xml|application/xhtml\\+xml|text/xml|application/xml|text/javascript|application/javascript)\\s*[;,].*')
+  // [fileSize] 클라이언트가 자기 신고한 값이라 다운로드 일일 한도(traffic.js) UX용
+  // 참고치일 뿐, 진짜 바이트 상한은 storage.rules가 업로드 시점에 강제한다. 그래도
+  // 터무니없는 값(음수, maxBytes 초과 주장)은 여기서 막아 둔다.
+  function fileEntryOk(f, maxBytes, pathPrefix) {
+    return f is map
+           && f.keys().hasOnly(['fileName', 'fileSize', 'storagePath'])
            && f.fileName is string
            && f.fileName.size() > 0
            && f.fileName.size() <= 200
-           && !f.fileName.matches('.*[/\\\\\\x{202a}-\\x{202e}\\x{2066}-\\x{2069}\\x{0000}-\\x{001f}].*');
+           && !f.fileName.matches('.*[/\\\\\\x{202a}-\\x{202e}\\x{2066}-\\x{2069}\\x{0000}-\\x{001f}].*')
+           && f.fileSize is int
+           && f.fileSize >= 0
+           && f.fileSize <= maxBytes
+           && f.storagePath is string
+           && f.storagePath.size() <= 300
+           && f.storagePath.matches('^' + pathPrefix + '[^/]+$');
   }
 
   // Firestore 규칙 언어에는 리스트에 대한 map/reduce가 없어, 최대 개수(10)만큼
   // 인덱스를 직접 펼쳐 쓴다. size()가 그보다 작은 인덱스는 존재 자체를 먼저
   // 확인(단락 평가)해 인덱스 초과 오류 없이 안전하게 스킵한다.
-  function filesWithinPerFileLimit(files, maxBytes) {
-    return (files.size() < 1  || fileEntryOk(files[0], maxBytes))
-        && (files.size() < 2  || fileEntryOk(files[1], maxBytes))
-        && (files.size() < 3  || fileEntryOk(files[2], maxBytes))
-        && (files.size() < 4  || fileEntryOk(files[3], maxBytes))
-        && (files.size() < 5  || fileEntryOk(files[4], maxBytes))
-        && (files.size() < 6  || fileEntryOk(files[5], maxBytes))
-        && (files.size() < 7  || fileEntryOk(files[6], maxBytes))
-        && (files.size() < 8  || fileEntryOk(files[7], maxBytes))
-        && (files.size() < 9  || fileEntryOk(files[8], maxBytes))
-        && (files.size() < 10 || fileEntryOk(files[9], maxBytes));
+  function filesWithinPerFileLimit(files, maxBytes, pathPrefix) {
+    return (files.size() < 1  || fileEntryOk(files[0], maxBytes, pathPrefix))
+        && (files.size() < 2  || fileEntryOk(files[1], maxBytes, pathPrefix))
+        && (files.size() < 3  || fileEntryOk(files[2], maxBytes, pathPrefix))
+        && (files.size() < 4  || fileEntryOk(files[3], maxBytes, pathPrefix))
+        && (files.size() < 5  || fileEntryOk(files[4], maxBytes, pathPrefix))
+        && (files.size() < 6  || fileEntryOk(files[5], maxBytes, pathPrefix))
+        && (files.size() < 7  || fileEntryOk(files[6], maxBytes, pathPrefix))
+        && (files.size() < 8  || fileEntryOk(files[7], maxBytes, pathPrefix))
+        && (files.size() < 9  || fileEntryOk(files[8], maxBytes, pathPrefix))
+        && (files.size() < 10 || fileEntryOk(files[9], maxBytes, pathPrefix));
   }
 
   // content/files는 필수가 아니라 "있으면 검증"으로 둔다. 새로 쓰는 카드는 이
