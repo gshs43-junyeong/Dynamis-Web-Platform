@@ -122,10 +122,119 @@ function initCardTilt() {
     });
 }
 
+/* 매개변수 곡면에 실시간으로 파동을 흘려보낸다.
+ *
+ * 마크업에 박혀 있는 path는 위상 t=0인 정지 상태이고(tools/build_hero_geometry.js가
+ * 생성), 여기서 매 프레임 z = sin(u + t)·cos(v)를 다시 계산해 d 속성을 갱신한다.
+ * t가 증가하면 마루와 골이 u 방향으로 이동해 파동이 지나가는 것처럼 보인다.
+ *
+ * [매 프레임 비용을 어떻게 줄였나]
+ * 정직하게 짜면 꼭짓점마다 sin/cos를 호출하게 되는데(11×11×2 = 242회), 삼각함수를
+ * 상수로 분리하면 프레임당 2회로 줄일 수 있다:
+ *
+ *     sin(u + t) = sin(u)·cos(t) + cos(u)·sin(t)
+ *
+ * sin(u), cos(u), cos(v)는 t와 무관하므로 미리 구해 둔다. 등각 투영의 화면x와
+ * 화면y의 z 무관 성분도 마찬가지로 상수라 미리 계산해 둔다. 결과적으로 프레임당
+ * 꼭짓점 하나에 곱셈 몇 번과 뺄셈 하나만 남는다.
+ *
+ * [언제 도는가]
+ * IntersectionObserver로 무대가 화면에 보일 때만 루프를 돌린다. 홈이 아닌 탭으로
+ * 이동하면 무대가 display:none이 되어 교차하지 않으므로 같은 장치로 함께 멈춘다.
+ * 탭 자체가 백그라운드로 가면 rAF가 알아서 멈춘다. */
+function initSurfaceWave() {
+    const svg = document.querySelector('.hero-geo-surface');
+    if (!svg) return;
+
+    // 곡면 파라미터는 마크업이 단일 출처다(생성기가 data-*로 실어 보낸다).
+    const span = parseFloat(svg.dataset.span);
+    const cells = parseInt(svg.dataset.cells, 10);
+    const amp = parseFloat(svg.dataset.amp);
+    if (!Number.isFinite(span) || !Number.isFinite(cells) || !Number.isFinite(amp)) return;
+
+    const paths = svg.querySelectorAll('path');
+    // 생성기는 u방향 (cells+1)개 + v방향 (cells+1)개를 이 순서로 낸다.
+    if (paths.length !== (cells + 1) * 2) return;
+
+    const n = cells;
+    const COS30 = Math.cos(Math.PI / 6);
+    const SIN30 = Math.sin(Math.PI / 6);
+    const stepW = (span * 2) / n;
+
+    // t와 무관한 값들을 미리 계산한다.
+    const sinU = new Float64Array(n + 1);
+    const cosU = new Float64Array(n + 1);
+    const cosV = new Float64Array(n + 1);
+    for (let k = 0; k <= n; k++) {
+        const a = (k / n) * Math.PI * 2 - Math.PI;
+        sinU[k] = Math.sin(a);
+        cosU[k] = Math.cos(a);
+        cosV[k] = Math.cos(a);
+    }
+    // 꼭짓점(i,j)의 화면 좌표 중 z에 영향받지 않는 성분
+    const sx = new Float64Array((n + 1) * (n + 1));
+    const byBase = new Float64Array((n + 1) * (n + 1));
+    for (let i = 0; i <= n; i++) {
+        for (let j = 0; j <= n; j++) {
+            const x = -span + i * stepW;
+            const y = -span + j * stepW;
+            const idx = i * (n + 1) + j;
+            sx[idx] = (x - y) * COS30;
+            byBase[idx] = (x + y) * SIN30;
+        }
+    }
+
+    const round1 = (v) => Math.round(v * 10) / 10;
+    let rafId = null;
+    const start = performance.now();
+
+    function frame(now) {
+        // 약 9초에 한 주기. 기어(12초)와 서로 배수 관계가 아니라서 둘의 위상이
+        // 계속 어긋나며 전체가 규칙적으로 반복되는 느낌을 피한다.
+        const t = ((now - start) / 9000) * Math.PI * 2;
+        const cosT = Math.cos(t);
+        const sinT = Math.sin(t);
+
+        // u방향 능선
+        for (let i = 0; i <= n; i++) {
+            const zRow = (sinU[i] * cosT + cosU[i] * sinT) * amp;
+            let d = '';
+            for (let j = 0; j <= n; j++) {
+                const idx = i * (n + 1) + j;
+                d += (j === 0 ? 'M' : ' L') + round1(sx[idx]) + ',' + round1(byBase[idx] - zRow * cosV[j]);
+            }
+            paths[i].setAttribute('d', d);
+        }
+        // v방향 능선 (같은 꼭짓점을 반대 순서로 잇는다)
+        for (let j = 0; j <= n; j++) {
+            let d = '';
+            for (let i = 0; i <= n; i++) {
+                const idx = i * (n + 1) + j;
+                const z = (sinU[i] * cosT + cosU[i] * sinT) * amp * cosV[j];
+                d += (i === 0 ? 'M' : ' L') + round1(sx[idx]) + ',' + round1(byBase[idx] - z);
+            }
+            paths[n + 1 + j].setAttribute('d', d);
+        }
+        rafId = requestAnimationFrame(frame);
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+        const visible = entries.some((e) => e.isIntersecting);
+        if (visible && rafId === null) {
+            rafId = requestAnimationFrame(frame);
+        } else if (!visible && rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+    });
+    observer.observe(svg);
+}
+
 export function initHero3D() {
     // 모션 최소화 설정에서는 CSS 쪽에서 이미 정적으로 고정하지만, 여기서도
     // 리스너 자체를 붙이지 않아 불필요한 연산을 아예 만들지 않는다.
     if (prefersReducedMotion()) return;
     initHeroStage();
     initCardTilt();
+    initSurfaceWave();
 }

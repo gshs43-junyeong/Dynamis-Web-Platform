@@ -66,11 +66,16 @@ function surfaceMesh(halfSpan, cells, amp) {
 
 const ind = (n) => ' '.repeat(n);
 
+/* 곡면 파라미터는 한 곳에서만 정의한다. hero3d.js가 매 프레임 이 곡면을 다시 계산해
+ * 파동을 흘려보내는데, 거기에 같은 숫자를 또 적어 두면 한쪽만 고쳤을 때 조용히
+ * 어긋난다. 그래서 아래 data-* 속성으로 마크업에 실어 보내고 JS가 그걸 읽게 한다. */
+const SURFACE = { span: 150, cells: 10, amp: 44 };
+
 const rings = [230, 300, 372, 448]
     .map((r, i) => `${ind(28)}<ellipse cx="0" cy="0" rx="${r}" ry="${f(r * 0.3)}" opacity="${(0.5 - i * 0.09).toFixed(2)}"/>`)
     .join('\n');
 
-const mesh = surfaceMesh(150, 10, 44)
+const mesh = surfaceMesh(SURFACE.span, SURFACE.cells, SURFACE.amp)
     .map((d) => `${ind(28)}<path d="${d}"/>`)
     .join('\n');
 
@@ -96,29 +101,38 @@ const markup = `                <!-- 히어로 3D 무대.
 ${rings}
                         </svg>
 
-                        <!-- 심층: 매개변수 곡면 와이어프레임 -->
-                        <svg class="hero-geo hero-geo-surface" viewBox="-280 -220 560 440" fill="none" stroke="currentColor" stroke-width="0.9">
+                        <!-- 심층: 매개변수 곡면 와이어프레임.
+                             아래 path의 d값은 위상 t=0인 정지 상태다 — hero3d.js가 붙으면
+                             매 프레임 다시 계산해 파동이 흐른다. JS가 없거나 모션 최소화
+                             설정이면 이 정지 상태 그대로 남는다. -->
+                        <svg class="hero-geo hero-geo-surface" viewBox="-280 -220 560 440" fill="none" stroke="currentColor" stroke-width="0.9"\n                             data-span="${SURFACE.span}" data-cells="${SURFACE.cells}" data-amp="${SURFACE.amp}">
 ${mesh}
                         </svg>
 
-                        <!-- 중간층: 큰 기어 (천천히 정방향 회전) -->
+                        <!-- 중간층: 큰 기어. 자전은 바깥 <svg>가 아니라 안쪽 .gear-rotor가 맡는다 —
+                             <svg>에는 이미 배치용 translate3d가 걸려 있어서 거기에 회전을
+                             더하면 제자리 자전이 아니라 무대 중심을 도는 공전이 된다. -->
                         <svg class="hero-geo hero-geo-gear-lg" viewBox="-190 -190 380 380" fill="none" stroke="currentColor" stroke-width="1.4">
-${ind(28)}<path d="${gearPath(168, 136, 28)}"/>
-${ind(28)}<circle cx="0" cy="0" r="118"/>
-${ind(28)}<circle cx="0" cy="0" r="46"/>
-${ind(28)}<circle cx="0" cy="0" r="26"/>
-${ind(28)}<g opacity="0.55">
-${ind(32)}<path d="M0,-118 L0,-46 M0,46 L0,118 M-118,0 L-46,0 M46,0 L118,0"/>
-${ind(32)}<path d="M-83,-83 L-33,-33 M83,83 L33,33 M83,-83 L33,-33 M-83,83 L-33,33"/>
+${ind(28)}<g class="gear-rotor">
+${ind(32)}<path d="${gearPath(168, 136, 28)}"/>
+${ind(32)}<circle cx="0" cy="0" r="118"/>
+${ind(32)}<circle cx="0" cy="0" r="46"/>
+${ind(32)}<circle cx="0" cy="0" r="26"/>
+${ind(32)}<g opacity="0.55">
+${ind(36)}<path d="M0,-118 L0,-46 M0,46 L0,118 M-118,0 L-46,0 M46,0 L118,0"/>
+${ind(36)}<path d="M-83,-83 L-33,-33 M83,83 L33,33 M83,-83 L33,-33 M-83,83 L-33,33"/>
+${ind(32)}</g>
 ${ind(28)}</g>
                         </svg>
 
-                        <!-- 중간층: 작은 기어 (큰 기어와 맞물리도록 역방향 회전) -->
+                        <!-- 중간층: 작은 기어 (기어비대로 더 빠르게 역방향 자전) -->
                         <svg class="hero-geo hero-geo-gear-sm" viewBox="-110 -110 220 220" fill="none" stroke="currentColor" stroke-width="1.6">
-${ind(28)}<path d="${gearPath(96, 77, 18)}"/>
-${ind(28)}<circle cx="0" cy="0" r="62"/>
-${ind(28)}<circle cx="0" cy="0" r="24"/>
-${ind(28)}<path d="M0,-62 L0,-24 M0,62 L0,24 M-62,0 L-24,0 M62,0 L24,0" opacity="0.55"/>
+${ind(28)}<g class="gear-rotor">
+${ind(32)}<path d="${gearPath(96, 77, 18)}"/>
+${ind(32)}<circle cx="0" cy="0" r="62"/>
+${ind(32)}<circle cx="0" cy="0" r="24"/>
+${ind(32)}<path d="M0,-62 L0,-24 M0,62 L0,24 M-62,0 L-24,0 M62,0 L24,0" opacity="0.55"/>
+${ind(28)}</g>
                         </svg>
 
                         <!-- 최전면: 좌표축 · 치수선 (설계 도면의 언어) -->

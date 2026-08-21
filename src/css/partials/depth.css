@@ -92,26 +92,31 @@
     transform: translate3d(-575px, 135px, -400px) rotateX(6deg) rotateZ(-3deg);
 }
 
-/* 중간층 — 큰 기어. 오른쪽에서 천천히 자전한다. */
+/* 중간층 — 큰 기어(톱니 28개). 오른쪽에서 자전한다.
+   12초에 한 바퀴면 톱니 하나가 약 0.43초마다 지나가서 "톱니가 실제로 움직인다"는
+   것이 눈에 분명히 들어온다. 더 빠르게 하면 배경이 아니라 시선을 끄는 물체가 되어
+   본문을 읽는 데 방해가 된다. 움직임이 보이는 만큼 밝기도 조금 올렸다. */
 .hero-geo-gear-lg {
     width: 430px;
     height: 430px;
     margin: -215px 0 0 -215px;
-    color: rgba(255, 255, 255, 0.22);
+    color: rgba(255, 255, 255, 0.26);
     transform: translate3d(430px, -30px, -230px) rotateX(14deg) rotateY(-10deg);
-    animation: heroGearSpin 90s linear infinite;
 }
+.hero-geo-gear-lg .gear-rotor { animation: heroGearSpin 12s linear infinite; }
 
-/* 중간층 — 작은 기어. 큰 기어의 오른쪽 위에서 맞물리듯 역방향으로 돈다.
-   (실제 물리적 맞물림까지 계산하지는 않았고, 방향만 반대로 두어 자연스럽게 보이게 했다) */
+/* 중간층 — 작은 기어(톱니 18개). 큰 기어의 오른쪽 위에서 역방향으로 돈다.
+   주기를 12s × 18/28 ≈ 7.7s로 잡았다 — 맞물린 기어는 톱니 수에 반비례하는 각속도로
+   돌기 때문이다. 둘이 실제로 접해 있지는 않아 눈으로 검증되는 부분은 아니지만,
+   아무 숫자나 넣는 것보다 맞는 비율을 쓰는 편이 이 사이트의 성격에 맞다. */
 .hero-geo-gear-sm {
     width: 216px;
     height: 216px;
     margin: -108px 0 0 -108px;
-    color: rgba(255, 255, 255, 0.26);
+    color: rgba(255, 255, 255, 0.3);
     transform: translate3d(583px, -232px, -150px) rotateX(14deg) rotateY(-10deg);
-    animation: heroGearSpin 52s linear infinite reverse;
 }
+.hero-geo-gear-sm .gear-rotor { animation: heroGearSpin 7.7s linear infinite reverse; }
 
 /* 최전면 — 좌표축·치수선. 가장 앞이라 시차가 가장 크게 움직인다. */
 .hero-geo-axes {
@@ -122,12 +127,20 @@
     transform: translate3d(-620px, 150px, -90px) rotateX(4deg);
 }
 
-/* 자전은 각 도형이 이미 갖고 있는 배치 transform과 충돌하면 안 되므로,
-   회전만 담당하는 별도 요소가 아니라 rotate 단축 속성으로 건다. rotate는
-   transform과 독립적으로 합성되어 위 translate3d/rotateX를 덮어쓰지 않는다. */
+/* 자전은 배치용 transform이 걸린 <svg>가 아니라 그 안의 .gear-rotor <g>에 건다.
+   처음에는 rotate 단축 속성을 <svg>에 걸었는데, 그러면 제자리 자전이 아니라
+   무대 중심을 도는 공전이 된다 — rotate/translate/scale 개별 속성은 transform보다
+   "바깥"에서 합성되므로(최종 행렬 = translate × rotate × scale × transform),
+   transform 안의 translate3d(430px …)로 옮겨진 뒤에 회전이 걸려 반지름 430px짜리
+   궤도를 그린다. 실측으로 작은 기어가 y=-172 → 900까지 흘러가는 것을 확인했다.
+
+   <g>에는 배치 transform이 없으므로 여기서는 transform: rotate()를 그대로 쓸 수
+   있다. 기어 좌표가 사용자 공간 원점(0,0) 중심으로 그려져 있고 viewBox도 그 점이
+   한가운데라, transform-origin 기본값(50% 50% = viewBox 중심)이 정확히 기어 중심과
+   일치한다 — 별도 지정이 필요 없다. */
 @keyframes heroGearSpin {
-    from { rotate: 0deg; }
-    to   { rotate: 360deg; }
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
 /* 워드마크 자체에도 얕은 두께를 준다. 여러 겹의 그림자를 아래로 조금씩 밀어
@@ -234,8 +247,8 @@
         transform: none;
         transition: none;
     }
-    .hero-geo-gear-lg,
-    .hero-geo-gear-sm {
+    .hero-geo-gear-lg .gear-rotor,
+    .hero-geo-gear-sm .gear-rotor {
         animation: none;
     }
     #home .card3d,
