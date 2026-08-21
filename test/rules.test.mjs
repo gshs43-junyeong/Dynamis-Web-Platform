@@ -343,16 +343,6 @@ await check('L-13b', '[정상] main 본문 작성은 계속 가능', 'allow', ()
 await check('L-13c', '작성자가 마감 시각을 사후 연장', 'block', () =>
     updateDoc(doc(ctx('alice'), 'events/e1'), { deadline: now() + 999999999 }));
 
-console.log('\n=== M-3 : 이벤트 첨부도 notices와 동일한 storagePath 접두사 검증 ===');
-await check('M3-EP1', '[정상] events/e1 본문에 자기 접두사(attachments/events/e1/) 첨부', 'allow', () =>
-    setDoc(doc(ctx('alice'), 'events/e1/content/main'), {
-        content: '행사 본문', files: [{ fileName: 'x.pdf', fileSize: 10, storagePath: 'attachments/events/e1/f1' }],
-    }));
-await check('M3-EP2', 'events 본문 첨부의 storagePath가 notices 접두사를 가리킴', 'block', () =>
-    setDoc(doc(ctx('alice'), 'events/e1/content/main'), {
-        content: '행사 본문', files: [{ fileName: 'x.pdf', fileSize: 10, storagePath: 'attachments/notices/e1/f1' }],
-    }));
-
 console.log('\n=== L-6 : 이름 문자 검증 서버 이식 ===');
 await check('L-6a', '제로폭 문자를 섞은 이름으로 가입', 'block', () =>
     setDoc(doc(ctx('newbie'), 'users/newbie'), {
@@ -365,11 +355,7 @@ await check('L-6b', '[정상] 한글 정상 이름은 통과', 'allow', () =>
         role: 'general', warnings: 0, createdAt: now(),
     }));
 
-console.log('\n=== L-1 : 첨부 파일명 (메타데이터 스키마) ===');
-// M-3로 첨부 실 바이트가 Storage로 옮겨간 뒤 files 항목은 fileName/fileSize/
-// storagePath 메타데이터만 남는다. MIME 차단(옛 L-1a/L-1b)은 이제 storage.rules
-// 쪽 책임이라 test/storage-rules-smoke.mjs의 S-7이 그 역할을 대신한다. 여기서는
-// 파일명 검증과 storagePath 접두사 검증(신규)만 본다.
+console.log('\n=== L-1 : 첨부 파일명 / MIME ===');
 const noticeWith = (files) => async () => {
     const db = ctx('alice');
     const b = writeBatch(db);
@@ -381,20 +367,18 @@ const noticeWith = (files) => async () => {
     b.set(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 1 });
     return b.commit();
 };
+await check('L-1a', 'data:text/html 첨부(로컬 실행 위험)', 'block',
+    noticeWith([{ fileName: 'report.html', fileSize: 10, fileData: 'data:text/html;base64,PHNjcmlwdD4=' }]));
+await check('L-1b', 'image/svg+xml 첨부', 'block',
+    noticeWith([{ fileName: 'a.svg', fileSize: 10, fileData: 'data:image/svg+xml;base64,PHN2Zz4=' }]));
 await check('L-1c', 'RTL override(U+202E)를 넣은 파일명', 'block',
-    noticeWith([{ fileName: '‮cod.exe', fileSize: 10, storagePath: 'attachments/notices/att/f1' }]));
+    noticeWith([{ fileName: '\u202Ecod.exe', fileSize: 10, fileData: 'data:application/pdf;base64,AAA=' }]));
 await check('L-1d', '경로 구분자가 든 파일명', 'block',
-    noticeWith([{ fileName: '../../etc/passwd', fileSize: 10, storagePath: 'attachments/notices/att/f1' }]));
+    noticeWith([{ fileName: '../../etc/passwd', fileSize: 10, fileData: 'data:application/pdf;base64,AAA=' }]));
 await check('L-1e', '[정상] 한글 이름의 PDF 첨부는 계속 허용', 'allow',
-    noticeWith([{ fileName: '재료역학 정리.pdf', fileSize: 10, storagePath: 'attachments/notices/att/f1' }]));
+    noticeWith([{ fileName: '재료역학 정리.pdf', fileSize: 10, fileData: 'data:application/pdf;base64,AAA=' }]));
 await check('L-1f', '[정상] 한글 이름의 hwp/zip 첨부도 계속 허용(허용목록 방식 아님)', 'allow',
-    noticeWith([{ fileName: '세미나 자료.hwp', fileSize: 10, storagePath: 'attachments/notices/att/f1' }]));
-await check('M3-P1', 'storagePath가 이 notice의 attachments 접두사 밖을 가리킴', 'block',
-    noticeWith([{ fileName: 'x.pdf', fileSize: 10, storagePath: 'attachments/notices/other-notice/f1' }]));
-await check('M3-P2', 'storagePath가 아예 다른 컬렉션(events)을 가리킴', 'block',
-    noticeWith([{ fileName: 'x.pdf', fileSize: 10, storagePath: 'attachments/events/att/f1' }]));
-await check('M3-P3', 'fileData 필드를 다시 실어 보내는 옛 형태는 이제 거부(스키마 hasOnly)', 'block',
-    noticeWith([{ fileName: 'x.pdf', fileSize: 10, fileData: 'data:application/pdf;base64,AAA=' }]));
+    noticeWith([{ fileName: '세미나 자료.hwp', fileSize: 10, fileData: 'data:application/x-hwp;base64,AAA=' }]));
 
 console.log('\n=== L-14 : 서버 한도를 클라이언트 바이트 한도에 맞춤 ===');
 await check('L-14a', '클라이언트 한도(2000B)를 넘는 공지 본문', 'block', async () => {
@@ -430,12 +414,9 @@ await check('N-5', "content/main 문서 ID를 'main' 외 임의로 생성 차단
     setDoc(doc(ctx('alice'), 'notices/n1/content/spam'), { content: 'x', files: [] }));
 await check('N-6', 'content/main 본문이 클라이언트 한도(2000B) 초과', 'block', () =>
     setDoc(doc(ctx('alice'), 'notices/n1/content/main'), { content: 'A'.repeat(3000), files: [] }));
-// 실제 바이트 상한은 이제 storage.rules가 강제한다(test/storage-rules-smoke.mjs
-// S-6). 여기서는 클라이언트가 자기 신고한 fileSize가 상한을 넘는 값을 그대로
-// 우겨 넣는 경우만 본다 — Firestore 쪽은 메타데이터 스키마의 최소 방어선이다.
-await check('N-7', 'content/main 첨부의 자기신고 fileSize가 700KB 초과', 'block', () =>
+await check('N-7', 'content/main에 700KB 초과 첨부', 'block', () =>
     setDoc(doc(ctx('alice'), 'notices/n1/content/main'), {
-        content: '본문', files: [{ fileName: 'big.pdf', fileSize: 750000, storagePath: 'attachments/notices/n1/f1' }],
+        content: '본문', files: [{ fileName: 'big.pdf', fileSize: 1, fileData: 'data:application/pdf;base64,' + 'A'.repeat(750000) }],
     }));
 await check('N-8', '[정상] 비로그인도 content/main 읽기는 가능', 'allow',
     () => getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'notices/n1/content/main')),

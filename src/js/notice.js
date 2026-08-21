@@ -1,4 +1,4 @@
-import { db, auth as firebaseAuth, storage } from './firebase-config.js';
+import { db, auth as firebaseAuth } from './firebase-config.js';
 import { readTrafficState, withinLimit, stageQuota, checkAndRecordDownload } from './traffic.js';
 import {
     collection,
@@ -13,8 +13,7 @@ import {
     orderBy,
     writeBatch
 } from "firebase/firestore";
-import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, uiIcon, iconLabel } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { emit, EVENTS } from './bus.js';
@@ -76,20 +75,23 @@ export async function addNotice() {
         }
     }
 
-    const selectedFiles = fileInput?.files.length > 0 ? Array.from(fileInput.files) : [];
+    const uploadedFilesArray = [];
     let totalNewSize = 0;
-    if (selectedFiles.length > 0) {
+    if (fileInput?.files.length > 0) {
         if (loggedInUser.role === 'honored') {
             alert('❌ 명예부원 등급은 파일 업로드가 절대 허용되지 않습니다.');
             return;
         }
 
-        totalNewSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+        for (let i = 0; i < fileInput.files.length; i++) {
+            totalNewSize += fileInput.files[i].size;
+        }
 
-        // 개별 파일이 너무 크면 업로드를 시도하기 전에 즉시 막는다. 관리자 계정도
-        // 예외가 없다 — storage.rules가 최종 방어선이지만(700KB/파일), 실수로 큰
-        // 파일을 골랐을 때 굳이 업로드를 시작했다가 거부당하게 두지 않는다.
-        const oversizedFile = selectedFiles.find((f) => f.size > MAX_ATTACHMENT_FILE_BYTES);
+        // 개별 파일이 너무 크면 FileReader로 전체를 메모리에 올리기 전에 즉시 막는다.
+        // 관리자 계정도 예외가 없다 — 예전에는 아래 일일 한도 체크만 관리자에게
+        // 생략됐을 뿐 이 검사 자체가 없어서, 큰 파일을 선택하면 서버에 닿기도 전에
+        // 브라우저가 멈추거나 크래시할 수 있었다.
+        const oversizedFile = Array.from(fileInput.files).find((f) => f.size > MAX_ATTACHMENT_FILE_BYTES);
         if (oversizedFile) {
             alert(`❌ [파일 크기 초과] "${oversizedFile.name}" 파일이 첨부 가능한 개별 용량(${Math.floor(MAX_ATTACHMENT_FILE_BYTES / 1024)}KB)을 초과합니다.`);
             return;
@@ -101,6 +103,24 @@ export async function addNotice() {
                 alert('⚠️ [업로드 제한] 하루 최대 파일 업로드 총량(2MB)을 초과하였거나 이번 파일이 허용치를 초과했습니다.');
                 return;
             }
+        }
+
+        for (let i = 0; i < fileInput.files.length; i++) {
+            const file = fileInput.files[i];
+            const data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            uploadedFilesArray.push({ fileName: file.name, fileSize: file.size, fileData: data });
+        }
+
+        // 인코딩(base64) 후 합계가 서버 규칙의 상한을 넘지 않는지 마지막으로 확인.
+        const totalEncodedBytes = uploadedFilesArray.reduce((sum, f) => sum + f.fileData.length, 0);
+        if (totalEncodedBytes > MAX_ATTACHMENT_TOTAL_ENCODED_BYTES) {
+            alert('❌ [첨부 합계 초과] 첨부파일들의 합계 용량이 허용치를 초과합니다. 파일 수를 줄이거나 더 작은 파일로 시도해 주세요.');
+            return;
         }
     }
 
@@ -117,15 +137,14 @@ export async function addNotice() {
         authorId: uid,
         date,
         pinned: false,
-        hasFiles: selectedFiles.length > 0,
+        hasFiles: uploadedFilesArray.length > 0,
         timestamp: Date.now()
     };
 
     try {
         // 카드와 카운터는 한 배치로 원자적으로 쓴다(규칙이 getAfter로 대조).
-        // 파일 업로드·본문은 카드가 커밋된 뒤에 해야 한다 — storage.rules와 본문
-        // 규칙 둘 다 카드 문서를 get()으로 읽어 작성자를 확인하므로, 카드가 아직
-        // 없으면 업로드도 본문 쓰기도 거부된다.
+        // 본문은 카드가 커밋된 뒤에 써야 한다 — 본문 규칙이 카드 문서를 get()으로
+        // 읽어 작성자를 확인하므로 같은 배치에 넣으면 아직 없는 것으로 보인다.
         const noticeRef = doc(collection(db, 'notices'));
         const batch = writeBatch(db);
         batch.set(noticeRef, noticeCard);
@@ -135,14 +154,6 @@ export async function addNotice() {
             stageQuota(batch, uid, trafficState, deltas);
         }
         await batch.commit();
-
-        // 파일 실 바이트는 Storage로, Firestore 본문 문서에는 메타데이터만 남긴다(M-3).
-        const uploadedFilesArray = [];
-        for (const file of selectedFiles) {
-            const path = `attachments/notices/${noticeRef.id}/${crypto.randomUUID()}`;
-            await uploadBytes(storageRef(storage, path), file, { contentType: file.type || 'application/octet-stream' });
-            uploadedFilesArray.push({ fileName: file.name, fileSize: file.size, storagePath: path });
-        }
 
         await setDoc(doc(db, 'notices', noticeRef.id, 'content', 'main'), {
             content,
@@ -388,7 +399,7 @@ async function openNoticeDetail(n) {
             link.appendChild(fileLabel);
             link.onclick = (e) => {
                 e.preventDefault();
-                executeFileDownloadSecure(fObj);
+                executeFileDownloadSecure(e, fObj.fileSize, fObj.fileData, fObj.fileName);
             };
             fileListContainer.appendChild(link);
         });
@@ -452,47 +463,25 @@ async function openNoticeDetail(n) {
     if (noticeModal) noticeModal.style.display = 'flex';
 }
 
-// Storage로 옮긴 새 형태(storagePath)와, 이관 스크립트를 돌릴 방법이 없어(운영
-// Firestore 직접 쓰기 권한 없음) 여전히 남아 있는 옛 형태(fileData, base64 data:
-// URI)를 둘 다 처리한다.
-//
-// Storage 다운로드 URL은 다른 오리진(firebasestorage.googleapis.com)이라 <a
-// download>가 브라우저에 무시되고 그냥 새 창에서 열릴 수 있다 — fetch로 받아
-// blob: URL을 직접 만들면 오리진 문제 없이 항상 원래 파일명으로 저장된다.
-async function executeFileDownloadSecure(fObj) {
+async function executeFileDownloadSecure(e, size, dataStr, nameStr) {
     if (!loggedInUser) return alert('다운로드는 로그인된 회원 정보 세션이 있어야 동작합니다.');
+    if (!isSafeAttachmentData(dataStr)) {
+        alert('⛔ 첨부파일 형식이 올바르지 않아 다운로드를 차단했습니다. 관리자에게 신고해 주세요.');
+        return;
+    }
     if (loggedInUser.role !== 'admin') {
-        const isDownloadAllowed = await checkAndRecordDownload(firebaseAuth.currentUser?.uid, fObj.fileSize || 0, 5 * 1024 * 1024);
+        const isDownloadAllowed = await checkAndRecordDownload(firebaseAuth.currentUser?.uid, size || 0, 5 * 1024 * 1024);
         if (!isDownloadAllowed) {
             alert('❌ [다운로드 제한] 하루 최대 파일 다운로드 총량(5MB) 한도를 초과하여 다운로드가 차단되었습니다.');
             return;
         }
     }
-
-    try {
-        let href = fObj.fileData;
-        let isBlob = false;
-        if (fObj.storagePath) {
-            const downloadUrl = await getDownloadURL(storageRef(storage, fObj.storagePath));
-            const res = await fetch(downloadUrl);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            href = URL.createObjectURL(await res.blob());
-            isBlob = true;
-        } else if (!isSafeAttachmentData(href)) {
-            alert('⛔ 첨부파일 형식이 올바르지 않아 다운로드를 차단했습니다. 관리자에게 신고해 주세요.');
-            return;
-        }
-
-        const gateLink = document.createElement('a');
-        gateLink.href = href;
-        gateLink.download = fObj.fileName;
-        document.body.appendChild(gateLink);
-        gateLink.click();
-        document.body.removeChild(gateLink);
-        if (isBlob) URL.revokeObjectURL(href);
-    } catch (err) {
-        alert('⛔ 첨부파일을 불러오지 못했습니다: ' + err.message);
-    }
+    const gateLink = document.createElement('a');
+    gateLink.href = dataStr;
+    gateLink.download = nameStr;
+    document.body.appendChild(gateLink);
+    gateLink.click();
+    document.body.removeChild(gateLink);
 }
 
 export async function addComment() {
@@ -547,14 +536,6 @@ export async function deleteCurrentNotice() {
     if (!confirm('정말 이 공지사항을 삭제 처리 하시겠습니까? 복구가 불가합니다.')) return;
     if (!currentNoticeDocId) return;
     try {
-        // Storage에 올라간 첨부가 있으면 함께 지운다(안 지워도 보안 문제는 아니고
-        // 그냥 버려진 파일이 남을 뿐이라, 실패해도 삭제 자체는 계속 진행한다).
-        const contentSnap = await getDoc(doc(db, 'notices', currentNoticeDocId, 'content', 'main')).catch(() => null);
-        const files = contentSnap?.exists() ? (contentSnap.data().files || []) : [];
-        await Promise.all(
-            files.filter((f) => f.storagePath).map((f) => deleteObject(storageRef(storage, f.storagePath)).catch(() => {}))
-        );
-
         // 본문 문서 먼저 삭제한 뒤 카드 문서 삭제. 옛 형태 공지는 content/main이
         // 애초에 없으므로 실패를 조용히 넘긴다.
         await deleteDoc(doc(db, 'notices', currentNoticeDocId, 'content', 'main')).catch(() => {});

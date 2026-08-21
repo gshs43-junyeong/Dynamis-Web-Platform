@@ -1,6 +1,5 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
 import {
     initializeAppCheck,
     ReCaptchaV3Provider
@@ -73,8 +72,3 @@ export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
 
 export const db = getFirestore(app);
-
-// M-3 근본 해법: 첨부파일 실 바이트를 Firestore 문서가 아니라 Storage에 둔다.
-// storage.rules가 파일당 700KB 상한·MIME 차단·업로드자=작성자/관리자 여부를
-// 독립적으로 검증한다.
-export const storage = getStorage(app);
