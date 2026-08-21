@@ -3,7 +3,17 @@
 // 별도 파일로 뒀다. firestore.get() cross-service 호출이 실제로 Firestore
 // 에뮬레이터 데이터를 읽어오는지가 핵심 확인 대상이다.
 //
-// 실행 전: firebase emulators:start --only firestore,storage --project dynamis-audit
+// 실행 전: npm i --no-save firebase-tools @firebase/rules-unit-testing firebase
+//         firebase emulators:start --only firestore,storage --project dynamis-audit
+// 실행:    node test/storage-rules-smoke.mjs
+//
+// ⚠️ 샌드박스에서 작성할 당시 firestore.get() cross-service 호출(myRole()/작성자
+// 대조)이 이 환경의 Storage↔Firestore 에뮬레이터 간 통신에서만 "no rule allows
+// host 127.0.0.1"로 실패해, 허용(allow) 경로(S-2/S-4/S-10)를 로컬에서 끝까지
+// 검증하지 못했다. 거부(block) 경로는 전부 통과했고 문법도 Firebase 공식 문서와
+// 대조 확인했지만, 실제 Firebase 프로젝트(또는 이 샌드박스 밖의 로컬 환경)에서
+// 한 번은 이 스크립트를 다시 돌려 S-2/S-4/S-10이 'allow'로 나오는지 확인할 것.
+// (실패 시 fail-closed라 보안 사고는 아니지만, 그러면 아무도 첨부를 못 올린다.)
 import { readFileSync } from 'fs';
 import {
     initializeTestEnvironment,
