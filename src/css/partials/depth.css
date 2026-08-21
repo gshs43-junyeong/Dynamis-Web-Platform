@@ -1,0 +1,274 @@
+/* 홈 화면 입체(3D) 연출.
+   ────────────────────────────────────────────────────────────────────────────
+   기존 홈은 요소가 전부 같은 평면에 얹혀 있어 "단정하지만 인상이 남지 않는"
+   상태였다. 여기서는 깊이(z축)를 실제로 만들어서, 이 동아리가 다루는 대상
+   (기어·곡면·도면)이 화면 뒤 공간에 놓여 있는 것처럼 보이게 한다.
+
+   핵심은 층별 이동량을 JS로 계산하지 않는다는 것이다. .hero-stage에 perspective를
+   걸고 자식들을 서로 다른 translateZ에 놓은 뒤 부모를 조금 회전시키면, 원근 투영이
+   깊이에 비례한 시차를 알아서 만들어 준다. JS는 회전각 두 개만 넘긴다(hero3d.js).
+
+   [성능] 움직이는 값은 transform/opacity로만 제한한다. 레이아웃이나 페인트를
+   유발하는 속성은 애니메이션하지 않는다.
+
+   [접근성] prefers-reduced-motion에서는 회전·자전·시차를 전부 끄고 정적인
+   배치만 남긴다 — 도형 자체는 보이되 움직이지 않는다.
+
+   [터치 기기] 마우스가 없으면 시차가 성립하지 않으므로 hero3d.js가 아예 바인딩을
+   하지 않는다. 그래도 기어 자전과 정적 원근 배치는 유지되어 밋밋해지지 않는다. */
+
+/* ── 히어로 3D 무대 ──────────────────────────────────────────────────────── */
+
+/* 무대는 뷰포트보다 넓게 잡아 좌우 끝이 화면 안에서 "벽"처럼 끊겨 보이지 않게 한다
+   (ambient.css가 쓰는 것과 같은 방식). body에 overflow-x: hidden이 이미 걸려 있어
+   이렇게 넓혀도 가로 스크롤이 생기지 않는다.
+
+   z-index: -1 — .section(#home)이 stacking context라서 이 값은 그 안에서만 의미가
+   있다. 같은 -1인 .bg-blob보다 DOM에서 뒤에 오므로 발광체 위에, 그리고 z-index가
+   auto인 로고/제목/태그라인보다는 아래에 그려진다. 즉 글자를 절대 가리지 않는다. */
+.hero-stage {
+    position: absolute;
+    top: 50%;
+    left: -60vw;
+    width: 220vw;
+    height: 760px;
+    margin-top: -380px;
+    z-index: -1;
+    pointer-events: none;
+    perspective: 1100px;
+    perspective-origin: 50% 50%;
+}
+
+.hero-stage-inner {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    /* hero3d.js가 --rx/--ry(마우스 회전)와 --sy(스크롤 드리프트)만 갱신한다.
+       기본값을 여기 둬서 JS가 없거나 아직 안 붙었을 때도 배치가 성립한다.
+       --stage-scale은 좁은 화면에서만 바뀐다 — transform 선언을 한 곳에만 두려고
+       변수로 뺐다. 미디어 쿼리에서 transform을 통째로 다시 쓰면 JS가 넣는 회전이
+       사라져 버린다. */
+    --rx: 0deg;
+    --ry: 0deg;
+    --sy: 0px;
+    --stage-scale: 1;
+    transform: scale(var(--stage-scale)) rotateX(var(--rx)) rotateY(var(--ry)) translate3d(0, var(--sy), 0);
+    /* 마우스를 뗐을 때 원위치로 부드럽게 풀리도록. 움직이는 동안에는 JS가
+       transition을 끊지 않고 그대로 두어도 값이 촘촘히 들어와 지연이 체감되지 않는다. */
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+}
+
+/* 도형 공통. 각 도형은 무대 중앙을 기준으로 배치되고, translate3d의 z값이
+   곧 깊이다 — 음수일수록 뒤로 물러나고, 원근 때문에 작고 느리게 움직인다.
+   색은 currentColor(=color)로 받아 도형마다 밝기를 따로 준다. */
+.hero-geo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    overflow: visible;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* 최심층 — 동심 궤도 링. 가장 뒤에서 공간의 스케일을 잡아 준다. */
+.hero-geo-rings {
+    width: 1180px;
+    height: 410px;
+    margin: -205px 0 0 -590px;
+    color: rgba(255, 255, 255, 0.16);
+    transform: translate3d(0, 40px, -520px) rotateX(8deg);
+}
+
+/* 심층 — z = sin(u)cos(v) 매개변수 곡면. 왼쪽 아래에 두어 오른쪽 기어와 균형을
+   맞춘다. 워드마크("Dynamis") 뒤를 가로지르면 글자 획과 격자선이 겹쳐 읽기가
+   탁해지므로, 제목 왼쪽 바깥으로 충분히 밀어내고 아래로도 내렸다. 대신 글자를
+   침범하지 않는 위치가 되었으니 밝기를 조금 올려 "수학" 쪽 상징이 묻히지 않게 한다. */
+.hero-geo-surface {
+    width: 620px;
+    height: 490px;
+    margin: -245px 0 0 -310px;
+    color: rgba(255, 255, 255, 0.26);
+    transform: translate3d(-575px, 135px, -400px) rotateX(6deg) rotateZ(-3deg);
+}
+
+/* 중간층 — 큰 기어. 오른쪽에서 천천히 자전한다. */
+.hero-geo-gear-lg {
+    width: 430px;
+    height: 430px;
+    margin: -215px 0 0 -215px;
+    color: rgba(255, 255, 255, 0.22);
+    transform: translate3d(430px, -30px, -230px) rotateX(14deg) rotateY(-10deg);
+    animation: heroGearSpin 90s linear infinite;
+}
+
+/* 중간층 — 작은 기어. 큰 기어의 오른쪽 위에서 맞물리듯 역방향으로 돈다.
+   (실제 물리적 맞물림까지 계산하지는 않았고, 방향만 반대로 두어 자연스럽게 보이게 했다) */
+.hero-geo-gear-sm {
+    width: 216px;
+    height: 216px;
+    margin: -108px 0 0 -108px;
+    color: rgba(255, 255, 255, 0.26);
+    transform: translate3d(583px, -232px, -150px) rotateX(14deg) rotateY(-10deg);
+    animation: heroGearSpin 52s linear infinite reverse;
+}
+
+/* 최전면 — 좌표축·치수선. 가장 앞이라 시차가 가장 크게 움직인다. */
+.hero-geo-axes {
+    width: 460px;
+    height: 345px;
+    margin: -172px 0 0 -230px;
+    color: rgba(255, 255, 255, 0.17);
+    transform: translate3d(-620px, 150px, -90px) rotateX(4deg);
+}
+
+/* 자전은 각 도형이 이미 갖고 있는 배치 transform과 충돌하면 안 되므로,
+   회전만 담당하는 별도 요소가 아니라 rotate 단축 속성으로 건다. rotate는
+   transform과 독립적으로 합성되어 위 translate3d/rotateX를 덮어쓰지 않는다. */
+@keyframes heroGearSpin {
+    from { rotate: 0deg; }
+    to   { rotate: 360deg; }
+}
+
+/* 워드마크 자체에도 얕은 두께를 준다. 여러 겹의 그림자를 아래로 조금씩 밀어
+   압출(extrude)된 것처럼 보이게 하는 고전적인 방법이다 — 실제 3D가 아니라
+   글자 렌더링 위에 얹는 것이라 폰트 힌팅이나 선택 동작을 건드리지 않는다.
+   기존 그라디언트 배경(-webkit-background-clip: text)과 함께 쓰기 위해
+   text-shadow가 아니라 filter: drop-shadow를 쓴다 — 배경이 클립된 텍스트에는
+   text-shadow가 글자 모양이 아니라 배경 박스에 걸려 어긋난다. */
+.hero h1 {
+    filter:
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.10))
+        drop-shadow(0 2px 1px rgba(0, 0, 0, 0.55))
+        drop-shadow(0 8px 22px rgba(0, 0, 0, 0.7));
+}
+
+/* ── 카드 입체 반응 ──────────────────────────────────────────────────────── */
+
+/* 홈의 각 카드가 커서 쪽으로 아주 살짝 기운다. 각도를 크게 주면 정보를 읽는
+   화면이 장난스러워지므로, 기울기는 최대 ±3.2deg로 묶고(hero3d.js) 대신
+   그림자와 테두리 밝기로 "떠오른다"는 인상을 만든다.
+
+   .card3d는 hero3d.js가 자격이 되는 카드에만 붙인다(대시보드처럼 상호작용이
+   많은 카드는 제외). 클래스가 없으면 기존 카드와 완전히 동일하게 동작한다. */
+#home .card3d {
+    position: relative;   /* 아래 ::before 광택 레이어의 기준점 */
+    --tx: 0deg;
+    --ty: 0deg;
+    --reveal-y: 0px;
+    transform-style: preserve-3d;
+    /* reveal.js가 붙이는 .scroll-reveal도 transform(translateY)로 등장 효과를 낸다.
+       두 선언이 부딪히면 더 구체적인 이쪽이 이겨서 등장 시 떠오르는 움직임이
+       사라지므로, 그 이동량을 --reveal-y로 흡수해 한 transform 안에서 합성한다. */
+    transform: perspective(1200px) translateY(var(--reveal-y)) rotateX(var(--tx)) rotateY(var(--ty));
+    transition:
+        transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.5s ease;
+}
+/* 아직 화면에 들어오지 않은 카드 = scroll-reveal의 시작 위치 */
+#home .card3d.scroll-reveal:not(.is-visible) { --reveal-y: 48px; }
+
+#home .card3d.is-tilting {
+    /* 기울어져 있는 동안에는 복귀 transition이 커서 추적을 늦추므로 짧게 준다. */
+    transition:
+        transform 0.12s linear,
+        box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.5s ease;
+    box-shadow:
+        0 26px 60px rgba(0, 0, 0, 0.66),
+        0 0 0 1px rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* 카드가 기울 때 제목만 살짝 앞으로 떠오르게 해서 면과 글자 사이에 층이 생긴다.
+   translateZ는 부모에 preserve-3d가 있어야 의미가 있는데, 위에서 지정해 두었다. */
+#home .card3d h3 {
+    transform: translateZ(0);
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#home .card3d.is-tilting h3 {
+    transform: translateZ(34px);
+}
+
+/* 커서를 따라 움직이는 옅은 광택. 카드 면이 실제로 빛을 받는 것처럼 보이게 하는
+   부분이라 기울기와 함께 있어야 입체감이 성립한다. --mx/--my는 hero3d.js가
+   카드 안에서의 커서 위치(%)로 갱신한다. */
+#home .card3d::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    background: radial-gradient(
+        420px circle at var(--mx, 50%) var(--my, 50%),
+        rgba(255, 255, 255, 0.07),
+        transparent 62%
+    );
+}
+#home .card3d.is-tilting::before { opacity: 1; }
+
+/* ── 특징 / 인재상 타일 ──────────────────────────────────────────────────── */
+
+/* 타일은 카드 안에 있어서 카드가 이미 기울고 있다. 여기에 또 기울기를 더하면
+   축이 겹쳐 어지러우므로, 타일은 "앞으로 떠오르는" 것만 한다. */
+#home .feature-item,
+#home .ideal-item {
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.45s ease, border-color 0.45s ease;
+}
+#home .ideal-item:hover {
+    transform: translateZ(26px) translateY(-4px);
+    background: #2b2b2b;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+#home .feature-item:hover {
+    transform: translateZ(20px);
+}
+
+/* ── 모션 최소화 ─────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-stage-inner {
+        transform: none;
+        transition: none;
+    }
+    .hero-geo-gear-lg,
+    .hero-geo-gear-sm {
+        animation: none;
+    }
+    #home .card3d,
+    #home .card3d.is-tilting,
+    #home .card3d h3,
+    #home .card3d.is-tilting h3,
+    #home .feature-item,
+    #home .ideal-item {
+        transform: none;
+        transition: none;
+    }
+    #home .card3d::before { display: none; }
+}
+
+/* ── 좁은 화면 ───────────────────────────────────────────────────────────── */
+
+/* 좁은 화면에서는 도형이 좌우로 벌어진 배치 그대로는 대부분 화면 밖으로 나가므로
+   스케일을 줄여 안쪽으로 끌어온다. 다만 스케일은 위치 offset까지 같이 줄여서
+   도형이 오히려 워드마크 쪽으로 다가온다 — 그래서 크기만 줄이는 것으로는 겹침이
+   해결되지 않는다. 대신 밝기를 확실히 낮춰 "제목과 경쟁하는 물체"가 아니라
+   "뒤에 깔린 질감"으로 물러나게 한다. */
+@media (max-width: 768px) {
+    .hero-stage {
+        height: 560px;
+        margin-top: -280px;
+        perspective: 800px;
+    }
+    .hero-stage-inner { --stage-scale: 0.52; }
+    .hero-geo-rings,
+    .hero-geo-surface,
+    .hero-geo-gear-lg,
+    .hero-geo-gear-sm,
+    .hero-geo-axes {
+        opacity: 0.45;
+    }
+}
