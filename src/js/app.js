@@ -13,6 +13,7 @@
 //   search.js    - 통합 검색 커맨드 팔레트 (⌘K / Ctrl+K)
 //   unread.js    - 마지막 방문 이후 올라온 글 NEW 표시
 //   scrollui.js  - 읽기 진행 바 및 맨 위로 버튼
+//   hero3d.js    - 홈 히어로 3D 무대 시차 및 카드 기울기
 import * as auth from './auth.js';
 import { navigateTo, handleAuthNavClick, renderRoute, toggleMobileMenu, closeMobileMenu } from './router.js';
 import { applyUserSessionUI } from './session.js';
@@ -40,6 +41,7 @@ import { syncMembersSection } from './members.js';
 import { syncAdminUserConsole, commitRoleChange, warnUser, deleteUserByAdmin } from './admin.js';
 import { openPuzzle } from './puzzle.js';
 import { initScrollReveal } from './reveal.js';
+import { initHero3D } from './hero3d.js';
 import { initDashboard } from './dashboard.js';
 import { initSearch, openSearch, closeSearch } from './search.js';
 import { initUnreadTracking } from './unread.js';
@@ -102,6 +104,9 @@ function initSystemConfiguration() {
 
     renderRoute();
     initScrollReveal();
+    // initScrollReveal 다음에 둔다 — 카드에 .card3d를 붙일 때 이미 .scroll-reveal이
+    // 올라가 있어야 등장 위치(--reveal-y)가 처음부터 올바르게 잡힌다.
+    initHero3D();
 }
 
 auth.initializeAuthCallbacks(applyUserSessionUI);

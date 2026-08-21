@@ -1,0 +1,131 @@
+// 홈 화면 입체 연출의 동작 부분. 스타일은 css/partials/depth.css 참고.
+//
+// [설계] JS는 각도와 커서 위치만 CSS 변수로 넘기고, 실제 시차(parallax)는
+// 브라우저의 원근 투영에 맡긴다. 무대(.hero-stage-inner)를 몇 도 돌리면 그 안의
+// 도형들이 각자의 translateZ 깊이에 비례해 저절로 다른 거리만큼 움직인다 —
+// 층마다 이동량을 계산해 개별로 transform을 쓰는 방식보다 코드가 단순하고,
+// 합성 레이어도 하나로 유지되어 더 가볍다.
+//
+// [성능] 포인터 이벤트는 그대로 두면 초당 수백 번 들어오므로 rAF로 한 프레임에
+// 한 번만 스타일을 쓴다. 스크롤도 같은 방식이며 passive 리스너를 쓴다.
+
+// 기울기 상한. 크게 주면 정보를 읽는 화면이 장난스러워져서 일부러 낮게 잡았다.
+const STAGE_MAX_DEG = 7;
+const CARD_MAX_DEG = 3.2;
+// 스크롤에 따라 무대가 아주 조금 떠내려가는 양(px). 히어로가 화면 밖으로
+// 나가기까지의 구간에만 적용한다.
+const STAGE_SCROLL_DRIFT = 90;
+
+const prefersReducedMotion = () =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// 마우스가 있는 환경에서만 시차를 건다. 터치 기기에서는 hover 상태가 없어
+// "기울었다가 안 돌아오는" 어색한 상태로 남기 쉽다.
+const hasFinePointer = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+/** rAF로 묶어서 한 프레임에 한 번만 실행되는 함수를 만든다. */
+function rafThrottle(fn) {
+    let queued = false;
+    let lastArgs = null;
+    return (...args) => {
+        lastArgs = args;
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => {
+            queued = false;
+            fn(...lastArgs);
+        });
+    };
+}
+
+/** 히어로 무대: 커서 위치 → 무대 회전, 스크롤 → 세로 드리프트 */
+function initHeroStage() {
+    const stage = document.querySelector('.hero-stage');
+    const inner = document.querySelector('.hero-stage-inner');
+    if (!stage || !inner) return;
+
+    if (hasFinePointer()) {
+        const onMove = rafThrottle((clientX, clientY) => {
+            // 뷰포트 중심을 원점으로 한 -1..1 정규화 좌표.
+            // 화면 어디에 있든 히어로가 반응하게 하려고 무대 박스가 아니라
+            // 뷰포트 기준으로 잡는다(무대는 화면보다 넓어서 박스 기준으로 하면
+            // 가장자리에서 값이 포화된다).
+            const nx = (clientX / window.innerWidth) * 2 - 1;
+            const ny = (clientY / window.innerHeight) * 2 - 1;
+            // 커서가 오른쪽이면 무대가 왼쪽을 보도록(=오른쪽으로 회전) 부호를 맞춘다.
+            inner.style.setProperty('--ry', `${(nx * STAGE_MAX_DEG).toFixed(2)}deg`);
+            inner.style.setProperty('--rx', `${(-ny * STAGE_MAX_DEG * 0.6).toFixed(2)}deg`);
+        });
+        window.addEventListener('pointermove', (e) => {
+            if (e.pointerType !== 'mouse') return;
+            onMove(e.clientX, e.clientY);
+        }, { passive: true });
+
+        // 창 밖으로 나가면 원위치. transition이 걸려 있어 부드럽게 풀린다.
+        document.addEventListener('mouseleave', () => {
+            inner.style.setProperty('--rx', '0deg');
+            inner.style.setProperty('--ry', '0deg');
+        });
+    }
+
+    const onScroll = rafThrottle(() => {
+        const rect = stage.getBoundingClientRect();
+        // 무대가 화면 위로 완전히 빠져나가면 더 계산하지 않는다.
+        if (rect.bottom < 0) return;
+        const progress = Math.min(Math.max(-rect.top / window.innerHeight, 0), 1);
+        inner.style.setProperty('--sy', `${(progress * STAGE_SCROLL_DRIFT).toFixed(1)}px`);
+    });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+}
+
+/** 카드: 커서를 따라 살짝 기울고, 커서 위치에 광택이 따라붙는다. */
+function initCardTilt() {
+    if (!hasFinePointer()) return;
+
+    // 대시보드(상호작용이 많은 데이터 패널)와 영상 카드는 제외한다.
+    // 특히 iframe은 3D 변환된 조상 안에서 합성/클릭 판정이 어긋나는 경우가 있어
+    // 기울이지 않는 편이 안전하다.
+    const cards = Array.from(document.querySelectorAll('#home .content-card')).filter(
+        (el) => !el.id && !el.querySelector('iframe')
+    );
+    if (!cards.length) return;
+
+    cards.forEach((card) => {
+        card.classList.add('card3d');
+
+        const onMove = rafThrottle((clientX, clientY) => {
+            const r = card.getBoundingClientRect();
+            const px = (clientX - r.left) / r.width;   // 0..1
+            const py = (clientY - r.top) / r.height;   // 0..1
+            card.style.setProperty('--ty', `${((px - 0.5) * 2 * CARD_MAX_DEG).toFixed(2)}deg`);
+            card.style.setProperty('--tx', `${(-(py - 0.5) * 2 * CARD_MAX_DEG).toFixed(2)}deg`);
+            card.style.setProperty('--mx', `${(px * 100).toFixed(1)}%`);
+            card.style.setProperty('--my', `${(py * 100).toFixed(1)}%`);
+        });
+
+        card.addEventListener('pointermove', (e) => {
+            if (e.pointerType !== 'mouse') return;
+            onMove(e.clientX, e.clientY);
+        }, { passive: true });
+
+        card.addEventListener('pointerenter', (e) => {
+            if (e.pointerType !== 'mouse') return;
+            card.classList.add('is-tilting');
+        });
+
+        card.addEventListener('pointerleave', () => {
+            card.classList.remove('is-tilting');
+            card.style.setProperty('--tx', '0deg');
+            card.style.setProperty('--ty', '0deg');
+        });
+    });
+}
+
+export function initHero3D() {
+    // 모션 최소화 설정에서는 CSS 쪽에서 이미 정적으로 고정하지만, 여기서도
+    // 리스너 자체를 붙이지 않아 불필요한 연산을 아예 만들지 않는다.
+    if (prefersReducedMotion()) return;
+    initHeroStage();
+    initCardTilt();
+}
