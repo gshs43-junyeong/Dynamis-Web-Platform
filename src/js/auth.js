@@ -11,7 +11,7 @@ import {
     query,
     where,
     getDocs
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "firebase/firestore";
 import {
     signInWithPopup,
     signInWithRedirect,
@@ -21,7 +21,7 @@ import {
     setPersistence,
     browserLocalPersistence,
     browserSessionPersistence
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+} from "firebase/auth";
 import { debugLog } from './utils.js';
 
 const SIGNUP_STORAGE_KEY = 'dynamis_pending_signup';

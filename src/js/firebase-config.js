@@ -1,10 +1,10 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 import {
     initializeAppCheck,
     ReCaptchaV3Provider
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check.js";
-import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+} from "firebase/app-check";
+import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC31TiRfm5yMKfMGDc8eLAUJXLS2BoldCQ",

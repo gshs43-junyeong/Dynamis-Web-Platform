@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { doc, getDoc, setDoc, increment } from "firebase/firestore";
 import { db, auth } from './firebase-config.js';
 import { serverNow } from './clock.js';
 

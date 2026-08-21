@@ -7,7 +7,7 @@ import {
     setDoc,
     deleteDoc,
     writeBatch
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "firebase/firestore";
 import { formatUserIdentityLabel, getRoleLabel } from './utils.js';
 import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';

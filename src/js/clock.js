@@ -1,5 +1,5 @@
 import { db, auth as firebaseAuth } from './firebase-config.js';
-import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
 // 컴퓨터 시계와 서버 시계의 차이를 측정한다.
 // 이벤트 마감 타이머의 신뢰성을 위해, 오차가 크면 사용자에게 경고하고

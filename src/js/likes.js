@@ -1,5 +1,5 @@
 import { db, auth as firebaseAuth } from './firebase-config.js';
-import { collection, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
 import { loggedInUser } from './state.js';
 import { uiIcon } from './utils.js';
 

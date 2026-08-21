@@ -11,7 +11,7 @@ import {
     deleteDoc,
     orderBy,
     writeBatch
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "firebase/firestore";
 import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
