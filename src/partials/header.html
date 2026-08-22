@@ -1,25 +1,25 @@
     <header>
-        <div class="logo-area" onclick="navigateTo('/home')">
-            <img src="logo.png" alt="Dynamis Logo" style="height: 38px; width: auto; filter: invert(1);" onerror="this.style.display='none'">
+        <div class="logo-area" data-action="nav" data-nav="/home">
+            <img src="logo.png" alt="Dynamis Logo" style="height: 38px; width: auto; filter: invert(1);" data-fallback="hide">
             <div class="logo-text">Dynamis</div>
         </div>
         <nav>
             <ul>
-                <li><a onclick="navigateTo('/home')" id="nav-home" class="active"><img src="/icons/nav-home.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Home</span></a></li>
-                <li><a onclick="navigateTo('/notice')" id="nav-notice"><img src="/icons/nav-notice.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Notice</span></a></li>
-                <li><a onclick="navigateTo('/event')" id="nav-event"><img src="/icons/nav-event.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Event</span></a></li>
-                <li><a onclick="navigateTo('/faq')" id="nav-faq"><img src="/icons/nav-faq.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">FAQ</span></a></li>
-                <li><a onclick="navigateTo('/members')" id="nav-members"><img src="/icons/nav-members.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Members</span></a></li>
-                <li><a onclick="handleAuthNavClick()" id="nav-login"><img src="/icons/nav-login.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Login</span></a></li>
-                <li id="admin-menu" style="display: none;"><a onclick="navigateTo('/admin')" id="nav-admin"><img src="/icons/nav-admin.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Admin</span></a></li>
+                <li><a data-action="nav" data-nav="/home" id="nav-home" class="active"><img src="/icons/nav-home.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Home</span></a></li>
+                <li><a data-action="nav" data-nav="/notice" id="nav-notice"><img src="/icons/nav-notice.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Notice</span></a></li>
+                <li><a data-action="nav" data-nav="/event" id="nav-event"><img src="/icons/nav-event.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Event</span></a></li>
+                <li><a data-action="nav" data-nav="/faq" id="nav-faq"><img src="/icons/nav-faq.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">FAQ</span></a></li>
+                <li><a data-action="nav" data-nav="/members" id="nav-members"><img src="/icons/nav-members.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Members</span></a></li>
+                <li><a data-action="auth-nav" id="nav-login"><img src="/icons/nav-login.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Login</span></a></li>
+                <li id="admin-menu" style="display: none;"><a data-action="nav" data-nav="/admin" id="nav-admin"><img src="/icons/nav-admin.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Admin</span></a></li>
             </ul>
         </nav>
-        <button type="button" class="search-trigger icon-btn" onclick="openSearch()" aria-label="통합 검색 열기">
+        <button type="button" class="search-trigger icon-btn" data-action="search-open" aria-label="통합 검색 열기">
             <img src="/icons/nav-search.png" alt="" aria-hidden="true" class="search-trigger-icon">
             <span class="search-trigger-label">검색</span>
             <kbd id="search-trigger-key">Ctrl K</kbd>
         </button>
-        <div class="hamburger-menu icon-btn" id="hamburger-menu" onclick="toggleMobileMenu()">
+        <div class="hamburger-menu icon-btn" id="hamburger-menu" data-action="menu-toggle">
             <span></span>
             <span></span>
             <span></span>

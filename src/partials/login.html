@@ -1,8 +1,8 @@
         <section id="login" class="section">
             <div id="login-form-box" class="form-card">
                 <h2 class="page-title" style="justify-content: center; margin-bottom: 2rem;"><img src="/icons/nav-login.png" alt="" aria-hidden="true" class="page-title-icon">Login</h2>
-                <button class="btn btn-oauth" style="width:100%; margin-bottom: 0.75rem; padding: 0.8rem 1rem;" onclick="handleLoginWithGoogle()"><img src="/icons/google-logo.png" alt="" aria-hidden="true" class="btn-oauth-icon">Google 계정으로 로그인</button>
-                <button class="btn btn-oauth" style="width:100%; margin-bottom: 1.5rem; padding: 0.8rem 1rem;" onclick="handleLoginWithGitHub()"><img src="/icons/github-logo.png" alt="" aria-hidden="true" class="btn-oauth-icon">GitHub 계정으로 로그인</button>
+                <button class="btn btn-oauth" style="width:100%; margin-bottom: 0.75rem; padding: 0.8rem 1rem;" data-action="login-google"><img src="/icons/google-logo.png" alt="" aria-hidden="true" class="btn-oauth-icon">Google 계정으로 로그인</button>
+                <button class="btn btn-oauth" style="width:100%; margin-bottom: 1.5rem; padding: 0.8rem 1rem;" data-action="login-github"><img src="/icons/github-logo.png" alt="" aria-hidden="true" class="btn-oauth-icon">GitHub 계정으로 로그인</button>
                 
                 <label class="signup-consent-item">
                     <input type="checkbox" id="login-persist-checkbox" class="signup-consent-checkbox">
@@ -10,7 +10,7 @@
                 </label>
                 
                 <div style="text-align: center; margin-top: 1rem; font-size: 0.95rem; color:var(--text-secondary);">
-                    아직 계정을 만들지 않으셨나요? <a onclick="navigateTo('/signup')" style="cursor:pointer; color:inherit; font-weight:700; text-decoration:underline;">회원가입</a>
+                    아직 계정을 만들지 않으셨나요? <a data-action="nav" data-nav="/signup" style="cursor:pointer; color:inherit; font-weight:700; text-decoration:underline;">회원가입</a>
                 </div>
             </div>
         </section>

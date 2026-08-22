@@ -1,5 +1,7 @@
-// 진입점: 각 기능 모듈을 초기화하고 index.html의 인라인 핸들러가 쓰는
-// 전역(window) 바인딩만 담당한다. 기능 로직은 각 모듈 참고:
+// 진입점: 각 기능 모듈을 초기화하고, 마크업의 data-action을 실제 함수에 연결한다.
+// (예전에는 인라인 onclick이 쓸 수 있도록 함수를 window에 올렸는데, CSP에서
+//  'unsafe-inline'을 걷어내면서 인라인 핸들러와 함께 전역 노출도 전부 없앴다.)
+// 기능 로직은 각 모듈 참고:
 //   router.js  - 라우팅/네비게이션, 모바일 메뉴
 //   session.js - 로그인 상태에 따른 UI 갱신
 //   notice.js  - 공지사항, 댓글, 파일 다운로드
@@ -13,18 +15,16 @@
 //   search.js    - 통합 검색 커맨드 팔레트 (⌘K / Ctrl+K)
 //   unread.js    - 마지막 방문 이후 올라온 글 NEW 표시
 //   scrollui.js  - 읽기 진행 바 및 맨 위로 버튼
+//   actions.js   - data-action 이벤트 위임 디스패처
 //   hero3d.js    - 홈 히어로 3D 무대 시차 및 카드 기울기
 import * as auth from './auth.js';
 import { navigateTo, handleAuthNavClick, renderRoute, toggleMobileMenu, closeMobileMenu } from './router.js';
 import { applyUserSessionUI } from './session.js';
 import {
     addNotice,
-    togglePin,
-    viewNotice,
     addComment,
     closeNotice,
     deleteCurrentNotice,
-    changePage,
     changeNoticeTagFilter,
     listenNotices
 } from './notice.js';
@@ -33,12 +33,11 @@ import {
     addEventComment,
     closeEvent,
     deleteCurrentEvent,
-    changeEventPage,
     listenEvents
 } from './event.js';
-import { addFaqQuestion, addFaqAnswer, closeFaq, deleteCurrentFaq, changeFaqPage, listenFaqs } from './faq.js';
+import { addFaqQuestion, addFaqAnswer, closeFaq, deleteCurrentFaq, listenFaqs } from './faq.js';
 import { syncMembersSection } from './members.js';
-import { syncAdminUserConsole, commitRoleChange, warnUser, deleteUserByAdmin } from './admin.js';
+import { syncAdminUserConsole } from './admin.js';
 import { openPuzzle } from './puzzle.js';
 import { initScrollReveal } from './reveal.js';
 import { initHero3D } from './hero3d.js';
@@ -46,49 +45,54 @@ import { initDashboard } from './dashboard.js';
 import { initSearch, openSearch, closeSearch } from './search.js';
 import { initUnreadTracking } from './unread.js';
 import { initScrollUI } from './scrollui.js';
+import { registerActions, initActions } from './actions.js';
 
-window.navigateTo = navigateTo;
-window.openPuzzle = openPuzzle;
-window.openSearch = openSearch;
-window.closeSearch = closeSearch;
-window.handleAuthNavClick = handleAuthNavClick;
-window.toggleMobileMenu = toggleMobileMenu;
-window.closeMobileMenu = closeMobileMenu;
+// 마크업의 data-action을 실제 함수에 연결한다.
+// 예전에는 이 자리에서 함수 35개를 window에 올렸다 — 인라인 onclick이 전역에서만
+// 함수를 찾을 수 있었기 때문이다. 인라인 핸들러를 전부 걷어낸 지금은 전역 오염
+// 없이 이 표 하나로 끝난다(actions.js 주석 참고).
+registerActions({
+    // 내비게이션. data-nav에 경로가 들어온다.
+    // 모바일 메뉴는 열려 있든 아니든 닫는다 — closeMobileMenu는 멱등이라
+    // 데스크톱에서 불러도 아무 일도 일어나지 않는다.
+    'nav': (el) => { navigateTo(el.dataset.nav); closeMobileMenu(); },
+    'auth-nav': () => { handleAuthNavClick(); closeMobileMenu(); },
+    'menu-toggle': () => toggleMobileMenu(),
+    'search-open': () => { closeMobileMenu(); openSearch(); },
+    'search-close': () => closeSearch(),
+    'puzzle': () => openPuzzle(),
 
-window.addNotice = addNotice;
-window.togglePin = togglePin;
-window.viewNotice = viewNotice;
-window.addComment = addComment;
-window.closeNotice = closeNotice;
-window.deleteCurrentNotice = deleteCurrentNotice;
-window.changePage = changePage;
-window.changeNoticeTagFilter = changeNoticeTagFilter;
+    'notice-add': () => addNotice(),
+    'notice-close': () => closeNotice(),
+    'notice-delete': () => deleteCurrentNotice(),
+    'notice-tag': (el) => changeNoticeTagFilter(el.dataset.tag),
+    'comment-add': () => addComment(),
 
-window.addEvent = addEvent;
-window.addEventComment = addEventComment;
-window.closeEvent = closeEvent;
-window.deleteCurrentEvent = deleteCurrentEvent;
-window.changeEventPage = changeEventPage;
+    'event-add': () => addEvent(),
+    'event-close': () => closeEvent(),
+    'event-delete': () => deleteCurrentEvent(),
+    'event-comment-add': () => addEventComment(),
 
-window.addFaqQuestion = addFaqQuestion;
-window.addFaqAnswer = addFaqAnswer;
-window.closeFaq = closeFaq;
-window.deleteCurrentFaq = deleteCurrentFaq;
-window.changeFaqPage = changeFaqPage;
+    'faq-add': () => addFaqQuestion(),
+    'faq-answer-add': () => addFaqAnswer(),
+    'faq-close': () => closeFaq(),
+    'faq-delete': () => deleteCurrentFaq(),
 
-window.commitRoleChange = commitRoleChange;
-window.warnUser = warnUser;
-window.deleteUserByAdmin = deleteUserByAdmin;
+    'login-google': () => auth.handleLoginWithGoogle(),
+    'login-github': () => auth.handleLoginWithGitHub(),
+    'signup-google': () => auth.handleSignupWithGoogle(),
+    'signup-github': () => auth.handleSignupWithGitHub(),
+    'logout': () => auth.handleLogout(),
+    'account-delete': () => auth.handleDeleteAccount(),
 
-window.handleLoginWithGoogle = auth.handleLoginWithGoogle;
-window.handleLoginWithGitHub = auth.handleLoginWithGitHub;
-window.handleSignupWithGoogle = auth.handleSignupWithGoogle;
-window.handleSignupWithGitHub = auth.handleSignupWithGitHub;
-window.handleSignup = auth.handleSignupWithGoogle;
-window.handleLogout = auth.handleLogout;
-window.handleDeleteAccount = auth.handleDeleteAccount;
+    'signup-preview-close': () => auth.closeSignupPreview(),
+    'signup-preview-google': () => auth.proceedSignupWithGoogle(),
+    'signup-preview-github': () => auth.proceedSignupWithGitHub(),
+});
 
 function initSystemConfiguration() {
+    initActions();
+
     listenNotices();
     listenEvents();
     listenFaqs();

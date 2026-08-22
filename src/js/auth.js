@@ -400,7 +400,7 @@ export async function handleSignupWithGoogle() {
     }
 
     debugLog('[Signup Flow] Google signup - showing preview:', { id, batch, name });
-    await window.showSignupPreview(id, batch, name, 'google');
+    await showSignupPreview(id, batch, name, 'google');
 }
 
 export async function handleSignupWithGitHub() {
@@ -433,7 +433,7 @@ export async function handleSignupWithGitHub() {
     }
 
     debugLog('[Signup Flow] GitHub signup - showing preview:', { id, batch, name });
-    await window.showSignupPreview(id, batch, name, 'github');
+    await showSignupPreview(id, batch, name, 'github');
 }
 
 export async function handleLogout() {
@@ -446,7 +446,7 @@ export async function handleLogout() {
     }
 }
 
-window.showSignupPreview = async function(id, batch, name, provider) {
+export async function showSignupPreview(id, batch, name, provider) {
     document.getElementById('preview-id').textContent = id;
     document.getElementById('preview-batch').textContent = batch;
     document.getElementById('preview-name').textContent = name;
@@ -528,19 +528,19 @@ window.showSignupPreview = async function(id, batch, name, provider) {
     }
     
     document.getElementById('signup-preview-modal').style.display = 'flex';
-};
+}
 
-window.closeSignupPreview = function() {
+export function closeSignupPreview() {
     document.getElementById('signup-preview-modal').style.display = 'none';
     signupPreviewData = null;
-};
+}
 
-window.proceedSignupWithGoogle = async function() {
+export async function proceedSignupWithGoogle() {
     if (!signupPreviewData) return;
     const { id, batch, name } = signupPreviewData;
     
     debugLog('[Signup Flow] Proceeding with Google OAuth after preview confirmation:', { id, batch, name });
-    window.closeSignupPreview();
+    closeSignupPreview();
     storePendingSignupData({ id, batch, name });
     pendingAuthIntent = { type: 'signup', providerLabel: 'Google' };
     setAuthStatus('Google 회원가입 진행 중입니다...', 'info');
@@ -577,14 +577,14 @@ window.proceedSignupWithGoogle = async function() {
         setAuthStatus('Google 회원가입 실패: ' + err.message, 'error');
         alert('Google 회원가입 실패: ' + err.message + '\n팝업이 차단되어 리디렉트 방식으로 시도했습니다.');
     }
-};
+}
 
-window.proceedSignupWithGitHub = async function() {
+export async function proceedSignupWithGitHub() {
     if (!signupPreviewData) return;
     const { id, batch, name } = signupPreviewData;
     
     debugLog('[Signup Flow] Proceeding with GitHub OAuth after preview confirmation:', { id, batch, name });
-    window.closeSignupPreview();
+    closeSignupPreview();
     storePendingSignupData({ id, batch, name });
     pendingAuthIntent = { type: 'signup', providerLabel: 'GitHub' };
     setAuthStatus('GitHub 회원가입 진행 중입니다...', 'info');
@@ -621,7 +621,7 @@ window.proceedSignupWithGitHub = async function() {
         setAuthStatus('GitHub 회원가입 실패: ' + err.message, 'error');
         alert('GitHub 회원가입 실패: ' + err.message + '\n팝업이 차단되어 리디렉트 방식으로 시도했습니다.');
     }
-};
+}
 
 // 특정 사용자가 작성한 부가 데이터(공지/이벤트/댓글/트래픽)를 best-effort로 정리한다.
 // 각 단계는 독립적으로 try/catch 하므로, 한 쿼리가 규칙/권한 문제로 실패해도

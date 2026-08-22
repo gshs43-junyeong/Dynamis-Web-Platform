@@ -1,10 +1,10 @@
     <div class="mobile-nav" id="mobile-nav">
-        <a onclick="navigateTo('/home'); closeMobileMenu()" id="mobile-nav-home" class="active"><img src="/icons/nav-home.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Home</span></a>
-        <a onclick="navigateTo('/notice'); closeMobileMenu()" id="mobile-nav-notice"><img src="/icons/nav-notice.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Notice</span></a>
-        <a onclick="navigateTo('/event'); closeMobileMenu()" id="mobile-nav-event"><img src="/icons/nav-event.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Event</span></a>
-        <a onclick="navigateTo('/faq'); closeMobileMenu()" id="mobile-nav-faq"><img src="/icons/nav-faq.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">FAQ</span></a>
-        <a onclick="navigateTo('/members'); closeMobileMenu()" id="mobile-nav-members"><img src="/icons/nav-members.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Members</span></a>
-        <a onclick="closeMobileMenu(); openSearch()" id="mobile-nav-search"><img src="/icons/nav-search.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">검색</span></a>
-        <a onclick="handleAuthNavClick(); closeMobileMenu()" id="mobile-nav-login"><img src="/icons/nav-login.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Login</span></a>
-        <a id="mobile-admin-menu" style="display: none;" onclick="navigateTo('/admin'); closeMobileMenu()" id="mobile-nav-admin"><img src="/icons/nav-admin.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Admin</span></a>
+        <a data-action="nav" data-nav="/home" id="mobile-nav-home" class="active"><img src="/icons/nav-home.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Home</span></a>
+        <a data-action="nav" data-nav="/notice" id="mobile-nav-notice"><img src="/icons/nav-notice.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Notice</span></a>
+        <a data-action="nav" data-nav="/event" id="mobile-nav-event"><img src="/icons/nav-event.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Event</span></a>
+        <a data-action="nav" data-nav="/faq" id="mobile-nav-faq"><img src="/icons/nav-faq.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">FAQ</span></a>
+        <a data-action="nav" data-nav="/members" id="mobile-nav-members"><img src="/icons/nav-members.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Members</span></a>
+        <a data-action="search-open" id="mobile-nav-search"><img src="/icons/nav-search.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">검색</span></a>
+        <a data-action="auth-nav" id="mobile-nav-login"><img src="/icons/nav-login.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Login</span></a>
+        <a id="mobile-admin-menu" style="display: none;" data-action="nav" data-nav="/admin" id="mobile-nav-admin"><img src="/icons/nav-admin.png" alt="" aria-hidden="true" class="nav-icon"><span class="nav-label">Admin</span></a>
     </div>

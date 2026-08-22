@@ -19,16 +19,16 @@
                     <input type="file" id="post-file" multiple style="padding: 0.5rem; background: transparent; border: 1px dashed var(--border-color); width: 100%;">
                 </div>
 
-                <button class="btn" onclick="addNotice()">게시하기</button>
+                <button class="btn" data-action="notice-add">게시하기</button>
             </div>
 
             <div class="tag-filter-bar">
-                <button type="button" class="page-btn notice-tag-filter-btn active" data-tag="" onclick="changeNoticeTagFilter('')">전체</button>
-                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="학술 자료" onclick="changeNoticeTagFilter('학술 자료')">학술 자료</button>
-                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="이벤트 안내" onclick="changeNoticeTagFilter('이벤트 안내')">이벤트 안내</button>
-                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="설문 조사" onclick="changeNoticeTagFilter('설문 조사')">설문 조사</button>
-                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="활동 기록" onclick="changeNoticeTagFilter('활동 기록')">활동 기록</button>
-                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="기타" onclick="changeNoticeTagFilter('기타')">기타</button>
+                <button type="button" class="page-btn notice-tag-filter-btn active" data-tag="" data-action="notice-tag" data-tag="">전체</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="학술 자료" data-action="notice-tag" data-tag="학술 자료">학술 자료</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="이벤트 안내" data-action="notice-tag" data-tag="이벤트 안내">이벤트 안내</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="설문 조사" data-action="notice-tag" data-tag="설문 조사">설문 조사</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="활동 기록" data-action="notice-tag" data-tag="활동 기록">활동 기록</button>
+                <button type="button" class="page-btn notice-tag-filter-btn" data-tag="기타" data-action="notice-tag" data-tag="기타">기타</button>
             </div>
 
             <table class="notice-table">

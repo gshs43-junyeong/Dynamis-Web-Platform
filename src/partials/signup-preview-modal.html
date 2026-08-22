@@ -1,6 +1,6 @@
     <div id="signup-preview-modal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
-            <span class="close-modal" onclick="closeSignupPreview()">&times;</span>
+            <span class="close-modal" data-action="signup-preview-close">&times;</span>
             <h2 style="margin-bottom: 1.5rem;">회원가입 정보 확인</h2>
             
             <div id="signup-preview-warnings" style="display: none; margin-bottom: 1.5rem; padding: 1rem; border-radius: 6px; background: rgba(255, 85, 85, 0.1); border: 1px solid rgba(255, 85, 85, 0.3);"></div>
@@ -26,9 +26,9 @@
             </p>
 
             <div style="display: flex; gap: 1rem;">
-                <button class="btn" style="flex: 1; background: #555; color: white;" onclick="closeSignupPreview()">◀ 수정하기</button>
-                <button class="btn" style="flex: 1;" id="signup-preview-google-btn" onclick="proceedSignupWithGoogle()">Google로 계속 ▶</button>
-                <button class="btn" style="flex: 1; display: none;" id="signup-preview-github-btn" onclick="proceedSignupWithGitHub()">GitHub로 계속 ▶</button>
+                <button class="btn" style="flex: 1; background: #555; color: white;" data-action="signup-preview-close">◀ 수정하기</button>
+                <button class="btn" style="flex: 1;" id="signup-preview-google-btn" data-action="signup-preview-google">Google로 계속 ▶</button>
+                <button class="btn" style="flex: 1; display: none;" id="signup-preview-github-btn" data-action="signup-preview-github">GitHub로 계속 ▶</button>
             </div>
         </div>
     </div>
