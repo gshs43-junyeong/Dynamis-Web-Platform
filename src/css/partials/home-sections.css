@@ -8,7 +8,41 @@
 @media (prefers-reduced-motion: reduce) {
     .scroll-reveal { opacity: 1; transform: none; transition: none; }
 }
-.content-card h3 { font-size: 1.8rem; margin-bottom: 1.5rem; border-left: 5px solid white; padding-left: 15px; letter-spacing: 1px; }
+/* 섹션 제목.
+   예전에는 흰색 5px 통짜 막대 하나가 전부라 밋밋했고, 막대가 제목 높이만큼
+   뚝 잘려 끝나서 어중간해 보였다. 지금은 (1) 위에서 아래로 옅어지는 가는 강조
+   막대와 (2) 제목 오른쪽으로 뻗다가 사라지는 얇은 선을 함께 써서, 제도 도면의
+   표제란처럼 "여기서 한 구역이 시작한다"는 신호를 준다.
+   ::after를 쓰기 위해 position이 필요한데, 제목 자체를 flex로 두면 선이 남는
+   가로 공간을 자동으로 채우므로 폭을 계산할 필요가 없다. */
+.content-card h3 {
+    font-family: var(--font-display) !important;
+    font-size: 1.65rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.5rem;
+    padding-left: 15px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.content-card h3::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    bottom: 0.1em;
+    width: 3px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #fff, rgba(255, 255, 255, 0.15));
+}
+.content-card h3::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent);
+}
 .content-card p { margin-bottom: 1rem; color: var(--text-secondary); }
 
 /* 특징 및 인재상 그리드 레이아웃 CSS */
@@ -24,7 +58,27 @@
 .video-embed iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
 
 .ideal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
-.ideal-item { background: var(--bg-tertiary); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center; }
+/* 타일. 단색 배경 하나뿐이라 평평해 보이던 것을, 위에서 빛을 받는 것처럼
+   아주 옅은 그라디언트와 윗변 하이라이트로 바꿨다. 하이라이트는 가운데만
+   밝고 양끝으로 사라져서 판이 살짝 휘어 있는 듯한 인상을 준다. */
+.ideal-item {
+    position: relative;
+    background: linear-gradient(165deg, #272727, #1b1b1b);
+    padding: 1.6rem 1.5rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    text-align: center;
+    overflow: hidden;
+}
+.ideal-item::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 12%;
+    right: 12%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+}
 .ideal-item i { font-size: 2rem; margin-bottom: 1rem; display: block; }
 
 /* 홈 화면 FAQ 카드 */

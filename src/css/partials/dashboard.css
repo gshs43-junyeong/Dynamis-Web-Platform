@@ -10,10 +10,14 @@
 
 /* 통계 카운터 */
 .dash-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
-.dash-stat { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.35rem 1rem; text-align: center; transition: border-color 0.3s ease, transform 0.3s ease; }
+.dash-stat { position: relative; overflow: hidden; background: linear-gradient(165deg, #272727, #1b1b1b); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.35rem 1rem; text-align: center; transition: border-color 0.3s ease, transform 0.3s ease; }
+/* 타일(.ideal-item)과 같은 윗변 하이라이트로 결을 맞춘다. */
+.dash-stat::before { content: ""; position: absolute; top: 0; left: 12%; right: 12%; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent); }
 .dash-stat:hover { border-color: rgba(255,255,255,0.22); transform: translateY(-2px); }
-.dash-stat-value { font-size: 2.2rem; font-weight: 700; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.dash-stat-label { margin-top: 0.4rem; font-size: 0.82rem; color: var(--text-secondary); letter-spacing: 0.3px; }
+/* 숫자는 워드마크와 같은 디스플레이 서체로. 자릿수가 바뀌어도 폭이 흔들리지
+   않도록 tabular-nums를 유지한다(수치를 보여주는 칸이라 특히 중요). */
+.dash-stat-value { font-family: var(--font-display) !important; font-size: 2.4rem; font-weight: 600; color: #fff; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.dash-stat-label { margin-top: 0.5rem; font-size: 0.72rem; color: var(--text-secondary); font-family: var(--font-mono) !important; letter-spacing: 0.12em; }
 
 /* 3열 미리보기 */
 .dash-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; }

@@ -47,4 +47,13 @@
    필요했지만, x-height가 큰 산세리프를 같은 값으로 두면 화면을 압도한다.
    자간을 살짝 벌려 제도 도면의 표제처럼 또박또박 읽히게 했다. */
 .hero h1 { font-family: var(--font-display) !important; font-size: 5.6rem; font-weight: 600; margin-bottom: 0.6rem; letter-spacing: 0.02em; background: linear-gradient(180deg, #fff 45%, #6a6a6a 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.hero .tagline { font-size: 1.25rem; color: var(--text-secondary); max-width: 720px; margin: 0 auto; word-break: keep-all; line-height: 1.8; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 1.5rem 0; }
+/* 위아래 경계선을 양 끝에서 사라지게 한다. 실선으로 딱 끊으면 문장이 상자에
+   갇힌 것처럼 보이는데, 페이드시키면 배경 위에 얹힌 느낌이 되어 히어로의
+   열린 분위기와 이어진다. border 대신 그라디언트 배경 두 겹으로 그린다. */
+.hero .tagline { position: relative; font-size: 1.25rem; color: var(--text-secondary); max-width: 720px; margin: 0 auto; word-break: keep-all; line-height: 1.8; padding: 1.5rem 0;
+    background-image:
+        linear-gradient(90deg, transparent, rgba(255,255,255,0.16) 22%, rgba(255,255,255,0.16) 78%, transparent),
+        linear-gradient(90deg, transparent, rgba(255,255,255,0.16) 22%, rgba(255,255,255,0.16) 78%, transparent);
+    background-size: 100% 1px, 100% 1px;
+    background-position: top left, bottom left;
+    background-repeat: no-repeat; }

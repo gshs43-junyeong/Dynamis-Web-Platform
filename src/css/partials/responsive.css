@@ -1,8 +1,11 @@
-/* 반응형 스타일 */
+/* 반응형 스타일.
+   [주의] 로고와 워드마크 크기는 base.css / hero.css의 기본값보다 반드시 작아야
+   한다. 워드마크를 필기체에서 산세리프로 바꾸면서 기본값을 크게 낮췄는데, 여기
+   값들이 예전 그대로 남아 있어 좁은 화면에서 오히려 더 커지는 역전이 있었다. */
 @media (max-width: 1080px) {
-    header { padding: 1.25rem 20px; }
+    header { padding: 1.25rem 20px; gap: 0.6rem; }
     .logo-area { gap: 8px; }
-    .logo-text { font-size: 2rem; }
+    .logo-text { font-size: 1.35rem; }
 
     nav { display: none; }
     .hamburger-menu { display: flex; }
@@ -11,10 +14,10 @@
 @media (max-width: 768px) {
     header { padding: 1.5rem 15px; }
     .logo-area { gap: 8px; }
-    .logo-text { font-size: 1.8rem; }
+    .logo-text { font-size: 1.25rem; }
     
     main { padding: 2rem 1rem; }
-    .hero h1 { font-size: 6rem; }
+    .hero h1 { font-size: 4rem; }
     .hero img { height: 80px !important; margin-bottom: 10px !important; }
     .hero .tagline { font-size: 1rem; padding: 1rem 0; }
     
@@ -24,7 +27,7 @@
 }
 
 @media (max-width: 480px) {
-    .logo-text { font-size: 1.4rem; }
-    .hero h1 { font-size: 4rem; }
+    .logo-text { font-size: 1.15rem; }
+    .hero h1 { font-size: 3rem; }
     .hero img { height: 60px !important; margin-bottom: 8px !important; }
 }
