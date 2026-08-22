@@ -13,7 +13,7 @@ import {
     orderBy,
     writeBatch
 } from "firebase/firestore";
-import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
+import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, hasAllowedAttachmentName, ALLOWED_ATTACHMENT_EXTENSION_LABEL, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { emit, EVENTS } from './bus.js';
@@ -94,6 +94,16 @@ export async function addNotice() {
         const oversizedFile = Array.from(fileInput.files).find((f) => f.size > MAX_ATTACHMENT_FILE_BYTES);
         if (oversizedFile) {
             alert(`❌ [파일 크기 초과] "${oversizedFile.name}" 파일이 첨부 가능한 개별 용량(${Math.floor(MAX_ATTACHMENT_FILE_BYTES / 1024)}KB)을 초과합니다.`);
+            return;
+        }
+
+        // 확장자 화이트리스트. 받는 사람이 파일을 열었을 때 무엇이 실행되는지는
+        // 저장된 이름의 확장자가 정하므로(.html이면 브라우저가 로컬에서 실행한다),
+        // 여기서 먼저 막는다. 같은 검사가 firebase.rules에도 있어 UI를 우회해도
+        // 서버에서 다시 걸린다.
+        const badNameFile = Array.from(fileInput.files).find((f) => !hasAllowedAttachmentName(f.name));
+        if (badNameFile) {
+            alert(`❌ [허용되지 않는 형식] "${badNameFile.name}"은(는) 첨부할 수 없습니다.\n허용 확장자: ${ALLOWED_ATTACHMENT_EXTENSION_LABEL}`);
             return;
         }
 
@@ -465,7 +475,10 @@ async function openNoticeDetail(n) {
 
 async function executeFileDownloadSecure(e, size, dataStr, nameStr) {
     if (!loggedInUser) return alert('다운로드는 로그인된 회원 정보 세션이 있어야 동작합니다.');
-    if (!isSafeAttachmentData(dataStr)) {
+    // 형식(MIME)과 저장될 이름(확장자)을 둘 다 본다. 규칙이 강화되기 전에 올라온
+    // 문서나 SDK로 직접 쓴 문서가 남아 있을 수 있고, 실제로 사용자 기기에서 파일이
+    // 열리는 지점이 바로 여기이기 때문이다.
+    if (!isSafeAttachmentData(dataStr) || !hasAllowedAttachmentName(nameStr)) {
         alert('⛔ 첨부파일 형식이 올바르지 않아 다운로드를 차단했습니다. 관리자에게 신고해 주세요.');
         return;
     }

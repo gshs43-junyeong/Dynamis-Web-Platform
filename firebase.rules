@@ -540,6 +540,13 @@ service cloud.firestore {
   // 컨텍스트에서 스크립트가 실행된다. 다만 이 사이트는 학술 자료(hwp/pptx/zip 등)를
   // 주고받는 용도이므로 허용 목록 방식은 정상 사용을 깨뜨린다. 그래서 브라우저가
   // 능동 콘텐츠로 렌더링하는 타입만 골라 차단한다.
+  //
+  // [확장자] MIME 차단만으로는 부족하다. 브라우저는 파일을 저장할 때 MIME이 아니라
+  // download 속성의 이름을 쓰므로, data:application/octet-stream 으로 보내도
+  // "보고서.html"이라는 이름이면 .html 파일로 저장되고 .html로 열린다. 실제로
+  // 무엇이 실행되는지를 정하는 것은 확장자이므로 이쪽은 허용 목록으로 못 박는다
+  // (MIME과 달리 확장자는 목록이 유한하고 명확하다). src/js/utils.js의
+  // ALLOWED_ATTACHMENT_EXTENSIONS와 같은 목록을 유지할 것.
   function fileEntryOk(f, maxBytes) {
     return f.fileData is string
            && f.fileData.size() <= maxBytes
@@ -547,7 +554,8 @@ service cloud.firestore {
            && f.fileName is string
            && f.fileName.size() > 0
            && f.fileName.size() <= 200
-           && !f.fileName.matches('.*[/\\\\\\x{202a}-\\x{202e}\\x{2066}-\\x{2069}\\x{0000}-\\x{001f}].*');
+           && !f.fileName.matches('.*[/\\\\\\x{202a}-\\x{202e}\\x{2066}-\\x{2069}\\x{0000}-\\x{001f}].*')
+           && f.fileName.matches('(?i).*\\.(png|jpe?g|gif|webp|bmp|avif|heic|heif|pdf|txt|csv|md|rtf|docx?|xlsx?|pptx?|hwpx?|zip|mp4|mov|m4v|mp3|wav)$');
   }
 
   // Firestore 규칙 언어에는 리스트에 대한 map/reduce가 없어, 최대 개수(10)만큼

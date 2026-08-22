@@ -113,9 +113,71 @@ export function getByteLength(str) {
 //
 // 정상 업로드 경로(FileReader.readAsDataURL)는 항상 'data:'로 시작하므로
 // data: 이외의 스킴은 전부 조작된 값으로 간주하고 거부한다.
+//
+// 스킴만 보는 것으로는 부족하다. data: 자체는 안전해도 MIME이 무제한이면
+// 'data:text/html;base64,...'를 첨부로 심을 수 있고, 받는 사람이 그 파일을 열면
+// 브라우저가 로컬 파일 컨텍스트에서 실행한다. 그래서 아래 화이트리스트로 좁힌다.
+// image/svg+xml이 빠져 있는 것은 실수가 아니다 — SVG는 그림처럼 보이지만 스크립트를
+// 품을 수 있는 문서 형식이라 같은 문제를 그대로 갖는다.
+//
+// hwp/hwpx는 브라우저가 MIME을 잘 몰라 application/octet-stream으로 넘기는 일이
+// 많아서 octet-stream도 허용한다. 대신 이 구멍은 확장자 검사(아래
+// hasAllowedAttachmentName)가 막는다 — 실제로 로컬에서 무엇으로 열릴지를 정하는
+// 것은 MIME이 아니라 저장되는 파일 이름의 확장자이기 때문이다.
+const ALLOWED_ATTACHMENT_MIME = [
+    'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp', 'image/avif',
+    'image/heic', 'image/heif',
+    'application/pdf', 'text/plain', 'text/csv', 'text/markdown',
+    'application/rtf', 'text/rtf',
+    'application/msword',
+    'application/vnd.ms-excel',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/haansofthwp', 'application/x-hwp', 'application/vnd.hancom.hwp', 'application/vnd.hancom.hwpx',
+    'application/zip', 'application/x-zip-compressed',
+    'video/mp4', 'video/quicktime', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4',
+    'application/octet-stream'
+];
+
+// 저장될 파일 이름에서 허용하는 확장자. MIME과 달리 이쪽이 "열었을 때 무엇이
+// 실행되는가"를 실제로 결정한다 — 브라우저는 저장할 때 download 속성의 이름을
+// 그대로 쓰므로, MIME이 무엇이든 .html로 저장되면 .html로 열린다.
+//
+// 화이트리스트로 두는 이유는, 위험한 확장자를 하나씩 지워 나가는 방식(.html,
+// .exe, .hta, .scr, ...)은 플랫폼마다 목록이 달라 반드시 빠뜨리는 것이 생기기
+// 때문이다. 여기 없는 형식(소스 코드 등)을 주고받아야 하면 zip으로 묶으면 된다.
+// 목록을 늘릴 때는 "그 파일을 더블클릭했을 때 코드가 실행될 수 있는가"만 보면 된다.
+// firebase.rules의 fileEntryOk()에 같은 목록이 정규식으로 들어가 있으니 함께 고칠 것.
+const ALLOWED_ATTACHMENT_EXTENSIONS = [
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif', 'heic', 'heif',
+    'pdf', 'txt', 'csv', 'md', 'rtf',
+    'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+    'hwp', 'hwpx',
+    'zip',
+    'mp4', 'mov', 'm4v', 'mp3', 'wav'
+];
+
 export function isSafeAttachmentData(dataStr) {
-    return typeof dataStr === 'string' && /^data:[a-z0-9.+-]+\/[a-z0-9.+-]*[;,]/i.test(dataStr);
+    if (typeof dataStr !== 'string') return false;
+    const match = /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+)[;,]/i.exec(dataStr);
+    if (!match) return false;
+    return ALLOWED_ATTACHMENT_MIME.includes(match[1].toLowerCase());
 }
+
+/** 저장될 파일 이름이 허용 확장자로 끝나는지. 경로 구분자·제어문자도 함께 막는다. */
+export function hasAllowedAttachmentName(fileName) {
+    if (typeof fileName !== 'string' || fileName.length === 0 || fileName.length > 200) return false;
+    // 경로 탈출과 표시 조작(RTL override 등)에 쓰이는 문자를 먼저 걸러 낸다.
+    // 서버 규칙(isAllowedAttachment)에도 같은 검사가 있다.
+    if (/[/\\\u0000-\u001f\u202a-\u202e\u2066-\u2069]/.test(fileName)) return false;
+    const ext = fileName.slice(fileName.lastIndexOf('.') + 1).toLowerCase();
+    return fileName.includes('.') && ALLOWED_ATTACHMENT_EXTENSIONS.includes(ext);
+}
+
+/** 사용자에게 보여 줄 허용 확장자 목록 (안내 문구용). */
+export const ALLOWED_ATTACHMENT_EXTENSION_LABEL = ALLOWED_ATTACHMENT_EXTENSIONS.map((e) => '.' + e).join(', ');
 
 // 첨부파일 용량 상한. firebase.rules의 isAllowedAttachment()와 반드시 같은 값을
 // 유지해야 한다 — 여기서 막으면 큰 파일을 FileReader로 읽어 브라우저 메모리에
