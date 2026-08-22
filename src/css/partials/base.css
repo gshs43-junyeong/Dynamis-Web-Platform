@@ -7,6 +7,14 @@
     --accent-color: #ffffff;
     --border-color: #333333;
     --modal-bg: rgba(0, 0, 0, 0.9);
+
+    /* 워드마크/제목용 기하학적 산세리프와 기술 라벨용 모노스페이스.
+       예전에는 필기체(Italianno)를 썼는데, 정밀 공학을 다루는 동아리라는
+       성격과 figure1/figure2의 제도 도면 언어에 비해 지나치게 장식적이었다.
+       Space Grotesk는 기하학적 골격에 살짝 각진 디테일이 있어 기술 브랜드에
+       자주 쓰이고, JetBrains Mono는 치수·번호 같은 계측 표기에 어울린다. */
+    --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* 기본 글씨체 적용 구조 강화 */
@@ -20,7 +28,7 @@ header {
     border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100;
 }
 .logo-area { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.logo-text { font-family: 'Italianno', cursive !important; font-size: 2.4rem; font-weight: 400; letter-spacing: 0; color: var(--text-primary); line-height: 1; }
+.logo-text { font-family: var(--font-display) !important; font-size: 1.5rem; font-weight: 600; letter-spacing: 0.055em; color: var(--text-primary); line-height: 1; }
 
 nav ul { display: flex; list-style: none; gap: 2rem; align-items: center; }
 nav a { display: inline-flex; align-items: center; gap: 0.4em; color: var(--text-secondary); text-decoration: none; font-weight: 500; cursor: pointer; transition: 0.3s; }
