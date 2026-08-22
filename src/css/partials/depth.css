@@ -275,6 +275,22 @@
         height: 560px;
         margin-top: -280px;
         perspective: 800px;
+
+        /* 무대 상자를 화면 폭에 딱 맞추고 넘치는 도형은 잘라 낸다.
+           데스크톱의 220vw 상자를 그대로 두면 문서가 화면보다 250px 넓어지는데,
+           모바일 브라우저는 그때 시각 뷰포트를 내용 폭까지 넓혀 버린다. 그러면
+           position: fixed의 기준 상자도 같이 넓어져서 `right: 0`으로 붙여 놓은
+           모바일 메뉴가 화면 오른쪽 바깥에 걸린다(실제로 메뉴 글자가 잘렸다).
+           body의 overflow-x: hidden은 스크롤만 막을 뿐 이 확장을 막지 못한다.
+
+           .hero는 좌우로 가운데 정렬된 main 안에 있으므로 calc(50% - 50vw)면
+           상자 왼쪽 끝이 정확히 화면 왼쪽 끝에 놓인다. 도형은 무대 중심을
+           기준으로 배치되는데(.hero-geo의 left/top 50%), 좁은 화면에서는 main의
+           좌우 여백이 1rem뿐이라 중심이 16px 남짓 옮겨질 뿐이라 눈에 띄지 않는다.
+           어차피 화면 밖으로 나가 보이지 않던 부분을 자르는 것이라 그림도 그대로다. */
+        left: calc(50% - 50vw);
+        width: 100vw;
+        overflow: clip;
     }
     .hero-stage-inner { --stage-scale: 0.52; }
     .hero-geo-rings,

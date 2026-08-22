@@ -35,6 +35,21 @@
     #home::before, .bg-blob { animation: none; }
 }
 
+/* 좁은 화면에서는 배경 장식이 화면 오른쪽 밖으로 나가지 않게 폭을 화면에 맞춘다.
+   가로로 넘치는 요소가 하나라도 있으면 모바일 브라우저가 시각 뷰포트를 내용
+   폭까지 넓혀 버리고, 그러면 position: fixed로 `right: 0`에 붙인 모바일 메뉴가
+   화면 밖에 걸린다 (자세한 이유는 depth.css의 같은 미디어 쿼리 주석 참고).
+   격자는 어차피 40px 타일이 반복되는 무늬라 폭을 줄여도 보이는 그림은 같고,
+   빛 덩어리는 blur(90px)로 번지는 장식이라 안쪽으로 당겨도 인상이 유지된다. */
+@media (max-width: 768px) {
+    #home::before { left: calc(50% - 50vw); width: 100vw; }
+    .bg-blob-1 { width: 300px; height: 300px; top: -110px; left: -80px; }
+    /* 오른쪽으로 삐져나오던 값(-120px)을 0으로 당긴다 — 왼쪽/위로 나가는 것은
+       가로 넘침으로 잡히지 않지만 오른쪽은 그대로 문서 폭이 된다. */
+    .bg-blob-2 { width: 280px; height: 280px; right: 0; }
+    .bg-blob-3 { width: 240px; height: 240px; left: 20%; }
+}
+
 .hero { position: relative; text-align: center; padding: 2rem 0 5rem 0; }
 
 /* 로고 이미지 자리. 예전에는 주위를 떠다니는 오브들의 위치 기준점이기도 해서
