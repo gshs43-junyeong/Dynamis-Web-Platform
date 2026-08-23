@@ -69,7 +69,10 @@ export function applyUserSessionUI(user) {
     const mobileAdminMenu = document.getElementById('mobile-admin-menu');
     const pinHeader = document.getElementById('th-pin-header');
     if (adminMenu) adminMenu.style.display = normalizedUser?.role === 'admin' ? 'block' : 'none';
-    if (mobileAdminMenu) mobileAdminMenu.style.display = normalizedUser?.role === 'admin' ? 'block' : 'none';
+    // mobile-nav a는 .mobile-nav a 규칙(display: flex)으로 아이콘·라벨을
+    // 세로 중앙 정렬한다. 여기서 'block'을 주면 인라인 스타일이 그 규칙을 덮어써
+    // 플렉스 정렬이 깨지고 아이콘과 글자가 기준선 정렬로 툭 붙어 보인다.
+    if (mobileAdminMenu) mobileAdminMenu.style.display = normalizedUser?.role === 'admin' ? 'flex' : 'none';
     if (pinHeader) pinHeader.style.display = normalizedUser?.role === 'admin' ? 'table-cell' : 'none';
 
     renderNotices();

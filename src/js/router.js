@@ -27,7 +27,13 @@ function showSection(id) {
         event: 'mobile-nav-event',
         faq: 'mobile-nav-faq',
         members: 'mobile-nav-members',
-        admin: 'mobile-nav-admin',
+        // mobile-nav.html의 관리자 항목은 id가 mobile-admin-menu 하나뿐이다
+        // (session.js가 표시/숨김에 그 id를 쓴다). 예전에는 이 <a>에 id를 두 개
+        // (mobile-admin-menu, mobile-nav-admin) 써 놓았는데, HTML은 같은 요소에
+        // id가 중복되면 첫 번째만 유효하게 취급해 두 번째는 조용히 무시된다 —
+        // getElementById('mobile-nav-admin')가 항상 null이라 관리자로 /admin에
+        // 들어가도 모바일 메뉴에서 활성 표시가 붙지 않았다.
+        admin: 'mobile-admin-menu',
         login: 'mobile-nav-login',
         signup: 'mobile-nav-login',
         mypage: 'mobile-nav-login'
