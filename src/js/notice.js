@@ -14,6 +14,7 @@ import {
     writeBatch
 } from "firebase/firestore";
 import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, hasAllowedAttachmentName, ALLOWED_ATTACHMENT_EXTENSION_LABEL, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
+import { reportListLoadError } from './loaderror.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { emit, EVENTS } from './bus.js';
@@ -576,5 +577,5 @@ export function listenNotices() {
         });
         renderNotices();
         emit(EVENTS.NOTICES_CHANGED, notices);
-    });
+    }, (err) => reportListLoadError('공지사항', err));
 }

@@ -13,6 +13,7 @@ import {
     writeBatch
 } from "firebase/firestore";
 import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText, isSafeAttachmentData, hasAllowedAttachmentName, ALLOWED_ATTACHMENT_EXTENSION_LABEL, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
+import { reportListLoadError } from './loaderror.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { serverNow, isClockOutOfSync } from './clock.js';
@@ -559,5 +560,5 @@ export function listenEvents() {
         });
         renderEvents();
         emit(EVENTS.EVENTS_CHANGED, events);
-    });
+    }, (err) => reportListLoadError('이벤트', err));
 }

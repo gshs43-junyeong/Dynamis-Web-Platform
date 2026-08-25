@@ -11,7 +11,8 @@ import {
 import { formatUserIdentityLabel, getRoleLabel } from './utils.js';
 import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';
-import { emit, EVENTS } from './bus.js';
+import { emit, on, EVENTS } from './bus.js';
+import { reportListLoadError } from './loaderror.js';
 
 let selectedMemberData = null;
 // 마지막으로 렌더된 부원 목록. 홈 대시보드/통합 검색이 재구독 없이 재사용한다.
@@ -19,12 +20,37 @@ let memberCache = [];
 let memberLikeUnsub = null;
 // 목록 버튼마다 붙는 하트 위젯의 구독 해제 함수들. 목록을 다시 그릴 때 모두 정리한다.
 let memberButtonLikeUnsubs = [];
+// 하트를 붙일 자리와 대상 uid. 부원 목록 화면에 실제로 들어왔을 때만 구독을 연다.
+let memberLikeMounts = [];
+
+// [읽기 비용] 하트 위젯은 부원 1명당 users/{uid}/likes 구독을 하나씩 연다.
+// 예전에는 이걸 목록을 그리는 시점에 무조건 열었는데, 부원 목록은 앱이 뜰 때
+// (라우트와 무관하게) 한 번 그려지므로 홈에만 들렀다 나가는 방문자도 부원 수만큼
+// 구독을 열고 있었다. 좋아요가 0개여도 빈 쿼리는 1 read로 과금되므로, 부원이
+// 30명이면 홈 방문 한 번에 30 read가 그냥 나갔다 — 무료 티어 하루 50,000 read
+// 기준으로 방문자당 읽기의 약 1/4을 차지하던 항목이다.
+//
+// 이제는 부원 목록 화면이 실제로 활성일 때만 구독을 열고, 화면을 벗어나면 닫는다.
+// 기능은 그대로다(목록에서도 하트 개수가 실시간으로 보인다). 화면을 보지 않는
+// 사람에게 비용을 물리지 않을 뿐이다.
+function isMembersSectionActive() {
+    return !!document.getElementById('members')?.classList.contains('active');
+}
+
+function mountMemberButtonLikeWidgets() {
+    if (memberButtonLikeUnsubs.length > 0) return; // 이미 열려 있음
+    memberLikeMounts.forEach(({ el, key }) => {
+        memberButtonLikeUnsubs.push(renderLikeWidget(el, ['users', key]));
+    });
+}
 
 function clearMemberButtonLikeWidgets() {
     memberButtonLikeUnsubs.forEach((fn) => {
         try { fn(); } catch { /* 이미 해제됨 */ }
     });
     memberButtonLikeUnsubs = [];
+    // 구독을 끊은 뒤에도 하트가 남아 있으면 개수가 갱신되지 않는 채로 보인다.
+    memberLikeMounts.forEach(({ el }) => { el.innerHTML = ''; });
 }
 
 function getMemberKey(member) {
@@ -218,7 +244,9 @@ export function syncMembersSection() {
         const gMember = document.getElementById('group-member');
         const gHonored = document.getElementById('group-honored');
         // 목록을 새로 그리기 전에 이전 버튼 하트 위젯 구독을 모두 해제 (누수 방지).
+        // 자리 목록도 함께 비운다 — 아래에서 새 DOM으로 다시 채운다.
         clearMemberButtonLikeWidgets();
+        memberLikeMounts = [];
         if (gAdmin) gAdmin.innerHTML = '';
         if (gMember) gMember.innerHTML = '';
         if (gHonored) gHonored.innerHTML = '';
@@ -265,7 +293,7 @@ export function syncMembersSection() {
             likeMount.addEventListener('click', (e) => e.stopPropagation());
             button.appendChild(likeMount);
             if (memberKey) {
-                memberButtonLikeUnsubs.push(renderLikeWidget(likeMount, ['users', memberKey]));
+                memberLikeMounts.push({ el: likeMount, key: memberKey });
             }
 
             if (u.role === 'admin') {
@@ -297,8 +325,18 @@ export function syncMembersSection() {
             renderMemberDetailPanel(null);
         }
         syncMemberSelectionHighlight();
+        // 부원 목록 화면을 보고 있는 중이었다면 하트를 다시 붙인다.
+        // (앱이 뜰 때 /members로 바로 들어온 경우도 여기서 처리된다 — 라우트
+        //  이벤트 순서에 기대지 않고 섹션의 활성 상태를 직접 본다.)
+        if (isMembersSectionActive()) mountMemberButtonLikeWidgets();
         memberCache = members;
         emit(EVENTS.MEMBERS_CHANGED, memberCache);
+    }, (err) => reportListLoadError('부원 목록', err));
+
+    // 부원 목록에 들어올 때만 하트 구독을 열고, 나가면 닫는다.
+    on(EVENTS.ROUTE_CHANGED, (sectionId) => {
+        if (sectionId === 'members') mountMemberButtonLikeWidgets();
+        else clearMemberButtonLikeWidgets();
     });
 }
 

@@ -12,6 +12,7 @@ import {
     writeBatch
 } from "firebase/firestore";
 import { ITEMS_PER_PAGE, formatAuthorBatchName, getByteLength, iconLabel } from './utils.js';
+import { reportListLoadError } from './loaderror.js';
 import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { emit, EVENTS } from './bus.js';
@@ -331,5 +332,5 @@ export function listenFaqs() {
         });
         renderFaqs();
         emit(EVENTS.FAQS_CHANGED, faqs);
-    });
+    }, (err) => reportListLoadError('FAQ', err));
 }
