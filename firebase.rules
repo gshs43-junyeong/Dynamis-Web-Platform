@@ -382,8 +382,20 @@ service cloud.firestore {
                    && (
                         // 기존 문서가 지난 날짜면 통째 리셋이 정상이다
                         !isTodayKst(resource.data)
-                        // 같은 날이면 어떤 카운터도 줄어들 수 없다((b) 차단)
-                        || countersNotDecreasing()
+                        || (
+                             // 같은 날이면 어떤 카운터도 줄어들 수 없고((b) 차단),
+                             countersNotDecreasing()
+                             // 반드시 건수 카운터가 하나는 늘어야 한다.
+                             // 이게 없으면 같은 값 반복 쓰기로 할당량을 태울 수 있다.
+                             && someWriteCounterIncreased()
+                             // 다운로드 누적량은 같은 날에는 못 바꾼다. 다운로드는
+                             // "읽기"라서 규칙이 증가를 강제할 수 없는 참고용 수치였고
+                             // (본문 쓰기에 묶이지 않아 단독 쓰기가 가능했다), 그래서
+                             // 이 필드 하나 때문에 무제한 쓰기 경로가 열려 있었다.
+                             // 클라이언트도 더 이상 쓰지 않는다(traffic.js).
+                             && request.resource.data.get('downloadBytes', 0)
+                                == resource.data.get('downloadBytes', 0)
+                           )
                       );
 
       // 오늘자 카운터의 삭제만 막는다((a) 차단). 지난 날짜 문서는 어차피 리셋
@@ -426,18 +438,17 @@ service cloud.firestore {
                     && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
-    // 6. serverTimeCheck: 클라이언트 시계 오차 측정용 (본인만 읽고 씀)
-    // 스키마 검증이 전혀 없어 1MiB짜리 문서를 무제한 횟수로 써 넣을 수 있었다.
-    // clock.js가 실제로 쓰는 것은 { t: serverTimestamp() } 하나뿐이므로 그 형태로
-    // 못 박는다. serverTimestamp()는 규칙에서 request.time과 같은 값으로 평가되므로,
-    // 임의의 시각이나 다른 필드를 실어 보내면 거부된다.
-    match /serverTimeCheck/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if request.auth != null
-                   && request.auth.uid == uid
-                   && request.resource.data.keys().hasOnly(['t'])
-                   && request.resource.data.t == request.time;
-    }
+    // 6. serverTimeCheck — 삭제됨.
+    //
+    // 클라이언트 시계 오차를 재려고 serverTimestamp()를 써 넣고 되읽던 컬렉션이다.
+    // 스키마는 { t: request.time } 하나로 못 박아 두었지만 "몇 번 쓸 수 있는가"에는
+    // 아무 제약이 없었다. 즉 로그인 계정 하나로 같은 문서를 무한히 덮어써서 무료
+    // 티어의 하루 쓰기 할당량(20,000건)을 통째로 태울 수 있었고, 그러면 사이트
+    // 전체의 글쓰기·댓글·가입이 다음 날까지 멈춘다(에뮬레이터로 60/60 성공 실측).
+    //
+    // 서버 시각을 얻는 데 데이터베이스 쓰기가 필요할 이유가 없어서, 같은 오리진
+    // HTTP 응답의 Date 헤더를 읽는 방식으로 바꾸고 이 컬렉션을 없앴다(clock.js).
+    // 규칙에 경로가 없으면 기본 거부이므로 별도의 차단 규칙을 둘 필요가 없다.
   }
 
   // ---------------------------------------------------------------------------
@@ -743,16 +754,42 @@ service cloud.firestore {
            && (!('hasUnseenWarning' in data) || data.hasUnseenWarning is bool);
   }
 
+  // 카운터 상한을 "실제 일일 한도"와 같은 값으로 못 박는다.
+  //
+  // 예전에는 여기가 1000(바이트 항목은 1GiB)이었는데, 정작 각 글쓰기 경로에 걸린
+  // 한도는 공지 5 / 이벤트 5 / 댓글 10 / FAQ 1이었다. 이 괴리가 그대로 구멍이 됐다:
+  // traffic 문서는 본문 쓰기 없이 단독으로도 갱신할 수 있어서, 카운터를 1씩 올리며
+  // 이 문서만 반복해 쓰면 하루 쓰기 할당량(20,000건)을 계정 하나로 태울 수 있었다.
+  // 상한을 실제 한도에 맞춰 두면 "올릴 수 있는 횟수" 자체가 5+5+10+1 = 21회로 막힌다.
+  //
+  // uploadBytes 상한(2MiB)도 클라이언트의 일일 업로드 예산과 같은 값이다.
+  // downloadBytes는 아래 update 규칙에서 같은 날 변경을 금지하므로 상한이 의미를
+  // 갖지 않지만, 예전에 만들어진 문서에 남아 있을 수 있어 필드 자체는 계속 허용한다
+  // (hasOnly에서 빼면 그 문서들은 merge 갱신이 전부 거부된다).
   function isValidTraffic(data) {
     return data is map
            && data.keys().hasOnly(['y', 'm', 'd', 'noticeCount', 'eventCount', 'uploadBytes', 'downloadBytes', 'commentCount', 'faqQuestionCount'])
            && data.y is int && data.m is int && data.d is int
-           && (!('noticeCount' in data) || (data.noticeCount is int && data.noticeCount >= 0 && data.noticeCount <= 1000))
-           && (!('eventCount' in data) || (data.eventCount is int && data.eventCount >= 0 && data.eventCount <= 1000))
-           && (!('uploadBytes' in data) || (data.uploadBytes is int && data.uploadBytes >= 0 && data.uploadBytes <= 1073741824))
+           && (!('noticeCount' in data) || (data.noticeCount is int && data.noticeCount >= 0 && data.noticeCount <= 5))
+           && (!('eventCount' in data) || (data.eventCount is int && data.eventCount >= 0 && data.eventCount <= 5))
+           && (!('uploadBytes' in data) || (data.uploadBytes is int && data.uploadBytes >= 0 && data.uploadBytes <= 2097152))
            && (!('downloadBytes' in data) || (data.downloadBytes is int && data.downloadBytes >= 0 && data.downloadBytes <= 1073741824))
-           && (!('commentCount' in data) || (data.commentCount is int && data.commentCount >= 0 && data.commentCount <= 1000))
-           && (!('faqQuestionCount' in data) || (data.faqQuestionCount is int && data.faqQuestionCount >= 0 && data.faqQuestionCount <= 1000));
+           && (!('commentCount' in data) || (data.commentCount is int && data.commentCount >= 0 && data.commentCount <= 10))
+           && (!('faqQuestionCount' in data) || (data.faqQuestionCount is int && data.faqQuestionCount >= 0 && data.faqQuestionCount <= 1));
+  }
+
+  // 같은 날 갱신이라면 "글을 하나 더 썼다"는 뜻이어야 한다 — 건수 카운터 중 최소
+  // 하나는 반드시 늘어야 한다. countersNotDecreasing()이 >= 비교라서, 이 조건이
+  // 없으면 완전히 같은 값을 무한 반복해 쓰는 것이 통과했다(실측 60/60 성공).
+  //
+  // 바이트 항목은 여기에 넣지 않는다. 1바이트씩 쪼개 올리면 횟수 제한이 되지 않기
+  // 때문이다. uploadBytes는 항상 공지/이벤트 작성과 같은 배치에서만 늘어나므로
+  // 아래 건수 조건에 이미 묶여 있다.
+  function someWriteCounterIncreased() {
+    return request.resource.data.get('noticeCount', 0) > resource.data.get('noticeCount', 0)
+        || request.resource.data.get('eventCount', 0) > resource.data.get('eventCount', 0)
+        || request.resource.data.get('commentCount', 0) > resource.data.get('commentCount', 0)
+        || request.resource.data.get('faqQuestionCount', 0) > resource.data.get('faqQuestionCount', 0);
   }
 
   function userDoc(userId) {

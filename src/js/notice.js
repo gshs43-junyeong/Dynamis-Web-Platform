@@ -1,5 +1,5 @@
 import { db, auth as firebaseAuth } from './firebase-config.js';
-import { readTrafficState, withinLimit, stageQuota, checkAndRecordDownload } from './traffic.js';
+import { readTrafficState, withinLimit, stageQuota } from './traffic.js';
 import {
     collection,
     doc,
@@ -409,7 +409,7 @@ async function openNoticeDetail(n) {
             link.appendChild(fileLabel);
             link.onclick = (e) => {
                 e.preventDefault();
-                executeFileDownloadSecure(e, fObj.fileSize, fObj.fileData, fObj.fileName);
+                executeFileDownloadSecure(fObj.fileData, fObj.fileName);
             };
             fileListContainer.appendChild(link);
         });
@@ -473,7 +473,7 @@ async function openNoticeDetail(n) {
     if (noticeModal) noticeModal.style.display = 'flex';
 }
 
-async function executeFileDownloadSecure(e, size, dataStr, nameStr) {
+async function executeFileDownloadSecure(dataStr, nameStr) {
     if (!loggedInUser) return alert('다운로드는 로그인된 회원 정보 세션이 있어야 동작합니다.');
     // 형식(MIME)과 저장될 이름(확장자)을 둘 다 본다. 규칙이 강화되기 전에 올라온
     // 문서나 SDK로 직접 쓴 문서가 남아 있을 수 있고, 실제로 사용자 기기에서 파일이
@@ -481,13 +481,6 @@ async function executeFileDownloadSecure(e, size, dataStr, nameStr) {
     if (!isSafeAttachmentData(dataStr) || !hasAllowedAttachmentName(nameStr)) {
         alert('⛔ 첨부파일 형식이 올바르지 않아 다운로드를 차단했습니다. 관리자에게 신고해 주세요.');
         return;
-    }
-    if (loggedInUser.role !== 'admin') {
-        const isDownloadAllowed = await checkAndRecordDownload(firebaseAuth.currentUser?.uid, size || 0, 5 * 1024 * 1024);
-        if (!isDownloadAllowed) {
-            alert('❌ [다운로드 제한] 하루 최대 파일 다운로드 총량(5MB) 한도를 초과하여 다운로드가 차단되었습니다.');
-            return;
-        }
     }
     const gateLink = document.createElement('a');
     gateLink.href = dataStr;

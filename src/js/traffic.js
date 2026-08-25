@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, increment } from "firebase/firestore";
+import { doc, getDoc, increment } from "firebase/firestore";
 import { db, auth } from './firebase-config.js';
 import { serverNow } from './clock.js';
 
@@ -76,31 +76,17 @@ export function stageQuota(batch, userId, state, deltas) {
     batch.set(ref, { ...state.today, ...deltas });
 }
 
-// 다운로드 누적량. 다운로드는 "읽기"라서 서버 규칙이 카운터 증가를 강제할 수 없다
-// (쓰기가 아니므로 getAfter로 묶을 대상이 없음). 따라서 이 수치는 강제력이 없는
-// 참고용 통계이며, 우회하려는 사용자는 얼마든지 우회할 수 있다.
-export async function recordAdvisoryUsage(userId, field, amount) {
-    if (!userId) return;
-    try {
-        const state = await readTrafficState(userId);
-        const ref = trafficDocRef(userId);
-        if (state.isToday) {
-            await setDoc(ref, { ...state.today, [field]: increment(amount) }, { merge: true });
-        } else {
-            await setDoc(ref, { ...state.today, [field]: amount });
-        }
-    } catch (error) {
-        console.error('트래픽 카운트 반영 실패:', error);
-    }
-}
-
-// 다운로드 한도(참고용) 확인 + 반영.
-export async function checkAndRecordDownload(userId, bytes, maxLimit) {
-    const state = await readTrafficState(userId);
-    if (!state.ok) return false;
-    if (!withinLimit(state, 'downloadBytes', bytes, maxLimit)) return false;
-    await recordAdvisoryUsage(userId, 'downloadBytes', bytes);
-    return true;
-}
+// [삭제됨] recordAdvisoryUsage / checkAndRecordDownload — 일일 다운로드 총량(5MB) 집계
+//
+// 다운로드는 "읽기"라서 서버 규칙이 카운터 증가를 강제할 수 없었다(쓰기가 아니라
+// getAfter로 묶을 대상이 없음). 그래서 이 수치는 원래부터 강제력이 없었다 — 그냥
+// 호출하지 않으면 그만이고, 애초에 첨부 본문은 비로그인도 읽을 수 있어서 막고 싶은
+// 상대에게는 아무 효과가 없었다. 반면 비용은 실재했다: 본문 쓰기에 묶이지 않은
+// 유일한 traffic 단독 쓰기 경로였기 때문에, 1바이트씩 올리며 반복 호출하면 계정
+// 하나로 하루 쓰기 할당량(20,000건)을 태울 수 있었다.
+//
+// 실효 없는 통제 하나를 지우는 대신 실재하는 DoS 경로를 닫았다. 첨부 용량 방어는
+// 서버에서 실제로 강제되는 쪽(파일당 700KB, 최대 10개, 확장자·MIME 화이트리스트)이
+// 그대로 담당한다.
 
 export { auth };

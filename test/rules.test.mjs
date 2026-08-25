@@ -109,7 +109,10 @@ await check('H-2f', '[정상] 본인 댓글 내용만 정상 수정', 'allow', (
     updateDoc(doc(ctx('alice'), 'notices/n1/comments/c1'), { content: '수정한 댓글' }));
 
 console.log('\n=== H-3 : 일일 한도 우회 ===');
-const seedTrafficToday = async (db) => { await setDoc(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 5 }); };
+// 3으로 두는 이유: H-3d가 여기서 +1을 하는데, 시드가 일일 한도(5)면 6이 되어
+// 정상적으로 거부된다(스키마 상한 = 실제 한도). 감소/삭제/날짜 되돌리기를 보는
+// H-3a~c는 시작값 크기와 무관하므로 3으로 낮춰도 검증력이 그대로다.
+const seedTrafficToday = async (db) => { await setDoc(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 3 }); };
 await check('H-3a', 'traffic 문서 통째 삭제(오늘자 카운터 리셋)', 'block', () =>
     deleteDoc(doc(ctx('alice'), 'traffic/alice')), seedTrafficToday);
 await check('H-3b', 'traffic update로 카운터를 0으로 되돌리기', 'block', () =>
@@ -187,10 +190,14 @@ await check('L-5c', '[정상] users.warnings는 이제 아무 의미 없는 필�
 await check('L-5d', '[정상] 관리자는 경고를 부여할 수 있다', 'allow', () =>
     updateDoc(doc(ctx('admin1'), 'users/bob'), { warnings: 1, hasUnseenWarning: true }));
 
-console.log('\n=== L-3 : serverTimeCheck 무검증 쓰기 ===');
+console.log('\n=== L-3 / DoS-1 : serverTimeCheck 컬렉션 폐지 ===');
 await reseed();
+// 시계 오차 측정을 HTTP Date 헤더로 옮기면서 이 컬렉션을 없앴다. 규칙에 경로가
+// 없으면 기본 거부이므로, 정상 형태의 쓰기까지 전부 막히는 것이 기대 동작이다.
 await check('L-3a', 'serverTimeCheck에 임의 대용량 페이로드 쓰기', 'block', () =>
     setDoc(doc(ctx('alice'), 'serverTimeCheck/alice'), { junk: 'D'.repeat(500000) }));
+await check('DoS-1', '폐지된 serverTimeCheck에 정상 형태 쓰기(무제한 쓰기 경로)', 'block', () =>
+    setDoc(doc(ctx('alice'), 'serverTimeCheck/alice'), { t: serverTimestamp() }));
 
 console.log('\n=== L-2 : 하위 문서 timestamp 신선도 ===');
 await reseed();
@@ -222,8 +229,41 @@ await check('X-4', '댓글에 정의되지 않은 필드 주입(hasOnly)', 'bloc
     b.set(doc(db, 'traffic/alice'), { ...TODAY, commentCount: 1 });
     return b.commit();
 });
-await check('X-5', '[정상] serverTimeCheck 정상 쓰기(서버 시각)는 계속 허용', 'allow', () =>
-    setDoc(doc(ctx('alice'), 'serverTimeCheck/alice'), { t: serverTimestamp() }));
+
+console.log('\n=== DoS-2 : traffic 단독 반복 쓰기로 일일 쓰기 할당량 소진 ===');
+await reseed();
+// 예전에는 countersNotDecreasing()이 >= 비교라 "완전히 같은 값"을 무한히 다시
+// 쓰는 것이 통과했다(실측 60/60 성공). 계정 하나로 하루 20,000건을 태울 수 있었다.
+await check('DoS-2a', '오늘자 traffic에 같은 값을 다시 쓰기(무증가)', 'block',
+    () => setDoc(doc(ctx('alice'), 'traffic/alice'), { ...TODAY, noticeCount: 1 }),
+    async (db) => setDoc(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 1 }));
+
+// downloadBytes는 본문 쓰기에 묶이지 않는 유일한 단독 쓰기 경로였다.
+// 1바이트씩 올리며 반복하면 횟수 제한이 되지 않으므로 같은 날 변경 자체를 막는다.
+await check('DoS-2b', 'downloadBytes만 올리는 단독 쓰기', 'block',
+    () => setDoc(doc(ctx('alice'), 'traffic/alice'), { ...TODAY, noticeCount: 1, downloadBytes: 1 }),
+    async (db) => setDoc(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 1, downloadBytes: 0 }));
+
+// 카운터 상한을 실제 일일 한도와 맞춰, 올릴 수 있는 횟수 자체를 묶는다.
+await check('DoS-2c', '건수 카운터를 실제 한도(공지 5) 위로 올리기', 'block',
+    () => setDoc(doc(ctx('alice'), 'traffic/alice'), { ...TODAY, noticeCount: 6 }),
+    async (db) => setDoc(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 5 }));
+
+await check('DoS-2d', '[정상] 실제 글쓰기에 동반된 카운터 +1은 계속 허용', 'allow', async () => {
+    const db = ctx('alice');
+    const b = writeBatch(db);
+    b.set(doc(db, 'notices/n-dos'), {
+        title: 'DoS 회귀', content: '본문', tag: '기타', authorId: 'alice',
+        authorName: '앨리스맨', authorBatch: '42기', authorRole: 'member',
+        date: '2026.8.6', timestamp: now(), likes: 0, pinned: false, hasFiles: false,
+    });
+    b.set(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 2 });
+    return b.commit();
+}, async (db) => setDoc(doc(db, 'traffic/alice'), { ...TODAY, noticeCount: 1 }));
+
+await check('DoS-2e', '[정상] 날짜가 바뀌면 카운터 통째 리셋은 계속 허용', 'allow',
+    () => setDoc(doc(ctx('alice'), 'traffic/alice'), { ...TODAY, noticeCount: 1 }),
+    async (db) => setDoc(doc(db, 'traffic/alice'), { y: 2020, m: 1, d: 1, noticeCount: 5 }));
 
 console.log('\n=== 기존 방어가 유지되는지 (회귀) ===');
 await reseed();
