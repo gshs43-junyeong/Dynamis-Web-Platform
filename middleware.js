@@ -21,6 +21,69 @@ export const config = {
 
 const REALM = 'Dynamis (development)';
 
+// ─────────────────────────────────────────────────────────────────────────
+// /api/* 요청 볼륨 제한 (DDoS 대응, 2단계)
+//
+// [왜 필요한가] api/list-*.js는 Upstash Redis로 Firestore 읽기를 캐싱해서
+// "TTL 안에서는 Firestore에 최대 1번만 도달"하도록 만들었다. 그런데 그건
+// Firestore로 가는 트래픽만 줄인 것이지, 애초에 들어오는 요청 자체는 여전히
+// 무제한이었다 — 그 요청들은 전부 Vercel 함수 호출 1건 + Redis 요청 1건을
+// 소모한다. 캐시가 막아주는 건 Firestore뿐이고, Upstash 자체의 요청 한도가
+// 먼저 바닥나면(공격자가 그 정도 물량을 퍼부으면) cache.js는 실패를 "캐시
+// 미스"로 취급해 Firestore로 그대로 흘려보낸다 — 즉 캐시가 무력화되는 순간
+// 원래 문제(읽기 증폭)로 되돌아간다. 그래서 애초에 요청 볼륨 자체를 여기서
+// 끊어야 캐시도, Firestore도 보호된다.
+//
+// [왜 Redis가 아니라 메모리인가] 카운터를 Upstash에 두면 판정 요청 자체가
+// 또 Upstash 요청 1건이 되어, 정작 막고 싶은 그 자원을 카운터가 계속
+// 갉아먹는다(공격이 심할수록 카운터 확인 비용도 같이 폭증). 여기서는 그냥
+// Edge 함수 인스턴스의 메모리에 카운터를 둔다 — Upstash와 완전히 독립적이라
+// Upstash가 죽거나 소진되어도 이 관문은 그대로 동작한다.
+//
+// [정확도의 한계] Vercel Edge 인스턴스는 여러 개가 뜨고 워밍업 상태에 따라
+// 교체되므로, 이 카운터는 "전역 정확한 카운트"가 아니라 "인스턴스별 근사치"다.
+// 완벽하지 않지만, 목표는 정교한 유량 제어가 아니라 "요청 몇백만 건을 그대로
+// Upstash/Firestore에 흘려보내지 않는 것"이라 이 정도로 충분하다.
+//
+// [임계치를 넉넉하게 잡은 이유] 학교 네트워크는 보통 공인 IP 하나를 여러
+// 학생이 공유한다(NAT). IP당 제한을 빡빡하게 걸면 공격자 한 명이 아니라 같은
+// 네트워크의 정상 사용자 전체가 함께 막힌다. 정상 폴링은 4개 엔드포인트 ×
+// 30초 주기라 사용자 1명당 10초에 대략 1.3건뿐이다 — 동시접속 200명이 겹쳐도
+// 10초에 약 260건 수준이므로, 아래 임계치(10초당 300건)는 정상적인 동시
+// 사용자 규모에는 여유가 있고 스크립트성 폭주(초당 수백~수천 건)는 확실히
+// 걸러낸다.
+const RATE_LIMIT_WINDOW_MS = 10000;
+const RATE_LIMIT_MAX = 300;
+const rateBuckets = new Map(); // key(IP) -> { count, windowStart }
+let lastSweep = Date.now();
+
+function isRateLimited(key) {
+    const now = Date.now();
+    // 오래된 버킷을 이따금 청소한다. 근사치 상태라 굳이 매 요청마다 훑을
+    // 필요는 없다 — 창 길이의 5배마다 한 번이면 메모리가 무한정 자라지 않는다.
+    if (now - lastSweep >= RATE_LIMIT_WINDOW_MS * 5) {
+        lastSweep = now;
+        for (const [k, entry] of rateBuckets) {
+            if (now - entry.windowStart >= RATE_LIMIT_WINDOW_MS * 2) rateBuckets.delete(k);
+        }
+    }
+
+    const entry = rateBuckets.get(key);
+    if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
+        rateBuckets.set(key, { count: 1, windowStart: now });
+        return false;
+    }
+    entry.count += 1;
+    return entry.count > RATE_LIMIT_MAX;
+}
+
+function clientKey(request) {
+    // Vercel이 붙여주는 표준 헤더. 여러 프록시를 거친 경우 첫 값이 실제 클라이언트.
+    const forwarded = request.headers.get('x-forwarded-for');
+    if (forwarded) return forwarded.split(',')[0].trim();
+    return request.headers.get('x-real-ip') || 'unknown';
+}
+
 export default function middleware(request) {
     const expectedUser = process.env.SITE_AUTH_USER;
     const expectedPass = process.env.SITE_AUTH_PASS;
@@ -41,6 +104,13 @@ export default function middleware(request) {
         const user = decoded.slice(0, separatorIndex);
         const pass = decoded.slice(separatorIndex + 1);
         if (user === expectedUser && pass === expectedPass) {
+            const { pathname } = new URL(request.url);
+            // Basic Auth 자격 증명을 아는 사람(=사이트 접근 권한이 있는 사람)의
+            // 요청도 대상이다 — 우리가 막으려는 상황이 정확히 "권한은 있지만
+            // 요청을 비정상적으로 반복하는 경우"이기 때문이다.
+            if (pathname.startsWith('/api/') && isRateLimited(clientKey(request))) {
+                return tooManyRequests();
+            }
             return next();
         }
     }
@@ -54,5 +124,12 @@ function unauthorized() {
         headers: {
             'WWW-Authenticate': `Basic realm="${REALM}", charset="UTF-8"`,
         },
+    });
+}
+
+function tooManyRequests() {
+    return new Response('요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', {
+        status: 429,
+        headers: { 'Retry-After': '10' },
     });
 }
