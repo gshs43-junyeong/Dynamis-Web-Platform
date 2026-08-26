@@ -35,6 +35,7 @@
 9. **관리자 콘솔:** 등급 변경·경고 부여·강제 탈퇴를 지원합니다. 실제 쓰기 권한은 보안 규칙이 요청자 본인의 `users/{uid}` 문서를 직접 읽어 `role` 필드로 판정하므로, 등급 변경은 화면 표시가 아니라 **서버 권한 자체**를 바꾸는 조치입니다(자세한 내용은 `관리자 계정 가이드.md`).
 10. **App Check & Google reCAPTCHA v3 연동:** 외부 비인가 프로그램(Python Request, cURL 등)을 통한 Firestore 데이터베이스 위변조 및 탈취 행위를 Google 보안 서버 인증 토큰을 통해 원천 무력화합니다.
 11. **연쇄적 개인정보 파기 영구 삭제:** 대한민국 개인정보보호법에 준거하여 사용자가 '탈퇴' 시 본인의 계정은 물론 그동안 작성했던 공지사항·이벤트·댓글·공개 프로필을 일괄 배치(Batch)로 흔적 없이 삭제 처리합니다.
+12. **읽기 증폭 방어(DDoS 캐싱 계층):** 공지·이벤트·FAQ·부원 목록은 브라우저가 Firestore를 직접 구독하지 않고, Vercel 서버리스 함수(`api/list-*.js`)가 Upstash Redis에 캐싱해 둔 결과를 내려줍니다. 계정 하나로 짧은 시간에 요청을 반복해도 캐시 유효 기간(TTL) 안에서는 Firestore에 최대 1번만 실제 요청이 가므로, 방문자 수·요청 빈도와 무관하게 origin 비용에 상한이 생깁니다. 대신 최대 TTL(30~60초)만큼 최신 글 반영이 지연될 수 있습니다. 필요한 환경 변수는 아래 [환경 변수](#환경-변수-environment-variables-vercel) 참고.
 
 ---
 
@@ -42,6 +43,15 @@
 
 ```
 Dynamis-Web-Platform/
+├── api/                           # Vercel 서버리스 함수 — 클라이언트가 아닌 여기서 배포
+│   ├── _lib/
+│   │   ├── admin.js               # Firebase Admin SDK 초기화 (서비스 계정, 보안 규칙 우회)
+│   │   ├── cache.js               # Upstash Redis 래퍼 (미설정/장애 시 캐시 없이 자동 폴백)
+│   │   └── cachedList.js          # "캐시 미스 → Firestore 조회 → 캐시 채움" 공용 핸들러
+│   ├── list-notices.js            # /api/list-notices  (컬렉션명은 코드에 고정, 파라미터로 안 받음)
+│   ├── list-events.js             # /api/list-events
+│   ├── list-faqs.js               # /api/list-faqs
+│   └── list-members.js            # /api/list-members  (memberProfiles)
 ├── public/
 │   ├── logo.png                  # 동아리 공식 심벌 로고
 │   ├── figure1.png               # 수학 및 기계공학 학술 도해
@@ -77,6 +87,7 @@ Dynamis-Web-Platform/
 │       ├── dashboard.js          # 홈 실시간 현황 대시보드
 │       ├── search.js             # 통합 검색(⌘K / Ctrl+K) 커맨드 팔레트
 │       ├── unread.js             # 마지막 방문 이후 새 글 NEW 표시 (로컬 저장, 서버 요청 없음)
+│       ├── listCache.js          # api/list-*를 주기적으로 폴링하는 공용 헬퍼 (onSnapshot 대체)
 │       ├── bus.js                # 모듈 간 이벤트 버스 (추가 Firestore 읽기 없이 데이터 재사용)
 │       ├── scrollui.js           # 읽기 진행 바 + 맨 위로 버튼
 │       ├── reveal.js             # 스크롤 시 카드 등장 애니메이션
@@ -103,7 +114,7 @@ Dynamis-Web-Platform/
 - 컴퓨터에 Node.js LTS 버전이 설치되어 있어야 합니다.
 
 ### 2. 패키지 설치
-프로젝트 루트 폴더로 이동한 뒤, 터미널을 열고 모든 필요 의존 패키지(Vite, Firebase)를 안전하게 설치합니다.
+프로젝트 루트 폴더로 이동한 뒤, 터미널을 열고 모든 필요 의존 패키지(Vite, Firebase, `api/`가 쓰는 Firebase Admin SDK·Upstash Redis 클라이언트)를 안전하게 설치합니다.
 ```bash
 npm install
 ```
@@ -131,6 +142,24 @@ npm run test:rules
 ```
 - 테스트 본체는 `test/rules.test.mjs`이며, 배포 번들과 무관하므로 위 패키지는 `--no-save`로만 설치합니다(운영 의존성에 포함시키지 않기 위함).
 - 규칙은 조건을 함수 안쪽에 두느냐 top-level에 두느냐에 따라 평가 결과가 달라지는 사례가 실제로 있었습니다. "고쳤다고 생각했는데 안 고쳐진" 상황을 잡아내는 것이 이 테스트의 목적입니다.
+
+---
+
+## 🔑 환경 변수 (Environment Variables, Vercel)
+
+로컬 `npm run dev`에는 필요 없습니다(에뮬레이터/직접 조회로 동작). **실제 배포(Vercel)에서만** 아래 값들을 프로젝트 Settings → Environment Variables에 등록해야 합니다. 하나라도 비어 있으면 그 기능만 안전한 방향(차단 또는 캐시 없이 직접 조회)으로 폴백하고, 사이트 전체가 죽지는 않습니다.
+
+| 변수 | 용도 | 값을 구하는 곳 |
+|---|---|---|
+| `SITE_AUTH_USER` / `SITE_AUTH_PASS` | 개발 중인 사이트의 Basic Auth 게이트(`middleware.js`). 둘 중 하나라도 없으면 전체 차단(fail-closed). | 직접 정하는 아이디/비밀번호 |
+| `FIREBASE_ADMIN_PROJECT_ID` | `api/list-*.js`가 서버에서 Firestore를 읽을 때 쓰는 Admin SDK 자격 증명. | Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성(JSON)의 `project_id` |
+| `FIREBASE_ADMIN_CLIENT_EMAIL` | 위와 동일 | 위 JSON의 `client_email` |
+| `FIREBASE_ADMIN_PRIVATE_KEY` | 위와 동일. 여러 줄 PEM을 그대로 붙여넣는다(값 칸이 여러 줄을 지원함). 앞뒤 따옴표·쉼표가 딸려 들어가지 않도록 주의. | 위 JSON의 `private_key` |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | 공지/이벤트/FAQ/부원 목록 캐싱(읽기 증폭 방어). 미설정 시 캐시 없이 매번 Firestore를 직접 조회(기능은 정상, 방어 효과만 없음). | Vercel 대시보드 → Storage → Upstash 통합 추가 시 자동 생성(권장) |
+
+세 값(`FIREBASE_ADMIN_*`) 중 하나라도 잘못되면 `/api/list-*`가 503을 반환하고, 클라이언트는 화면에 안내 배너를 띄운다(`src/js/loaderror.js`) — 콘솔이 아니라 화면에서 먼저 원인이 드러나도록 설계되어 있다. 정확한 에러 메시지는 Vercel 대시보드 → Deployments → 해당 배포 → Functions(Runtime Logs)에서 확인할 수 있다.
+
+환경 변수는 **저장 시점이 아니라 다음 배포부터** 적용된다 — 값을 추가/수정한 뒤에는 Deployments 탭에서 Redeploy가 필요하다.
 
 ---
 
