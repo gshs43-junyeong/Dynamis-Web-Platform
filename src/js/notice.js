@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, NOTICE_TAGS, linkifyText, isSafeAttachmentData, hasAllowedAttachmentName, ALLOWED_ATTACHMENT_EXTENSION_LABEL, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
 import { reportListLoadError } from './loaderror.js';
+import { pollCachedList } from './listCache.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { emit, EVENTS } from './bus.js';
@@ -567,14 +568,15 @@ export function getNotices() {
     return notices.slice();
 }
 
+// [DDoS 대응] 목록은 더 이상 onSnapshot으로 Firestore에 직결하지 않는다.
+// /api/list-notices(Redis 캐시, 30초 TTL)를 폴링한다 — 방문자 수와 무관하게
+// Firestore 읽기가 TTL당 최대 1건으로 상한이 걸린다. 자세한 배경은
+// listCache.js 참고. 개별 공지 본문(content/main)과 댓글은 그대로 실시간
+// 구독을 유지한다 — 접근 패턴이 분산적이라 캐싱 이득이 적고, 이미 지연 로딩
+// 구조라 비용도 낮다.
 export function listenNotices() {
-    onSnapshot(collection(db, 'notices'), (querySnapshot) => {
-        notices = [];
-        querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            data.docId = docSnap.id;
-            notices.push(data);
-        });
+    pollCachedList('/api/list-notices', (data) => {
+        notices = data;
         renderNotices();
         emit(EVENTS.NOTICES_CHANGED, notices);
     }, (err) => reportListLoadError('공지사항', err));

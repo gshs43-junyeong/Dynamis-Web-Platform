@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { ITEMS_PER_PAGE, formatAuthorBatchName, getByteLength, iconLabel } from './utils.js';
 import { reportListLoadError } from './loaderror.js';
+import { pollCachedList } from './listCache.js';
 import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { emit, EVENTS } from './bus.js';
@@ -322,14 +323,11 @@ export function getFaqs() {
     return faqs.slice();
 }
 
+// [DDoS 대응] notice.js와 같은 이유로 onSnapshot 직결 대신 캐시 폴링으로 바꿨다.
+// 자세한 배경은 listCache.js 참고.
 export function listenFaqs() {
-    onSnapshot(collection(db, 'faqs'), (querySnapshot) => {
-        faqs = [];
-        querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            data.docId = docSnap.id;
-            faqs.push(data);
-        });
+    pollCachedList('/api/list-faqs', (data) => {
+        faqs = data;
         renderFaqs();
         emit(EVENTS.FAQS_CHANGED, faqs);
     }, (err) => reportListLoadError('FAQ', err));

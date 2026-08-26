@@ -1,8 +1,6 @@
 import { db, auth as firebaseAuth } from './firebase-config.js';
 import {
-    collection,
     doc,
-    onSnapshot,
     getDoc,
     setDoc,
     deleteDoc,
@@ -13,6 +11,7 @@ import { loggedInUser } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { emit, on, EVENTS } from './bus.js';
 import { reportListLoadError } from './loaderror.js';
+import { pollCachedList } from './listCache.js';
 
 let selectedMemberData = null;
 // 마지막으로 렌더된 부원 목록. 홈 대시보드/통합 검색이 재구독 없이 재사용한다.
@@ -239,7 +238,10 @@ export function syncMembersSection() {
         return;
     }
 
-    membersUnsub = onSnapshot(collection(db, 'memberProfiles'), (snapshot) => {
+    // [DDoS 대응] notice.js와 같은 이유로 onSnapshot 직결 대신 캐시 폴링으로
+    // 바꿨다. 자세한 배경은 listCache.js 참고. API가 이미 { ...doc.data(), docId }
+    // 형태의 배열을 돌려주므로, 아래는 QuerySnapshot 대신 그 배열을 순회한다.
+    membersUnsub = pollCachedList('/api/list-members', (docs) => {
         const gAdmin = document.getElementById('group-admin');
         const gMember = document.getElementById('group-member');
         const gHonored = document.getElementById('group-honored');
@@ -257,8 +259,7 @@ export function syncMembersSection() {
         const members = [];
         const seenMemberIdentityKeys = new Set();
 
-        snapshot.forEach((docSnap) => {
-            const u = { ...docSnap.data(), docId: docSnap.id };
+        docs.forEach((u) => {
             const identityKey = `${u.batch || ''}|${(u.name || u.displayName || u.email || '').trim().toLowerCase()}`;
             if (seenMemberIdentityKeys.has(identityKey)) {
                 return;

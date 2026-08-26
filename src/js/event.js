@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { ITEMS_PER_PAGE, formatAuthorLabel, getByteLength, linkifyText, isSafeAttachmentData, hasAllowedAttachmentName, ALLOWED_ATTACHMENT_EXTENSION_LABEL, MAX_ATTACHMENT_FILE_BYTES, MAX_ATTACHMENT_TOTAL_ENCODED_BYTES, uiIcon, iconLabel } from './utils.js';
 import { reportListLoadError } from './loaderror.js';
+import { pollCachedList } from './listCache.js';
 import { loggedInUser, ensureAdminAction } from './state.js';
 import { renderLikeWidget } from './likes.js';
 import { serverNow, isClockOutOfSync } from './clock.js';
@@ -547,17 +548,14 @@ export function getEvents() {
     return events.slice();
 }
 
+// [DDoS 대응] notice.js와 같은 이유로 onSnapshot 직결 대신 캐시 폴링으로 바꿨다.
+// 자세한 배경은 listCache.js 참고.
 export function listenEvents() {
     if (!timerInterval) {
         timerInterval = setInterval(updateTimerCells, 1000);
     }
-    onSnapshot(collection(db, 'events'), (querySnapshot) => {
-        events = [];
-        querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            data.docId = docSnap.id;
-            events.push(data);
-        });
+    pollCachedList('/api/list-events', (data) => {
+        events = data;
         renderEvents();
         emit(EVENTS.EVENTS_CHANGED, events);
     }, (err) => reportListLoadError('이벤트', err));
