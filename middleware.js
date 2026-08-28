@@ -51,13 +51,13 @@ const REALM = 'Dynamis (development)';
 //
 // 주의할 점 하나: 방문자 1명이 페이지를 열면 listCache.js가 4개 엔드포인트
 // (notices/events/faqs/members)를 거의 동시에 요청한다 — "10초당 요청 수"와
-// "10초 안에 접속한 사람 수"는 4배 차이가 난다. 즉 50이면 같은 IP에서 10초
-// 사이에 새로 페이지를 여는 사람이 약 12명을 넘는 순간부터 걸릴 수 있다
-// (그 이후의 정상 폴링 자체는 사용자 1명당 10초에 1.3건 수준이라 훨씬 여유
-// 있다). 이 여유가 실제 동시 접속 규모에 비해 부족하다고 판단되면 값을
-// 올릴 것.
+// "10초 안에 접속한 사람 수"는 4배 차이가 난다. 지금 값(100)이면 같은 IP에서
+// 10초 사이에 새로 페이지를 여는 사람이 약 25명까지는 여유가 있다(그 이후의
+// 정상 폴링 자체는 사용자 1명당 10초에 1.3건 수준이라 훨씬 여유 있다).
+// 처음엔 50이었는데, 학교 NAT 뒤에서 여러 명이 동시에 들어오는 상황에
+// 여유를 더 두려고 2배로 올렸다.
 const RATE_LIMIT_WINDOW_MS = 10000;
-const RATE_LIMIT_MAX = 50;
+const RATE_LIMIT_MAX = 100;
 const rateBuckets = new Map(); // key(IP) -> { count, windowStart }
 let lastSweep = Date.now();
 
