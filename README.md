@@ -35,7 +35,9 @@
 9. **관리자 콘솔:** 등급 변경·경고 부여·강제 탈퇴를 지원합니다. 실제 쓰기 권한은 보안 규칙이 요청자 본인의 `users/{uid}` 문서를 직접 읽어 `role` 필드로 판정하므로, 등급 변경은 화면 표시가 아니라 **서버 권한 자체**를 바꾸는 조치입니다(자세한 내용은 `관리자 계정 가이드.md`).
 10. **App Check & Google reCAPTCHA v3 연동:** 외부 비인가 프로그램(Python Request, cURL 등)을 통한 Firestore 데이터베이스 위변조 및 탈취 행위를 Google 보안 서버 인증 토큰을 통해 원천 무력화합니다.
 11. **연쇄적 개인정보 파기 영구 삭제:** 대한민국 개인정보보호법에 준거하여 사용자가 '탈퇴' 시 본인의 계정은 물론 그동안 작성했던 공지사항·이벤트·댓글·공개 프로필을 일괄 배치(Batch)로 흔적 없이 삭제 처리합니다.
-12. **읽기 증폭 방어(DDoS 캐싱 계층):** 공지·이벤트·FAQ·부원 목록은 브라우저가 Firestore를 직접 구독하지 않고, Vercel 서버리스 함수(`api/list-*.js`)가 Upstash Redis에 캐싱해 둔 결과를 내려줍니다. 계정 하나로 짧은 시간에 요청을 반복해도 캐시 유효 기간(TTL) 안에서는 Firestore에 최대 1번만 실제 요청이 가므로, 방문자 수·요청 빈도와 무관하게 origin 비용에 상한이 생깁니다. 대신 최대 TTL(30~60초)만큼 최신 글 반영이 지연될 수 있습니다. 필요한 환경 변수는 아래 [환경 변수](#환경-변수-environment-variables-vercel) 참고.
+12. **읽기 증폭 방어(DDoS 캐싱 계층):** 공지·이벤트·FAQ·부원 목록은 브라우저가 Firestore를 직접 구독하지 않고, Vercel 서버리스 함수(`api/list-*.js`)가 **L1 메모리 → L2 Upstash Redis → L3 Firestore** 3단으로 캐싱해 둔 결과를 내려줍니다. 계정 하나로 짧은 시간에 요청을 반복해도 캐시 유효 기간(TTL) 안에서는 Firestore에 최대 1번만 실제 요청이 가므로, 방문자 수·요청 빈도와 무관하게 origin 비용에 상한이 생깁니다. 대신 최대 TTL(30~60초)만큼 최신 글 반영이 지연될 수 있습니다. 필요한 환경 변수는 아래 [환경 변수](#환경-변수-environment-variables-vercel) 참고.
+13. **요청 볼륨 제한(2단 rate limiter):** `middleware.js`가 `/api/*` 요청을 **IP당 10초에 50건**, **전역으로 10초에 600건** 두 층위로 제한합니다. IP당 제한만으로는 **여러 기기·IP에서 동시에 들어오는 분산 요청**을 막지 못하는데(이 사이트가 쓰는 HTTP Basic Auth는 쿠키와 달리 SameSite 보호가 없어 크로스 사이트 요청에도 자격 증명이 자동으로 실립니다), 전역 카운터가 그 경로를 함께 막습니다.
+14. **캐시 장애 시 fail-closed:** Redis가 죽거나 요청 한도가 소진되면, 예전에는 "캐시 미스"로 취급해 모든 요청을 Firestore로 흘려보냈습니다(방어가 가장 필요한 순간에 방어가 꺼지는 구조). 지금은 Redis 실패를 캐시 미스와 구분해서, Firestore로 가는 대신 **메모리에 남은 직전 데이터를 최대 10분간 그대로 제공**합니다. 목록이 조금 낡는 대신 데이터베이스 할당량이 소진되어 사이트 전체가 멈추는 상황을 막습니다.
 
 ---
 
@@ -46,8 +48,8 @@ Dynamis-Web-Platform/
 ├── api/                           # Vercel 서버리스 함수 — 클라이언트가 아닌 여기서 배포
 │   ├── _lib/
 │   │   ├── admin.js               # Firebase Admin SDK 초기화 (서비스 계정, 보안 규칙 우회)
-│   │   ├── cache.js               # Upstash Redis 래퍼 (미설정/장애 시 캐시 없이 자동 폴백)
-│   │   └── cachedList.js          # "캐시 미스 → Firestore 조회 → 캐시 채움" 공용 핸들러
+│   │   ├── cache.js               # Upstash Redis 래퍼 (miss와 error를 구분해 반환)
+│   │   └── cachedList.js          # L1 메모리 → L2 Redis → L3 Firestore 3단 캐시 핸들러
 │   ├── list-notices.js            # /api/list-notices  (컬렉션명은 코드에 고정, 파라미터로 안 받음)
 │   ├── list-events.js             # /api/list-events
 │   ├── list-faqs.js               # /api/list-faqs
@@ -155,7 +157,7 @@ npm run test:rules
 | `FIREBASE_ADMIN_PROJECT_ID` | `api/list-*.js`가 서버에서 Firestore를 읽을 때 쓰는 Admin SDK 자격 증명. | Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성(JSON)의 `project_id` |
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | 위와 동일 | 위 JSON의 `client_email` |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | 위와 동일. 여러 줄 PEM을 그대로 붙여넣는다(값 칸이 여러 줄을 지원함). 앞뒤 따옴표·쉼표가 딸려 들어가지 않도록 주의. | 위 JSON의 `private_key` |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | 공지/이벤트/FAQ/부원 목록 캐싱(읽기 증폭 방어). 미설정 시 캐시 없이 매번 Firestore를 직접 조회(기능은 정상, 방어 효과만 없음). | Vercel 대시보드 → Storage → Upstash 통합 추가 시 자동 생성(권장) |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | 공지/이벤트/FAQ/부원 목록의 L2 공유 캐싱(읽기 증폭 방어). 미설정 시 L1 메모리 캐시만으로 동작(기능은 정상, 인스턴스 간 공유가 없어 방어 효과가 줄어듦). | Vercel 대시보드 → Storage → Upstash 통합 추가 시 자동 생성(권장) |
 
 세 값(`FIREBASE_ADMIN_*`) 중 하나라도 잘못되면 `/api/list-*`가 503을 반환하고, 클라이언트는 화면에 안내 배너를 띄운다(`src/js/loaderror.js`) — 콘솔이 아니라 화면에서 먼저 원인이 드러나도록 설계되어 있다. 정확한 에러 메시지는 Vercel 대시보드 → Deployments → 해당 배포 → Functions(Runtime Logs)에서 확인할 수 있다.
 

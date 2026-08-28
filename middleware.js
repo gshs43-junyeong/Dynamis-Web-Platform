@@ -61,6 +61,27 @@ const RATE_LIMIT_MAX = 50;
 const rateBuckets = new Map(); // key(IP) -> { count, windowStart }
 let lastSweep = Date.now();
 
+// [전역 상한 — 분산 요청 대응]
+// 위의 IP당 제한은 "한 사람이 한 기기에서 퍼붓는" 경우만 막는다. 그런데 이
+// 사이트는 HTTP Basic Auth를 쓰고, Basic Auth는 쿠키와 달리 SameSite 같은
+// 보호 장치가 없어서 크로스 사이트 요청에도 브라우저가 자격 증명을 자동으로
+// 실어 보낸다. 즉 접속 비밀번호를 아는 학생들이 각자 다른 기기·IP에서 어떤
+// 링크를 열기만 해도, IP별 카운터는 하나도 안 건드리면서 총 요청량만 합산된다.
+// (악의가 없어도 단톡방에 링크 하나 도는 것으로 재현될 수 있다.)
+//
+// 그래서 IP와 무관한 전역 카운터를 한 겹 더 둔다. 값은 IP 상한의 12배로,
+// 서로 다른 기기 열몇 대가 동시에 최대치로 요청해도 정상 범위로 통과할 만큼
+// 여유를 두되 스크립트성 폭주는 걸리는 지점으로 잡았다.
+//
+// [한계 — 정직하게] 이 카운터도 Edge 인스턴스별 메모리다. Vercel이 부하에
+// 따라 인스턴스를 늘리면 실효 상한은 (인스턴스 수 × 이 값)이 되어 정확한
+// 전역 상한은 아니다. 다만 목표는 정밀한 유량 제어가 아니라 "무제한으로
+// 흘러가는 것을 막는 것"이고, 실제로 Upstash 요청을 줄이는 주력은
+// cachedList.js의 L1 메모리 캐시다(대부분의 요청이 Redis까지 가지도 않는다).
+// 이 관문은 그 위에서 Vercel 함수 호출량 자체를 묶는 역할을 한다.
+const GLOBAL_RATE_LIMIT_MAX = 600;
+let globalBucket = { count: 0, windowStart: Date.now() };
+
 function isRateLimited(key) {
     const now = Date.now();
     // 오래된 버킷을 이따금 청소한다. 근사치 상태라 굳이 매 요청마다 훑을
@@ -70,6 +91,14 @@ function isRateLimited(key) {
         for (const [k, entry] of rateBuckets) {
             if (now - entry.windowStart >= RATE_LIMIT_WINDOW_MS * 2) rateBuckets.delete(k);
         }
+    }
+
+    // 전역 상한을 먼저 본다 — IP가 아무리 잘게 쪼개져 있어도 여기서 걸린다.
+    if (now - globalBucket.windowStart >= RATE_LIMIT_WINDOW_MS) {
+        globalBucket = { count: 1, windowStart: now };
+    } else {
+        globalBucket.count += 1;
+        if (globalBucket.count > GLOBAL_RATE_LIMIT_MAX) return true;
     }
 
     const entry = rateBuckets.get(key);
