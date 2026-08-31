@@ -36,7 +36,7 @@
 10. **App Check & Google reCAPTCHA v3 연동:** 외부 비인가 프로그램(Python Request, cURL 등)을 통한 Firestore 데이터베이스 위변조 및 탈취 행위를 Google 보안 서버 인증 토큰을 통해 원천 무력화합니다.
 11. **연쇄적 개인정보 파기 영구 삭제:** 대한민국 개인정보보호법에 준거하여 사용자가 '탈퇴' 시 본인의 계정은 물론 그동안 작성했던 공지사항·이벤트·댓글·공개 프로필을 일괄 배치(Batch)로 흔적 없이 삭제 처리합니다.
 12. **읽기 증폭 방어(DDoS 캐싱 계층):** 공지·이벤트·FAQ·부원 목록은 브라우저가 Firestore를 직접 구독하지 않고, Vercel 서버리스 함수(`api/list-*.js`)가 **L1 메모리 → L2 Upstash Redis → L3 Firestore** 3단으로 캐싱해 둔 결과를 내려줍니다. 계정 하나로 짧은 시간에 요청을 반복해도 캐시 유효 기간(TTL) 안에서는 Firestore에 최대 1번만 실제 요청이 가므로, 방문자 수·요청 빈도와 무관하게 origin 비용에 상한이 생깁니다. 대신 최대 TTL(30~60초)만큼 최신 글 반영이 지연될 수 있습니다. 필요한 환경 변수는 아래 [환경 변수](#환경-변수-environment-variables-vercel) 참고.
-13. **요청 볼륨 제한(2단 rate limiter):** `middleware.js`가 `/api/*` 요청을 **IP당 10초에 100건**, **전역으로 10초에 600건** 두 층위로 제한합니다. IP당 제한만으로는 **여러 기기·IP에서 동시에 들어오는 분산 요청**을 막지 못하는데(이 사이트가 쓰는 HTTP Basic Auth는 쿠키와 달리 SameSite 보호가 없어 크로스 사이트 요청에도 자격 증명이 자동으로 실립니다), 전역 카운터가 그 경로를 함께 막습니다.
+13. **요청 볼륨 제한(2단 rate limiter):** `middleware.js`가 `/api/*` 요청을 **IP당 10초에 100건**, **전역으로 10초에 600건** 두 층위로 제한합니다. IP당 제한만으로는 **여러 기기·IP에서 동시에 들어오는 분산 요청**(예: 링크 하나가 단톡방에 퍼져 수십 명의 브라우저가 동시에 요청하는 상황)을 막지 못하므로, 전역 카운터가 그 경로를 함께 막습니다.
 14. **캐시 장애 시 fail-closed:** Redis가 죽거나 요청 한도가 소진되면, 예전에는 "캐시 미스"로 취급해 모든 요청을 Firestore로 흘려보냈습니다(방어가 가장 필요한 순간에 방어가 꺼지는 구조). 지금은 Redis 실패를 캐시 미스와 구분해서, Firestore로 가는 대신 **메모리에 남은 직전 데이터를 최대 10분간 그대로 제공**합니다. 목록이 조금 낡는 대신 데이터베이스 할당량이 소진되어 사이트 전체가 멈추는 상황을 막습니다.
 
 ---
@@ -153,7 +153,6 @@ npm run test:rules
 
 | 변수 | 용도 | 값을 구하는 곳 |
 |---|---|---|
-| `SITE_AUTH_USER` / `SITE_AUTH_PASS` | 개발 중인 사이트의 Basic Auth 게이트(`middleware.js`). 둘 중 하나라도 없으면 전체 차단(fail-closed). | 직접 정하는 아이디/비밀번호 |
 | `FIREBASE_ADMIN_PROJECT_ID` | `api/list-*.js`가 서버에서 Firestore를 읽을 때 쓰는 Admin SDK 자격 증명. | Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성(JSON)의 `project_id` |
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | 위와 동일 | 위 JSON의 `client_email` |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | 위와 동일. 여러 줄 PEM을 그대로 붙여넣는다(값 칸이 여러 줄을 지원함). 앞뒤 따옴표·쉼표가 딸려 들어가지 않도록 주의. | 위 JSON의 `private_key` |
