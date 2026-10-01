@@ -23,7 +23,9 @@
 // 발급된다. Vercel 환경 변수로 등록:
 //   UPSTASH_REDIS_REST_URL
 //   UPSTASH_REDIS_REST_TOKEN
-// (Vercel 마켓플레이스의 "Upstash" 통합을 쓰면 이 두 값이 자동으로 채워진다.)
+// (Vercel 마켓플레이스의 "Upstash" 통합을 쓰면 이 두 값이 자동으로 채워진다.
+//  통합에 따라 KV_REST_API_URL / KV_REST_API_TOKEN 이름으로 들어오기도 해서
+//  그 이름도 폴백으로 받는다.)
 
 const { Redis } = require('@upstash/redis');
 
@@ -34,10 +36,12 @@ function getClient() {
     if (clientInitAttempted) return client;
     clientInitAttempted = true;
 
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    // Vercel 마켓플레이스 통합은 같은 값을 KV_REST_API_* 이름으로 주입하기도 한다.
+    // 통합을 다시 설치할 때 이름이 달라 조용히 disabled로 떨어지는 일이 없도록 둘 다 받는다.
+    const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
     if (!url || !token) {
-        console.warn('[cache] UPSTASH_REDIS_REST_URL/TOKEN 미설정 — 메모리 캐시만으로 동작합니다.');
+        console.warn('[cache] Upstash REST URL/TOKEN 미설정 (UPSTASH_REDIS_REST_* 또는 KV_REST_API_*) — 메모리 캐시만으로 동작합니다.');
         return null;
     }
     client = new Redis({ url, token });

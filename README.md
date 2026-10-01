@@ -156,7 +156,7 @@ npm run test:rules
 | `FIREBASE_ADMIN_PROJECT_ID` | `api/list-*.js`가 서버에서 Firestore를 읽을 때 쓰는 Admin SDK 자격 증명. | Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성(JSON)의 `project_id` |
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | 위와 동일 | 위 JSON의 `client_email` |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | 위와 동일. 여러 줄 PEM을 그대로 붙여넣는다(값 칸이 여러 줄을 지원함). 앞뒤 따옴표·쉼표가 딸려 들어가지 않도록 주의. | 위 JSON의 `private_key` |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | 공지/이벤트/FAQ/부원 목록의 L2 공유 캐싱(읽기 증폭 방어). 미설정 시 L1 메모리 캐시만으로 동작(기능은 정상, 인스턴스 간 공유가 없어 방어 효과가 줄어듦). | Vercel 대시보드 → Storage → Upstash 통합 추가 시 자동 생성(권장) |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (또는 `KV_REST_API_URL` / `KV_REST_API_TOKEN`) | 공지/이벤트/FAQ/부원 목록의 L2 공유 캐싱(읽기 증폭 방어). 미설정 시 L1 메모리 캐시만으로 동작(기능은 정상, 인스턴스 간 공유가 없어 방어 효과가 줄어듦). | Vercel 대시보드 → Storage → Upstash 통합 추가 시 자동 생성(권장) |
 
 세 값(`FIREBASE_ADMIN_*`) 중 하나라도 잘못되면 `/api/list-*`가 503을 반환하고, 클라이언트는 화면에 안내 배너를 띄운다(`src/js/loaderror.js`) — 콘솔이 아니라 화면에서 먼저 원인이 드러나도록 설계되어 있다. 정확한 에러 메시지는 Vercel 대시보드 → Deployments → 해당 배포 → Functions(Runtime Logs)에서 확인할 수 있다.
 
