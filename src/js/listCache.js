@@ -16,6 +16,7 @@
 // 상수(캐시 히트)로 바뀌었으므로 문제가 되지 않는다.
 
 const DEFAULT_INTERVAL_MS = 30000;
+const REQUEST_TIMEOUT_MS = 15000;
 
 /**
  * url을 주기적으로 GET하고 결과를 onData로 넘긴다.
@@ -31,7 +32,9 @@ export function pollCachedList(url, onData, onError, intervalMs = DEFAULT_INTERV
 
     async function tick() {
         try {
-            const res = await fetch(url);
+            // 타임아웃이 없으면 응답이 안 오는 요청 하나가 tick을 영원히 붙잡아
+            // finally의 다음 폴링 예약에 도달하지 못한다 — 폴링이 조용히 영구 중단된다.
+            const res = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
             if (!res.ok) {
                 throw new Error(`HTTP ${res.status}`);
             }

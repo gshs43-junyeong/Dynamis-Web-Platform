@@ -29,6 +29,20 @@
 
 const { Redis } = require('@upstash/redis');
 
+// Redis 한 번 호출에 허용하는 최대 시간. @upstash/redis는 기본 타임아웃이 없어서,
+// 연결은 받아 주지만 응답을 안 하는 상태(복구 직후, 장애, 네트워크 블랙홀)에서는
+// 호출이 영원히 끝나지 않는다 — 그러면 error로 분류돼 STALE로 버티는 경로에
+// 도달하지도 못하고 /api/list-* 전체가 멈춘다. 시간 초과는 error와 같이 취급한다.
+const REDIS_TIMEOUT_MS = 2000;
+
+function withTimeout(promise, label) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} ${REDIS_TIMEOUT_MS}ms 시간 초과`)), REDIS_TIMEOUT_MS);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 let client = null;
 let clientInitAttempted = false;
 
@@ -61,7 +75,7 @@ async function cacheGet(key) {
     const redis = getClient();
     if (!redis) return { status: 'disabled' };
     try {
-        const value = await redis.get(key);
+        const value = await withTimeout(redis.get(key), 'get');
         return value === null || value === undefined
             ? { status: 'miss' }
             : { status: 'hit', value };
@@ -85,7 +99,7 @@ async function cacheSet(key, value, ttlSeconds) {
     const redis = getClient();
     if (!redis) return false;
     try {
-        await redis.set(key, value, { ex: ttlSeconds });
+        await withTimeout(redis.set(key, value, { ex: ttlSeconds }), 'set');
         return true;
     } catch (err) {
         console.warn(`[cache] set(${key}) 실패(무시하고 계속):`, err?.message || err);
