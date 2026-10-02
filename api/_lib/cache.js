@@ -43,6 +43,41 @@ function withTimeout(promise, label) {
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// [서킷 브레이커] 타임아웃만으로는 부족하다. Redis가 계속 응답하지 않으면 캐시가
+// 만료된 뒤 들어오는 요청마다 2초를 기다렸다가 실패를 확인하게 된다. 한 번 실패가
+// 확인되면 BREAKER_COOLDOWN_MS 동안은 Redis를 아예 부르지 않고 곧바로 error를
+// 돌려준다(→ cachedList.js가 대기 없이 STALE/Firestore 폴백으로 넘어간다).
+// 쿨다운이 지나면 요청 하나만 시험 삼아 보내고(half-open), 그동안 다른 요청은
+// 계속 건너뛴다. 시험이 성공하면 곧바로 정상으로 복귀한다. 이 상태는 인스턴스별
+// 메모리라서 인스턴스마다 한 번씩 실패를 겪고 나면 각자 우회한다.
+const BREAKER_COOLDOWN_MS = 60 * 1000;
+let breakerOpenUntil = 0;   // 0이면 닫힘(정상). 아니면 이 시각까지 우회.
+let probeInFlight = false;
+
+/** @returns {'closed'|'open'|'probe'} */
+function breakerGate() {
+    if (breakerOpenUntil === 0) return 'closed';
+    if (Date.now() < breakerOpenUntil) return 'open';
+    if (probeInFlight) return 'open';
+    probeInFlight = true;
+    return 'probe';
+}
+
+function breakerFailure() {
+    const wasClosed = breakerOpenUntil === 0;
+    breakerOpenUntil = Date.now() + BREAKER_COOLDOWN_MS;
+    probeInFlight = false;
+    if (wasClosed) {
+        console.warn(`[cache] Redis 실패 확인 — ${BREAKER_COOLDOWN_MS / 1000}초간 Redis를 건너뜁니다.`);
+    }
+}
+
+function breakerSuccess() {
+    if (breakerOpenUntil !== 0) console.warn('[cache] Redis 응답 복구 — 정상 호출로 복귀합니다.');
+    breakerOpenUntil = 0;
+    probeInFlight = false;
+}
+
 let client = null;
 let clientInitAttempted = false;
 
@@ -95,12 +130,15 @@ function getClient() {
 async function cacheGet(key) {
     const redis = getClient();
     if (!redis) return { status: 'disabled' };
+    if (breakerGate() === 'open') return { status: 'error' };
     try {
         const value = await withTimeout(redis.get(key), 'get');
+        breakerSuccess();
         return value === null || value === undefined
             ? { status: 'miss' }
             : { status: 'hit', value };
     } catch (err) {
+        breakerFailure();
         console.warn(`[cache] get(${key}) 실패:`, err?.message || err);
         return { status: 'error' };
     }
@@ -119,10 +157,13 @@ async function cacheGet(key) {
 async function cacheSet(key, value, ttlSeconds) {
     const redis = getClient();
     if (!redis) return false;
+    if (breakerGate() === 'open') return false;
     try {
         await withTimeout(redis.set(key, value, { ex: ttlSeconds }), 'set');
+        breakerSuccess();
         return true;
     } catch (err) {
+        breakerFailure();
         console.warn(`[cache] set(${key}) 실패(무시하고 계속):`, err?.message || err);
         return false;
     }
