@@ -46,16 +46,37 @@ function withTimeout(promise, label) {
 let client = null;
 let clientInitAttempted = false;
 
+// REST 자격 증명을 환경 변수에서 찾는다. 허용하는 이름:
+//   UPSTASH_REDIS_REST_URL / _TOKEN          (직접 등록)
+//   KV_REST_API_URL / _TOKEN                 (Vercel 마켓플레이스 통합 기본값)
+//   <접두사>_KV_REST_API_URL / _TOKEN        (통합 설치 시 접두사를 붙인 경우, 예: STORAGE_)
+// 접두사가 붙은 이름은 URL과 토큰이 반드시 같은 접두사 쌍일 때만 쓴다.
+function readCredentials() {
+    const env = process.env;
+    const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
+    const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
+    if (url && token) return { url, token };
+
+    for (const key of Object.keys(env)) {
+        const m = key.match(/^(.+)_KV_REST_API_URL$/);
+        const prefixedToken = m && env[`${m[1]}_KV_REST_API_TOKEN`];
+        if (env[key] && prefixedToken) return { url: env[key], token: prefixedToken };
+    }
+    return {};
+}
+
 function getClient() {
     if (clientInitAttempted) return client;
     clientInitAttempted = true;
 
-    // Vercel 마켓플레이스 통합은 같은 값을 KV_REST_API_* 이름으로 주입하기도 한다.
-    // 통합을 다시 설치할 때 이름이 달라 조용히 disabled로 떨어지는 일이 없도록 둘 다 받는다.
-    const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+    const { url, token } = readCredentials();
     if (!url || !token) {
-        console.warn('[cache] Upstash REST URL/TOKEN 미설정 (UPSTASH_REDIS_REST_* 또는 KV_REST_API_*) — 메모리 캐시만으로 동작합니다.');
+        // 값은 절대 찍지 않는다 — 어떤 이름의 변수가 있는지(이름만)로 원인을 좁힌다.
+        const related = Object.keys(process.env).filter((k) => /REDIS|KV_|UPSTASH/i.test(k));
+        console.warn(
+            '[cache] Upstash REST URL/TOKEN 미설정 — 메모리 캐시만으로 동작합니다. ' +
+            `관련 이름의 환경 변수: ${related.length ? related.join(', ') : '(없음)'}`
+        );
         return null;
     }
     client = new Redis({ url, token });
